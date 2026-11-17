@@ -1,0 +1,57 @@
+{
+  "name": "stage2_pendulum_table",
+  "_note": "Stage 2: first learning curve and first RAM figure. Table resolution sweep.",
+  "task": {
+    "name": "pendulum",
+    "obs_mode": "angle"
+  },
+  "run": {
+    "episodes": 1500,
+    "decay_episodes": 900,
+    "eval_every": 50,
+    "eval_episodes": 5
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "metrics": {
+    "threshold": -200
+  },
+  "learners": [
+    {
+      "label": "table",
+      "base": {
+        "kind": "tabular",
+        "alpha": 0.3,
+        "gamma": 0.95
+      },
+      "sweep": {
+        "bins": [
+          5,
+          7,
+          11,
+          15,
+          21,
+          31
+        ]
+      }
+    },
+    {
+      "label": "random",
+      "base": {
+        "kind": "baseline_random"
+      }
+    },
+    {
+      "label": "zero-torque",
+      "base": {
+        "kind": "baseline_const",
+        "action": 1
+      }
+    }
+  ]
+}

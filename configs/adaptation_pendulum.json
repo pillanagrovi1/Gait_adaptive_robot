@@ -1,0 +1,77 @@
+{
+  "name": "adaptation_pendulum",
+  "_note": "Adaptation speed: after 1000 episodes the rod becomes 50% heavier. How fast does each learner recover?",
+  "task": {
+    "name": "pendulum",
+    "obs_mode": "trig"
+  },
+  "run": {
+    "episodes": 1600,
+    "decay_episodes": 900,
+    "eval_every": 25,
+    "eval_episodes": 5,
+    "shift_at": 1000,
+    "shift_level": 0.5
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "learners": [
+    {
+      "label": "table",
+      "base": {
+        "kind": "tabular",
+        "alpha": 0.3,
+        "gamma": 0.95,
+        "bins": 11
+      },
+      "task": {
+        "obs_mode": "angle"
+      }
+    },
+    {
+      "label": "linear",
+      "base": {
+        "kind": "linear",
+        "alpha": 0.2,
+        "gamma": 0.95,
+        "tilings": 8,
+        "tiles": 8,
+        "features": 1024
+      },
+      "task": {
+        "obs_mode": "angle"
+      }
+    },
+    {
+      "label": "net",
+      "base": {
+        "kind": "mlp",
+        "alpha": 0.02,
+        "gamma": 0.95,
+        "hidden": 32,
+        "td_clip": 1.0,
+        "target_period": 100,
+        "replay_cap": 2000,
+        "batch": 8
+      }
+    },
+    {
+      "label": "random",
+      "base": {
+        "kind": "baseline_random"
+      }
+    },
+    {
+      "label": "zero-torque",
+      "base": {
+        "kind": "baseline_const",
+        "action": 1
+      }
+    }
+  ]
+}

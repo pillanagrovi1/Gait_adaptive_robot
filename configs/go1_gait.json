@@ -1,0 +1,88 @@
+{
+  "name": "go1_gait",
+  "_note": "Stage 7 (the robot): learners pick gait adjustments for a CPG trot on rough ground. Terrain gets 50% rougher at episode 300. UNTUNED.",
+  "task": {
+    "name": "go1",
+    "obs_mode": "imu4",
+    "roughness": 0.06
+  },
+  "run": {
+    "episodes": 500,
+    "decay_episodes": 250,
+    "eval_every": 25,
+    "eval_episodes": 3,
+    "shift_at": 300,
+    "shift_level": 0.5
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "learners": [
+    {
+      "label": "table",
+      "base": {
+        "kind": "tabular",
+        "alpha": 0.2,
+        "gamma": 0.9
+      },
+      "sweep": {
+        "bins": [
+          3,
+          5,
+          7
+        ]
+      }
+    },
+    {
+      "label": "linear",
+      "base": {
+        "kind": "linear",
+        "alpha": 0.1,
+        "gamma": 0.9,
+        "tilings": 8,
+        "tiles": 4
+      },
+      "sweep": {
+        "features": [
+          256,
+          1024
+        ]
+      }
+    },
+    {
+      "label": "net",
+      "base": {
+        "kind": "mlp",
+        "alpha": 0.01,
+        "gamma": 0.9,
+        "td_clip": 1.0,
+        "target_period": 100,
+        "replay_cap": 1000,
+        "batch": 4
+      },
+      "sweep": {
+        "hidden": [
+          16,
+          32
+        ]
+      }
+    },
+    {
+      "label": "nominal-trot",
+      "base": {
+        "kind": "baseline_const",
+        "action": 0
+      }
+    },
+    {
+      "label": "random",
+      "base": {
+        "kind": "baseline_random"
+      }
+    }
+  ]
+}

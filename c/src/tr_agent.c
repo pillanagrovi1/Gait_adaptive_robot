@@ -1,0 +1,214 @@
+/*
+ * tr_agent.c - the part every learner shares: config checks, arena layout,
+ * normalisation, epsilon-greedy, the Q-learning target and the replay buffer.
+ */
+#include <string.h>
+#include "tr_internal.h"
+
+static size_t replay_mem(const tr_cfg_t *c)
+{
+    size_t n = (size_t)c->replay_cap;
+    if (n == 0) return 0;
+    return 2 * TR_ALIGN4(n * c->obs_dim * sizeof(q16_t))   /* s, s2 */
+         + TR_ALIGN4(n * sizeof(q16_t))                    /* r */
+         + 2 * TR_ALIGN4(n);                               /* a, done */
+}
+
+static int cfg_valid(const tr_cfg_t *c)
+{
+    if (!c) return 0;
+    if (c->obs_dim < 1 || c->obs_dim > TR_MAX_OBS) return 0;
+    if (c->n_actions < 2 || c->n_actions > TR_MAX_ACTIONS) return 0;
+    for (int i = 0; i < c->obs_dim; i++)
+        if (c->obs_hi[i] <= c->obs_lo[i]) return 0;
+    if (c->gamma < 0 || c->gamma > Q16_ONE) return 0;
+    if (c->alpha <= 0) return 0;
+    if (c->replay_cap < 0 || c->replay_cap > 65535) return 0;
+    if (c->replay_cap > 0 && (c->batch < 1 || c->batch > c->replay_cap)) return 0;
+    switch (c->kind) {
+    case TR_TABULAR:
+        if (c->bins < 1) return 0;
+        break;
+    case TR_LINEAR:
+        if (c->tilings < 1 || c->tilings > TR_MAX_TILINGS) return 0;
+        if (c->tiles < 1 || c->features < 1) return 0;
+        break;
+    case TR_MLP:
+        if (c->hidden < 1 || c->target_period < 0) return 0;
+        break;
+    default:
+        return 0;
+    }
+    return 1;
+}
+
+static size_t learner_mem(const tr_cfg_t *c)
+{
+    switch (c->kind) {
+    case TR_TABULAR: return tr_tab_mem(c);
+    case TR_LINEAR:  return tr_lin_mem(c);
+    case TR_MLP:     return tr_mlp_mem(c);
+    }
+    return 0;
+}
+
+size_t tr_mem_bytes(const tr_cfg_t *c)
+{
+    if (!cfg_valid(c)) return 0;
+    size_t m = TR_ALIGN4(c->obs_dim * sizeof(q16_t))       /* xn */
+             + TR_ALIGN4(c->n_actions * sizeof(q16_t))     /* q  */
+             + replay_mem(c);
+    size_t lm = learner_mem(c);
+    if (lm == 0) return 0;                                 /* e.g. table too large */
+    return m + lm;
+}
+
+size_t tr_agent_sizeof(void) { return sizeof(tr_agent_t); }
+
+uint32_t tr_param_count(const tr_cfg_t *c)
+{
+    if (!cfg_valid(c)) return 0;
+    switch (c->kind) {
+    case TR_TABULAR: return (uint32_t)(tr_tab_mem(c) / sizeof(q16_t));
+    case TR_LINEAR:  return (uint32_t)c->features * (uint32_t)c->n_actions;
+    case TR_MLP:     return tr_mlp_nparams(c);
+    }
+    return 0;
+}
+
+int tr_init(tr_agent_t *ag, const tr_cfg_t *cfg, void *arena, size_t arena_bytes, uint32_t seed)
+{
+    if (!ag || !cfg_valid(cfg)) return TR_ERR_CFG;
+    size_t need = tr_mem_bytes(cfg);
+    if (need == 0) return TR_ERR_CFG;
+    if (!arena || arena_bytes < need) return TR_ERR_ARENA;
+
+    memset(ag, 0, sizeof(*ag));
+    ag->cfg = *cfg;
+    ag->rng = tr_rng_seed(seed);
+    for (int i = 0; i < cfg->obs_dim; i++) {
+        int64_t range = (int64_t)cfg->obs_hi[i] - cfg->obs_lo[i];
+        ag->inv_range[i] = q16_sat((1LL << 32) / range);
+    }
+
+    memset(arena, 0, need);
+    uint8_t *cur = (uint8_t *)arena;
+    ag->xn = (q16_t *)tr_carve(&cur, cfg->obs_dim * sizeof(q16_t));
+    ag->q  = (q16_t *)tr_carve(&cur, cfg->n_actions * sizeof(q16_t));
+    if (cfg->replay_cap > 0) {
+        size_t n = (size_t)cfg->replay_cap;
+        ag->rb.s    = (q16_t *)tr_carve(&cur, n * cfg->obs_dim * sizeof(q16_t));
+        ag->rb.s2   = (q16_t *)tr_carve(&cur, n * cfg->obs_dim * sizeof(q16_t));
+        ag->rb.r    = (q16_t *)tr_carve(&cur, n * sizeof(q16_t));
+        ag->rb.a    = (uint8_t *)tr_carve(&cur, n);
+        ag->rb.done = (uint8_t *)tr_carve(&cur, n);
+    }
+    int rc = TR_ERR_CFG;
+    switch (cfg->kind) {
+    case TR_TABULAR: rc = tr_tab_init(ag, &cur); break;
+    case TR_LINEAR:  rc = tr_lin_init(ag, &cur); break;
+    case TR_MLP:     rc = tr_mlp_init(ag, &cur); break;
+    }
+    ag->arena_used = (uint32_t)(cur - (uint8_t *)arena);
+    return rc;
+}
+
+void tr_normalise01(tr_agent_t *ag, const q16_t *obs, q16_t *u)
+{
+    const tr_cfg_t *c = &ag->cfg;
+    for (int i = 0; i < c->obs_dim; i++) {
+        q16_t x = q16_clip(obs[i], c->obs_lo[i], c->obs_hi[i]);
+        u[i] = q16_clip(q16_mul(q16_sub(x, c->obs_lo[i]), ag->inv_range[i]), 0, Q16_ONE);
+    }
+}
+
+static void q_all(tr_agent_t *ag, const q16_t *obs, q16_t *out, int use_target)
+{
+    switch (ag->cfg.kind) {
+    case TR_TABULAR: tr_tab_q(ag, obs, out, use_target); break;
+    case TR_LINEAR:  tr_lin_q(ag, obs, out, use_target); break;
+    case TR_MLP:     tr_mlp_q(ag, obs, out, use_target); break;
+    }
+}
+
+void tr_qvalues(tr_agent_t *ag, const q16_t *obs, q16_t *out)
+{
+    q_all(ag, obs, out, 0);
+}
+
+int tr_greedy(tr_agent_t *ag, const q16_t *obs)
+{
+    const int A = ag->cfg.n_actions;
+    q_all(ag, obs, ag->q, 0);
+    q16_t best = ag->q[0];
+    int n_best = 1;
+    for (int k = 1; k < A; k++) {
+        if (ag->q[k] > best) { best = ag->q[k]; n_best = 1; }
+        else if (ag->q[k] == best) n_best++;
+    }
+    if (n_best == 1) {
+        for (int k = 0; k < A; k++) if (ag->q[k] == best) return k;
+    }
+    uint32_t pick = tr_rng_below(&ag->rng, (uint32_t)n_best);
+    for (int k = 0; k < A; k++) {
+        if (ag->q[k] == best) {
+            if (pick == 0) return k;
+            pick--;
+        }
+    }
+    return 0; /* unreachable */
+}
+
+int tr_act(tr_agent_t *ag, const q16_t *obs, q16_t eps)
+{
+    if (tr_rng_unit_q16(&ag->rng) < eps)
+        return (int)tr_rng_below(&ag->rng, (uint32_t)ag->cfg.n_actions);
+    return tr_greedy(ag, obs);
+}
+
+/* One Q-learning update on one transition. Identical for every learner. */
+static void learn_one(tr_agent_t *ag, const q16_t *s, int a, q16_t r, const q16_t *s2, int done)
+{
+    const tr_cfg_t *c = &ag->cfg;
+    q16_t y = r;
+    if (!done) {
+        q_all(ag, s2, ag->q, 1);
+        q16_t m = ag->q[0];
+        for (int k = 1; k < c->n_actions; k++) if (ag->q[k] > m) m = ag->q[k];
+        y = q16_add(r, q16_mul(c->gamma, m));
+    }
+    switch (c->kind) {
+    case TR_TABULAR: tr_tab_update(ag, s, a, y); break;
+    case TR_LINEAR:  tr_lin_update(ag, s, a, y); break;
+    case TR_MLP:     tr_mlp_update(ag, s, a, y); break;
+    }
+    ag->n_updates++;
+    if (c->kind == TR_MLP && c->target_period > 0 &&
+        (ag->n_updates % (uint32_t)c->target_period) == 0)
+        tr_mlp_sync_target(ag);
+}
+
+int tr_observe(tr_agent_t *ag, const q16_t *s, int a, q16_t r, const q16_t *s2, int done)
+{
+    const tr_cfg_t *c = &ag->cfg;
+    if (c->replay_cap == 0) {
+        learn_one(ag, s, a, r, s2, done);
+        return 1;
+    }
+    tr_replay_t *rb = &ag->rb;
+    const int d = c->obs_dim;
+    uint32_t h = rb->head;
+    memcpy(&rb->s[h * d], s, d * sizeof(q16_t));
+    memcpy(&rb->s2[h * d], s2, d * sizeof(q16_t));
+    rb->r[h] = r;
+    rb->a[h] = (uint8_t)a;
+    rb->done[h] = (uint8_t)(done != 0);
+    rb->head = (h + 1) % (uint32_t)c->replay_cap;
+    if (rb->size < (uint32_t)c->replay_cap) rb->size++;
+    if (rb->size < (uint32_t)c->batch) return 0;   /* warm-up */
+    for (int k = 0; k < c->batch; k++) {
+        uint32_t j = tr_rng_below(&ag->rng, rb->size);
+        learn_one(ag, &rb->s[j * d], rb->a[j], rb->r[j], &rb->s2[j * d], rb->done[j]);
+    }
+    return c->batch;
+}
