@@ -56,7 +56,7 @@
         "target_period": 100,
         "replay_cap": 500,
         "batch": 4,
-        "replay_compact": 1
+        "replay_compact": 0
       },
       "sweep": {
         "hidden": [
