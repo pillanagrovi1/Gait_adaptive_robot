@@ -1,0 +1,125 @@
+{
+  "name": "pendulum_main_tuned",
+  "_note": "Stage 3: all learners on the pendulum, each swept along its memory knob. Same gamma, same reward, same STEP budget. The input encoding is an explicit factor for every learner (resolves D01). 'net' = original recipe (SGD + target net + replay); 'net-stream' = Stream Q(lambda) recipe (ObGD + traces + LayerNorm + stochastic rounding, no replay, no target). Hyperparameters tuned by scripts/tune.py: K=20 per learner, tuning seeds [1000, 1001, 1002], score auc.",
+  "task": {
+    "name": "pendulum"
+  },
+  "task_sweep": {
+    "obs_mode": [
+      "angle",
+      "trig"
+    ]
+  },
+  "run": {
+    "steps": 300000,
+    "decay_steps": 180000,
+    "eval_every_steps": 10000,
+    "eval_episodes": 10
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "metrics": {
+    "threshold": -200
+  },
+  "learners": [
+    {
+      "label": "table",
+      "base": {
+        "kind": "tabular",
+        "alpha": 0.30018406847847273,
+        "gamma": 0.95
+      },
+      "sweep": {
+        "bins": [
+          5,
+          7,
+          11,
+          15,
+          21
+        ]
+      }
+    },
+    {
+      "label": "linear",
+      "base": {
+        "kind": "linear",
+        "alpha": 0.300417304136544,
+        "gamma": 0.95,
+        "tilings": 8,
+        "tiles": 8
+      },
+      "sweep": {
+        "features": [
+          64,
+          256,
+          1024,
+          4096
+        ]
+      }
+    },
+    {
+      "label": "net",
+      "base": {
+        "kind": "mlp",
+        "alpha": 0.015127997271038265,
+        "gamma": 0.95,
+        "td_clip": 1.0,
+        "target_period": 100,
+        "replay_cap": 2000,
+        "batch": 8,
+        "replay_compact": 1
+      },
+      "sweep": {
+        "hidden": [
+          8,
+          16,
+          32,
+          64
+        ]
+      }
+    },
+    {
+      "label": "net-stream",
+      "base": {
+        "kind": "mlp",
+        "alpha": 1.0,
+        "gamma": 0.95,
+        "lam": 0.6,
+        "obgd_kappa": 3.0,
+        "norm": 1,
+        "round_mode": 1
+      },
+      "sweep": {
+        "hidden": [
+          8,
+          16,
+          32,
+          64
+        ]
+      }
+    },
+    {
+      "label": "random",
+      "base": {
+        "kind": "baseline_random"
+      }
+    },
+    {
+      "label": "zero-torque",
+      "base": {
+        "kind": "baseline_const",
+        "action": 1
+      }
+    }
+  ]
+}
