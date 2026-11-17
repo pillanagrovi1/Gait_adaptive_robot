@@ -29,8 +29,8 @@
 #include <stdint.h>
 #include "tr_fixed.h"
 
-#define TR_MAX_OBS      8
-#define TR_MAX_ACTIONS  16
+#define TR_MAX_OBS      12   /* raised from 8 (17 Nov): Go1 with contacts + gait parameters */
+#define TR_MAX_ACTIONS  32   /* raised from 16: Go1 factored actions (18) */
 #define TR_MAX_TILINGS  32
 
 enum { TR_TABULAR = 0, TR_LINEAR = 1, TR_MLP = 2 };
@@ -66,33 +66,78 @@ typedef struct {
     /* replay (any learner) */
     int32_t replay_cap;               /* transitions stored, 0 = pure streaming */
     int32_t batch;                    /* updates per env step when replay is on */
+    /* ---- added 17 Nov 2026 after the literature review (docs/research_review.md) ----
+     * All default to 0 = the original behaviour, bit for bit. */
+    q16_t   lambda;                   /* Watkins Q(lambda) trace decay; >0 enables traces */
+    q16_t   obgd_kappa;               /* ObGD step-size cap (Elsayed et al. 2024), 0 = off; typical 2.0 */
+    int32_t round_mode;               /* 0 = round to nearest, 1 = stochastic rounding of updates */
+    int32_t norm;                     /* MLP only: 0 = none, 1 = parameter-free LayerNorm on hidden layer */
+    int32_t trace_cap;                /* table/linear: sparse-trace entries kept, 0 = automatic */
+    /* ---- added 17 Nov 2026, second round ---- */
+    int32_t replay_compact;           /* 1 = compressed replay: uint16 states, next state implied */
+    int32_t tile_dense;               /* linear: 1 = collision-free (unhashed) tile indices */
+    int32_t cbp_period;               /* MLP: continual backprop, replace 1 unit every N updates, 0 = off */
+    int32_t cbp_maturity;             /* MLP: units younger than this many updates are never replaced */
 } tr_cfg_t;
 
 typedef struct {
+    /* plain layout (replay_compact = 0): full Q16.16 copies of s and s' */
     q16_t   *s;        /* replay_cap * obs_dim */
     q16_t   *s2;       /* replay_cap * obs_dim */
-    q16_t   *r;        /* replay_cap */
     uint8_t *a;        /* replay_cap */
     uint8_t *done;     /* replay_cap */
+    /* compressed layout (replay_compact = 1): s as uint16 fraction of [lo, hi],
+     * s' = the next entry's s (flag bit 7 says the successor continues this episode) */
+    uint16_t *su;      /* replay_cap * obs_dim */
+    uint8_t  *af;      /* replay_cap: action (bits 0-5) | done (bit 6) | has_next (bit 7) */
+    q16_t    *last_s2; /* obs_dim: s' of the newest entry, to detect continuity */
+    q16_t    *ds, *ds2;/* obs_dim each: decode scratch */
+    q16_t   *r;        /* replay_cap (both layouts) */
     uint32_t head, size;
 } tr_replay_t;
+
+/* Sparse eligibility trace: (index, value) pairs, for one-hot / few-hot features. */
+typedef struct {
+    uint32_t *idx;
+    q16_t    *val;
+    uint32_t  n, cap;
+} tr_strace_t;
 
 typedef struct {
     q16_t *table;                     /* n_cells * n_actions */
     uint32_t n_cells;
+    tr_strace_t tr;                   /* used only when lambda/ObGD is on */
 } tr_tab_t;
+
+/* Two-slot cache of active features: act(s), target(s'), update(s) and the
+ * next act(s') reuse each other's hashing instead of recomputing it. */
+typedef struct {
+    q16_t    *obs[2];                 /* obs_dim each */
+    uint32_t *idx[2];                 /* tilings each */
+    uint8_t   valid[2];
+    uint8_t   next;                   /* slot to overwrite next */
+} tr_lin_cache_t;
 
 typedef struct {
     q16_t    *w;                      /* features * n_actions */
-    uint32_t *idx;                    /* tilings, scratch for active features */
+    uint32_t *idx;                    /* points into the cache: active features of the last query */
+    int32_t  *off;                    /* tilings * obs_dim precomputed tiling offsets (Q16.16) */
     q16_t     alpha_t;                /* alpha / tilings */
+    uint32_t  mask;                   /* features-1 if features is a power of two, else 0 */
+    tr_lin_cache_t cache;
+    tr_strace_t tr;
 } tr_lin_t;
 
 typedef struct {
     q16_t *p;                         /* online params: W1 b1 W2 b2 */
     q16_t *tp;                        /* target params (NULL if no target net) */
-    q16_t *z;                         /* hidden pre-activations, scratch */
+    q16_t *z;                         /* hidden pre-activations (normalised if norm=1), scratch */
     q16_t *h;                         /* hidden activations, scratch */
+    q16_t *g;                         /* dQ/dz scratch (norm or trace paths) */
+    q16_t *e;                         /* eligibility trace, n_params (NULL if no traces) */
+    q16_t *util;                      /* continual backprop: unit utility, hidden (NULL if off) */
+    uint32_t *age;                    /* continual backprop: updates since (re)initialisation */
+    q16_t  inv_sigma;                 /* LayerNorm 1/sigma of the last forward pass */
     uint32_t n_params;
 } tr_mlp_t;
 
@@ -105,6 +150,8 @@ typedef struct {
     tr_replay_t rb;
     uint32_t n_updates;
     uint32_t arena_used;
+    uint32_t n_upd_terms;             /* weight-update products computed */
+    uint32_t n_underflow;             /* ... of which were non-zero before rounding, zero after */
     union { tr_tab_t tab; tr_lin_t lin; tr_mlp_t mlp; } u;
 } tr_agent_t;
 
@@ -125,5 +172,13 @@ int  tr_greedy(tr_agent_t *ag, const q16_t *obs);
 int  tr_act(tr_agent_t *ag, const q16_t *obs, q16_t eps);
 /* Store/learn from one transition. Returns number of updates performed. */
 int  tr_observe(tr_agent_t *ag, const q16_t *s, int a, q16_t r, const q16_t *s2, int done);
+/* Call at the start of every episode: clears eligibility traces (no-op without them).
+ * Needed because a time-limit truncation is not passed to tr_observe as done. */
+void tr_episode_start(tr_agent_t *ag);
+/* Diagnostics: how many update products rounded to exactly zero (Q16.16 underflow). */
+uint32_t tr_underflow_count(const tr_agent_t *ag);
+uint32_t tr_update_terms(const tr_agent_t *ag);
+/* 1 if this config uses the streaming path (lambda > 0 or ObGD on). */
+int  tr_is_stream(const tr_cfg_t *cfg);
 
 #endif

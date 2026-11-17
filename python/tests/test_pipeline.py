@@ -11,8 +11,8 @@ pytestmark = pytest.mark.skipif(not cbind.LIB_PATH.exists(), reason="run `make` 
 
 
 def test_cfg_struct_matches_c():
-    # sizeof(tr_cfg_t) = 3 + 8 + 8 + 2 + 1 + 3 + 3 + 2 int32 fields
-    assert cbind.C.sizeof(cbind.Cfg) == 30 * 4
+    # sizeof(tr_cfg_t) = 3 + 12 + 12 + 2 + 1 + 3 + 3 + 2 + 5 + 4 int32 fields
+    assert cbind.C.sizeof(cbind.Cfg) == 47 * 4
 
 
 @pytest.mark.parametrize("kind,extra", [
@@ -64,3 +64,61 @@ def test_harness_short_run(tmp_path):
     assert (tmp_path / "seed0.csv").exists() and (tmp_path / "meta.json").exists()
     assert len(out["rows"]) == 4
     assert out["rows"][1]["eval_return"] != ""
+
+
+@pytest.mark.parametrize("kind,extra", [
+    ("tabular", {"bins": 11}),
+    ("linear", {"features": 512}),
+    ("mlp", {"hidden": 16, "norm": 1, "round_mode": 1}),
+])
+def test_stream_agents_learn_one_step(kind, extra):
+    """Stream Q(lambda) path (ObGD + traces) fits Q(s,a) = +-0.5*s0 on terminal transitions."""
+    lo, hi = np.array([-1.0, -1.0]), np.array([1.0, 1.0])
+    ag = cbind.Agent({"kind": kind, "alpha": 1.0 if kind != "mlp" else 0.5, "obgd_kappa": 2.0,
+                      "lam": 0.8, **extra}, lo, hi, 2, seed=0)
+    rng = np.random.default_rng(0)
+    for _ in range(20000):
+        s = rng.uniform(-1, 1, 2)
+        a = int(rng.integers(2))
+        ag.episode_start()
+        ag.observe(s, a, 0.5 * s[0] * (1 if a else -1), s, True)
+    err = np.mean([abs(ag.qvalues(np.array([x, 0.2]))[1] - 0.5 * x) for x in np.linspace(-0.9, 0.9, 7)])
+    assert err < 0.1, err
+    lost, total = ag.underflow()
+    assert total > 0 and 0 <= lost <= total
+
+
+def test_unknown_learner_key_rejected():
+    with pytest.raises(ValueError):
+        cbind.Agent({"kind": "tabular", "lambda": 0.8}, np.zeros(2), np.ones(2), 2, 0)
+
+
+def test_harness_step_budget(tmp_path):
+    pytest.importorskip("mujoco")
+    from tinyrl import harness
+    out = harness.run({"name": "pendulum", "obs_mode": "trig"},
+                      {"kind": "mlp", "hidden": 8, "alpha": 1.0, "obgd_kappa": 2.0, "lam": 0.8, "gamma": 0.95},
+                      seed=0, run_cfg={"steps": 1000, "eval_every_steps": 250, "eval_episodes": 1},
+                      out_dir=tmp_path)
+    assert [e["step"] for e in out["evals"]] == [250, 500, 750, 1000]
+    assert out["meta"]["env_steps"] == 1000 and out["meta"]["budget"] == "steps"
+    assert (tmp_path / "seed0_eval.csv").exists() and (tmp_path / "seed0_meta.json").exists()
+    assert out["meta"]["update_terms"] > 0
+
+
+@pytest.mark.parametrize("kw,n_act,obs_dim", [
+    ({}, 6, 4),
+    ({"obs_mode": "imu4pc", "phase_lock": True, "action_mode": "factored"}, 18, 7),
+    ({"obs_mode": "imu4pc", "phase_lock": True, "action_mode": "incremental", "stumble": True}, 7, 10),
+    ({"obs_mode": "imu4p", "phase_lock": True, "tegotae_sigma": 1.0, "posture_gain": 0.5}, 6, 5),
+])
+def test_go1_modes(kw, n_act, obs_dim):
+    pytest.importorskip("mujoco")
+    from tinyrl.envs.go1 import Go1Gait
+    env = Go1Gait(roughness=0.05, **kw)
+    assert env.n_actions == n_act and env.obs_dim == obs_dim
+    o = env.reset(seed=0)
+    for a in range(3):
+        o, r, term, trunc = env.step(a % n_act)
+        assert o.shape == (obs_dim,) and np.all(np.isfinite(o))
+    assert np.all(o >= env.obs_lo - 1.0) and np.all(o <= env.obs_hi + 1.0)

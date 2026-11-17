@@ -1,0 +1,93 @@
+{
+  "name": "go1_gait_v2",
+  "_note": "Stage 7, revised after docs/research_review.md: decisions locked to the gait phase (every half cycle) with a 'which pair swings next' bit, IMU averaged over the half cycle, terrain set where the open-loop trot succeeds ~40-80% of the time (check with scripts/go1_difficulty.py first: 10-episode probe suggested 0.08-0.09), then 12.5% rougher at 12k decisions. Still UNTUNED.",
+  "task": {
+    "name": "go1",
+    "obs_mode": "imu4p",
+    "phase_lock": true,
+    "roughness": 0.08
+  },
+  "run": {
+    "steps": 20000,
+    "decay_steps": 8000,
+    "eval_every_steps": 1000,
+    "eval_episodes": 5,
+    "shift_at_step": 12000,
+    "shift_level": 0.125
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "learners": [
+    {
+      "label": "table",
+      "base": {
+        "kind": "tabular",
+        "alpha": 0.2,
+        "gamma": 0.9
+      },
+      "sweep": {
+        "bins": [
+          3,
+          5
+        ]
+      }
+    },
+    {
+      "label": "linear",
+      "base": {
+        "kind": "linear",
+        "alpha": 0.1,
+        "gamma": 0.9,
+        "tilings": 16,
+        "tiles": 4
+      },
+      "sweep": {
+        "features": [
+          256,
+          1024
+        ]
+      }
+    },
+    {
+      "label": "net-stream",
+      "base": {
+        "kind": "mlp",
+        "alpha": 1.0,
+        "gamma": 0.9,
+        "lam": 0.8,
+        "obgd_kappa": 2.0,
+        "norm": 1,
+        "round_mode": 1
+      },
+      "sweep": {
+        "hidden": [
+          16,
+          32
+        ]
+      }
+    },
+    {
+      "label": "nominal-trot",
+      "base": {
+        "kind": "baseline_const",
+        "action": 0
+      }
+    },
+    {
+      "label": "random",
+      "base": {
+        "kind": "baseline_random"
+      }
+    }
+  ]
+}

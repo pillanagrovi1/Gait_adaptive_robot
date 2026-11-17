@@ -10,7 +10,7 @@
 /* Map obs into u in [0, 1] (Q16.16), clipping to the configured bounds. */
 void tr_normalise01(tr_agent_t *ag, const q16_t *obs, q16_t *u);
 
-/* Per-learner hooks. Each learner implements these four. */
+/* ---- Per-learner hooks: the original one-step semi-gradient path ---- */
 size_t   tr_tab_mem(const tr_cfg_t *c);
 int      tr_tab_init(tr_agent_t *ag, uint8_t **cursor);
 void     tr_tab_q(tr_agent_t *ag, const q16_t *obs, q16_t *out, int use_target);
@@ -28,11 +28,89 @@ void     tr_mlp_update(tr_agent_t *ag, const q16_t *obs, int a, q16_t y);
 void     tr_mlp_sync_target(tr_agent_t *ag);
 uint32_t tr_mlp_nparams(const tr_cfg_t *c);
 
+/* ---- Streaming path (Watkins Q(lambda) + ObGD), used when tr_is_stream(cfg) ----
+ * X_trace: forward on (s, ·) leaving Q(s, ·) in ag->q, then
+ *          e <- decay * e + grad_w Q(s, a); writes ||e||_1 to *norm1; returns Q(s, a).
+ * X_apply: w <- w + (step * e) >> sh   (sh = 16: step is Q16.16; sh = 30: step is Q2.30,
+ *          used by ObGD when the effective step is too small for Q16.16).
+ * X_clear: e <- 0.
+ */
+q16_t tr_tab_trace(tr_agent_t *ag, const q16_t *obs, int a, q16_t decay, int64_t *norm1);
+void  tr_tab_apply(tr_agent_t *ag, q16_t step, int sh);
+void  tr_tab_clear(tr_agent_t *ag);
+q16_t tr_lin_trace(tr_agent_t *ag, const q16_t *obs, int a, q16_t decay, int64_t *norm1);
+void  tr_lin_apply(tr_agent_t *ag, q16_t step, int sh);
+void  tr_lin_clear(tr_agent_t *ag);
+q16_t tr_mlp_trace(tr_agent_t *ag, const q16_t *obs, int a, q16_t decay, int64_t *norm1);
+void  tr_mlp_apply(tr_agent_t *ag, q16_t step, int sh);
+void  tr_mlp_clear(tr_agent_t *ag);
+
+/* ---- Sparse trace (tr_trace.c) ---- */
+size_t  tr_strace_mem(uint32_t cap);
+void    tr_strace_init(tr_strace_t *t, uint8_t **cursor, uint32_t cap);
+void    tr_strace_decay(tr_strace_t *t, q16_t decay);
+void    tr_strace_add(tr_strace_t *t, uint32_t index, q16_t v);
+int64_t tr_strace_norm1(const tr_strace_t *t);
+void    tr_strace_apply(tr_agent_t *ag, const tr_strace_t *t, q16_t *w, q16_t step, int sh);
+static inline void tr_strace_clear(tr_strace_t *t) { t->n = 0; }
+
+static inline int tr_stream_on(const tr_cfg_t *c) { return c->lambda > 0 || c->obgd_kappa > 0; }
+
 /* Clip the TD error if the config asks for it (any learner). */
 static inline q16_t tr_clip_delta(const tr_cfg_t *c, q16_t d)
 {
     if (c->td_clip > 0) return q16_clip(d, -c->td_clip, c->td_clip);
     return d;
+}
+
+/*
+ * a * b with the configured rounding of LEARNING UPDATES.
+ * round_mode 0: round to nearest (same as q16_mul).
+ * round_mode 1: stochastic rounding (Gupta et al. 2015): add a uniform random
+ *   fraction in [0, 1) LSB before truncating, so E[result] = a*b exactly and
+ *   updates smaller than one LSB survive on average instead of vanishing.
+ */
+/* Underflow diagnostics. The M4 build defines TR_NO_DIAG so that instruction
+ * counts measure the learner, not the bookkeeping; the counters never affect
+ * any action, so host and M4 still agree bit for bit. */
+static inline q16_t tr_count_upd(tr_agent_t *ag, int64_t p, q16_t r)
+{
+#ifndef TR_NO_DIAG
+    ag->n_upd_terms++;
+    if (r == 0 && p != 0) ag->n_underflow++;
+#else
+    (void)ag; (void)p;
+#endif
+    return r;
+}
+
+static inline q16_t tr_mul_upd(tr_agent_t *ag, q16_t a, q16_t b)
+{
+    int64_t p = (int64_t)a * (int64_t)b;
+    if (ag->cfg.round_mode == 1)
+        return tr_count_upd(ag, p, q16_sat((p + (int64_t)(tr_rng_next(&ag->rng) >> 16)) >> 16));
+    return tr_count_upd(ag, p, q16_sat((p + (1LL << 15)) >> 16));
+}
+
+/* (a * b) >> sh with the configured rounding; sh = 16 is tr_mul_upd. */
+static inline q16_t tr_mul_upd_sh(tr_agent_t *ag, q16_t a, q16_t b, int sh)
+{
+    int64_t p = (int64_t)a * (int64_t)b;
+    if (ag->cfg.round_mode == 1) {
+        int64_t r = (int64_t)(tr_rng_next(&ag->rng) >> (32 - sh));   /* uniform in [0, 2^sh) */
+        return tr_count_upd(ag, p, q16_sat((p + r) >> sh));
+    }
+    return tr_count_upd(ag, p, q16_sat((p + (1LL << (sh - 1))) >> sh));
+}
+
+static inline q16_t tr_mul3_upd(tr_agent_t *ag, q16_t a, q16_t b, q16_t c)
+{
+    int64_t ab = ((int64_t)a * (int64_t)b + (1LL << 15)) >> 16;
+    int64_t p = ab * (int64_t)c;
+    int64_t exact_nonzero = (a != 0 && b != 0 && c != 0);
+    if (ag->cfg.round_mode == 1)
+        return tr_count_upd(ag, exact_nonzero, q16_sat((p + (int64_t)(tr_rng_next(&ag->rng) >> 16)) >> 16));
+    return tr_count_upd(ag, exact_nonzero, q16_sat((p + (1LL << 15)) >> 16));
 }
 
 static inline void *tr_carve(uint8_t **cursor, size_t bytes)

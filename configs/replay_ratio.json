@@ -1,0 +1,127 @@
+{
+  "name": "replay_ratio",
+  "_note": "Stage 4 (redefined after docs/research_review_2.md): spend idle compute to save samples. Replay ratio n = updates per real step ('batch'), from a compressed 1000-transition FIFO buffer, for all three learners; streaming learners (n = 1, no buffer) as references. KILL CRITERION: if n = 5 does not improve the table's steps-to-threshold, stop the sweep and report the null result.",
+  "task": {
+    "name": "pendulum",
+    "obs_mode": "trig"
+  },
+  "run": {
+    "steps": 300000,
+    "decay_steps": 180000,
+    "eval_every_steps": 10000,
+    "eval_episodes": 10
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "metrics": {
+    "threshold": -200
+  },
+  "learners": [
+    {
+      "label": "table",
+      "base": {
+        "kind": "tabular",
+        "alpha": 0.3,
+        "gamma": 0.95,
+        "bins": 11,
+        "replay_cap": 1000,
+        "replay_compact": 1
+      },
+      "sweep": {
+        "batch": [
+          1,
+          5,
+          20
+        ]
+      }
+    },
+    {
+      "label": "linear",
+      "base": {
+        "kind": "linear",
+        "alpha": 0.2,
+        "gamma": 0.95,
+        "tilings": 8,
+        "tiles": 8,
+        "features": 1024,
+        "replay_cap": 1000,
+        "replay_compact": 1
+      },
+      "sweep": {
+        "batch": [
+          1,
+          5,
+          20
+        ]
+      }
+    },
+    {
+      "label": "net",
+      "base": {
+        "kind": "mlp",
+        "alpha": 0.02,
+        "gamma": 0.95,
+        "hidden": 32,
+        "td_clip": 1.0,
+        "target_period": 100,
+        "replay_cap": 1000,
+        "replay_compact": 1
+      },
+      "sweep": {
+        "batch": [
+          1,
+          5,
+          20
+        ]
+      }
+    },
+    {
+      "label": "table-stream",
+      "base": {
+        "kind": "tabular",
+        "alpha": 1.0,
+        "gamma": 0.95,
+        "bins": 11,
+        "lam": 0.8,
+        "obgd_kappa": 2.0,
+        "round_mode": 1
+      }
+    },
+    {
+      "label": "net-stream",
+      "base": {
+        "kind": "mlp",
+        "alpha": 1.0,
+        "gamma": 0.95,
+        "lam": 0.8,
+        "obgd_kappa": 2.0,
+        "norm": 1,
+        "round_mode": 1,
+        "hidden": 32
+      }
+    },
+    {
+      "label": "random",
+      "base": {
+        "kind": "baseline_random"
+      }
+    },
+    {
+      "label": "zero-torque",
+      "base": {
+        "kind": "baseline_const",
+        "action": 1
+      }
+    }
+  ]
+}

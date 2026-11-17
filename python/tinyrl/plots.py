@@ -58,25 +58,26 @@ def learning_curves(exp: dict, specs, path: Path):
     is_base = lambda s: s["learner"]["kind"].startswith("baseline")  # noqa: E731
     labels = list(dict.fromkeys(s["label"] for s in specs if not is_base(s)))
     base_curves = []
+    xlabel = "training episode"
     for s in specs:
         if is_base(s):
-            df, _ = analysis.load_run(exp["name"], s["run_id"])
+            df, ev, _, _ = analysis.load_run(exp["name"], s["run_id"])
             if df is not None:
-                eps, M = analysis.eval_matrix(df)
+                eps, M, xlabel = analysis.eval_matrix(df, ev)
                 base_curves.append((s["run_id"], eps, np.nanmean(M, 0)))
     fig, axes = plt.subplots(1, len(labels), figsize=(4.2 * len(labels), 3.4),
                              sharey=True, squeeze=False, facecolor=SURFACE)
-    shift_at = exp.get("run", {}).get("shift_at")
+    shift_at = analysis._shift_point(exp)
     for ax, lab in zip(axes[0], labels):
         _style(ax)
         for (bname, beps, bmu), ls in zip(base_curves, (":", "-.", "--")):
             ax.plot(beps, bmu, color=INK2, linestyle=ls, linewidth=1, label=f"baseline: {bname}")
         group = [s for s in specs if s["label"] == lab]
         for s, col in zip(group, _ramp(len(group))):
-            df, _ = analysis.load_run(exp["name"], s["run_id"])
+            df, ev, _, _ = analysis.load_run(exp["name"], s["run_id"])
             if df is None:
                 continue
-            eps, M = analysis.eval_matrix(df)
+            eps, M, xlabel = analysis.eval_matrix(df, ev)
             mu = np.nanmean(M, 0)
             ci = np.array([analysis.ci95(M[:, j]) for j in range(M.shape[1])])
             name = ", ".join(f"{k}={v}" for k, v in s["sweep_values"].items()) or s["run_id"]
@@ -87,7 +88,7 @@ def learning_curves(exp: dict, specs, path: Path):
             ax.axvline(shift_at, color=INK2, linestyle="--", linewidth=0.8)
             ax.text(shift_at, ax.get_ylim()[1], " shift", color=INK2, fontsize=7, va="top")
         ax.set_title(lab, color=INK, fontsize=10, loc="left")
-        ax.set_xlabel("training episode", color=INK2, fontsize=8)
+        ax.set_xlabel(xlabel, color=INK2, fontsize=8)
         ax.legend(fontsize=7, frameon=False, labelcolor=INK2)
     axes[0][0].set_ylabel("greedy eval return (mean, 95% CI)", color=INK2, fontsize=8)
     fig.suptitle(f"{exp['name']}: learning curves", color=INK, fontsize=11, x=0.01, ha="left")
@@ -96,7 +97,9 @@ def learning_curves(exp: dict, specs, path: Path):
     plt.close(fig)
 
 
-def headline(exp: dict, summ, path: Path, y="final", ylabel="final performance (greedy eval return)"):
+def headline(exp: dict, summ, path: Path, y="final", ylabel="final performance (greedy eval return)",
+             exp_path=None):
+    exp_path = exp_path or exp["name"]
     fig, ax = plt.subplots(figsize=(7.0, 4.4), facecolor=SURFACE)
     _style(ax)
     base = summ[summ["kind"].str.startswith("baseline")]
@@ -105,21 +108,33 @@ def headline(exp: dict, summ, path: Path, y="final", ylabel="final performance (
         if np.isnan(r.get(f"{y}_mean", np.nan)):
             continue
         ax.axhline(r[f"{y}_mean"], color=INK2, linestyle=":", linewidth=1)
-        ax.annotate(f"baseline: {r['label']}", (0.01, r[f"{y}_mean"]), xycoords=("axes fraction", "data"),
-                    xytext=(0, 3), textcoords="offset points", fontsize=7, color=INK2)
-    for kind in ("tabular", "linear", "mlp"):
-        d = summ[summ["kind"] == kind].sort_values("peak_bytes")
-        if d.empty:
+        ax.annotate(f"baseline: {r['label']}", (0.99, r[f"{y}_mean"]), xycoords=("axes fraction", "data"),
+                    xytext=(0, 3), textcoords="offset points", fontsize=7, color=INK2, ha="right")
+    # one line per learner LABEL (e.g. "net" and "net-stream" are separate lines),
+    # colour and marker by learner KIND
+    for label in dict.fromkeys(summ["label"]):
+        d = summ[summ["label"] == label].sort_values("peak_bytes")
+        kind = d["kind"].iloc[0]
+        if kind not in KIND_COLOR:
             continue
         c, mk = KIND_COLOR[kind], KIND_MARKER[kind]
-        ax.plot(d["peak_bytes"], d[f"{y}_mean"], color=c, linewidth=1.2, alpha=0.6)
+        dashed = "stream" in label
+        ax.plot(d["peak_bytes"], d[f"{y}_mean"], color=c, linewidth=1.2, alpha=0.6,
+                linestyle="--" if dashed else "-")
         for _, r in d.iterrows():
+            # every seed as a small dot: shows bimodality (solved / failed) the mean hides
+            try:
+                vals = analysis.per_seed(exp_path, r["run_id"], y).to_numpy(float)
+                jitter = np.exp(np.random.default_rng(0).uniform(-0.04, 0.04, len(vals)))
+                ax.scatter(r["peak_bytes"] * jitter, vals, s=9, color=c, alpha=0.35, linewidths=0, zorder=2)
+            except (FileNotFoundError, KeyError):
+                pass
             measured = r["peak_source"] == "m4-qemu"
             ax.errorbar(r["peak_bytes"], r[f"{y}_mean"], yerr=r[f"{y}_ci95"] if r["n_seeds"] > 1 else None,
                         fmt=mk, markersize=7, color=c, ecolor=c, elinewidth=1, capsize=2,
                         markerfacecolor=c if measured else SURFACE, markeredgewidth=1.5, zorder=3)
         last = d.iloc[-1]
-        ax.annotate(KIND_NAME[kind], (last["peak_bytes"], last[f"{y}_mean"]), xytext=(7, 9),
+        ax.annotate(label, (last["peak_bytes"], last[f"{y}_mean"]), xytext=(7, 9),
                     textcoords="offset points", fontsize=8, color=INK2, va="bottom",
                     bbox=dict(boxstyle="round,pad=0.15", fc=SURFACE, ec="none", alpha=0.85))
     ax.axvline(F446_SRAM, color=INK2, linestyle="--", linewidth=0.8)
@@ -169,6 +184,33 @@ def compute_plot(exp: dict, summ, path: Path):
     return True
 
 
+def underflow_plot(exp: dict, summ, path: Path):
+    """Share of learning updates lost to Q16.16 rounding, per configuration."""
+    d = summ[~summ["kind"].str.startswith("baseline")].dropna(subset=["underflow_frac"])
+    if d.empty:
+        return
+    fig, ax = plt.subplots(figsize=(7.0, 0.35 * len(d) + 1.4), facecolor=SURFACE)
+    _style(ax)
+    ax.grid(axis="y", visible=False)
+    ys = np.arange(len(d))
+    sr = d["round_mode"].to_numpy() == 1 if "round_mode" in d else np.zeros(len(d), bool)
+    bars = ax.barh(ys, 100 * d["underflow_frac"], color=[KIND_COLOR.get(k, INK2) for k in d["kind"]], height=0.6)
+    for b, is_sr in zip(bars, sr):
+        if is_sr:      # stochastic rounding: zeros are expected and unbiased, not lost learning
+            b.set_alpha(0.35)
+            b.set_hatch("///")
+    for y_, v in zip(ys, d["underflow_frac"]):
+        ax.text(100 * v + 0.5, y_, f"{100 * v:.1f}%", va="center", fontsize=7, color=INK2)
+    ax.set_yticks(ys, [r + ("  [SR]" if is_sr else "") for r, is_sr in zip(d["run_id"], sr)], fontsize=7)
+    ax.set_xlabel("update products rounded to exactly zero (%)\n"
+                  "[SR] = stochastic rounding: zeros there are unbiased by design; the number matters for round-to-nearest",
+                  color=INK2, fontsize=8)
+    ax.set_title(f"{exp['name']}: Q16.16 underflow in learning updates", color=INK, fontsize=10, loc="left")
+    fig.tight_layout()
+    fig.savefig(path, dpi=150, facecolor=SURFACE)
+    plt.close(fig)
+
+
 def make_all(exp_name: str):
     exp = sweep.load(exp_name)
     specs = sweep.expand(exp)
@@ -183,12 +225,15 @@ def make_all(exp_name: str):
     files.append(OUT / f"{name}_summary.csv")
     learning_curves(exp, specs, OUT / f"{name}_curves.png")
     files.append(OUT / f"{name}_curves.png")
-    headline(exp, summ, OUT / f"{name}_headline.png")
     files.append(OUT / f"{name}_headline.png")
-    if exp.get("run", {}).get("shift_at") is not None and "recovery_episodes_mean" in summ:
-        headline(exp, summ, OUT / f"{name}_adaptation.png", y="recovery_episodes",
-                 ylabel="episodes to recover after shift (lower = faster)")
+    headline(exp, summ, OUT / f"{name}_headline.png", exp_path=exp_name)
+    if analysis._shift_point(exp) is not None and "post_auc_mean" in summ:
+        headline(exp, summ, OUT / f"{name}_adaptation.png", y="post_auc",
+                 ylabel="mean eval return after the shift (higher = adapts better)", exp_path=exp_name)
         files.append(OUT / f"{name}_adaptation.png")
+    if "underflow_frac" in summ and summ["underflow_frac"].notna().any():
+        underflow_plot(exp, summ, OUT / f"{name}_underflow.png")
+        files.append(OUT / f"{name}_underflow.png")
     if compute_plot(exp, summ, OUT / f"{name}_compute.png"):
         files.append(OUT / f"{name}_compute.png")
     return files

@@ -49,3 +49,65 @@ an easy optimisation target.
   the default config. It was caught because instructions/step came out as exactly 0.
   The default config now lives in `m4/default_cfg/`.
 - A test tolerance in `test_fixed` ignored input quantisation error, which grows with operand size.
+
+
+## Second round (17 Nov 2026, after the literature review): NOT results either
+
+Deterministic checks (re-run any time):
+- Defaults unchanged: C regression errors identical before/after (0.0273 / 0.0236 / 0.0041); Stage 1 gate still bit-exact.
+- Streaming path: every learner fits the 1-step test function; Q(λ = 0.8) reaches Q* on the corridor (table and linear).
+- Stochastic rounding test (α = 2/65536, 20,000 updates towards 0.1): round-to-nearest stays at exactly 0.0000;
+  stochastic rounding reaches 0.0456 (exact 0.0457).
+- In the synthetic 1-step test, 46% of the streaming network's update products rounded to zero under
+  round-to-nearest (555,296 of 1,208,833). Real tasks will differ; the `_underflow.png` figure measures it per run.
+- Host == M4 bit-exact for all smoke configs including the streaming table and network.
+
+M4 (QEMU) instruction counts per act+learn step, smoke configs:
+
+| learner | before | after |
+|---|---|---|
+| table | ~830 | ~530 (pendulum 2-D) / ~630 (3-D) |
+| linear, 8 tilings | ~8,415 | ~1,604 (1,754–1,887 with 3-D input) |
+| network 8 / 16 hidden, replay batch 4 | 12,519 / 20,831 | 13,424 / 22,450 (+7%: per-weight rounding-mode branch) |
+| streaming network, 16 hidden | — | 19,010, peak SRAM 1,812 B |
+| streaming table, 9 bins, 3-D | — | 2,792 (sparse-trace search), peak 9,800 B |
+
+Go1 open-loop difficulty (`go1_difficulty.py --phase-lock`, 10 episodes per level; success = no fall and ≥ 2 m):
+0.05 → 1.00, 0.07 → 0.90, 0.08 → 0.50, 0.09 → 0.40, 0.11 → 0.00 (stuck rather than fallen: 0.6 m mean).
+
+Bugs found and fixed in this round:
+- The M4 benchmark header generator wrote the Python field name `.lam` instead of C's `.lambda`, so every
+  build failed and was reported as "does not fit in SRAM". Error messages now distinguish the two.
+- With phase lock, 0.25 s was 12 CPG ticks of 0.02 s (not 12.5), so the decision phase drifted by 4% of a
+  half cycle per decision. Phase lock now runs the CPG at 100 Hz (25 ticks).
+
+
+## Round 3 (17 Nov 2026 evening, after the second review): NOT results either
+
+M4 kernel costs (QEMU instructions per learning step, kernels only; `results/m4/kernels.csv`):
+
+| kernel | memory | instructions/step |
+|---|---|---|
+| table update (any size), Q16.16 / float32 / q15 | 1.5 KB – 120 KB (q15: half) | ~51 / ~50 / ~47 |
+| tile-coding update, 8 tilings, Q16.16 / float32 / q15 | 3.2 – 49 KB (q15: half) | ~412 / ~448 / ~413 |
+| network forward×2 + backward, H = 16 / 32 / 64, Q16.16 | 0.7 – 2.4 KB | 2,670 / 4,986 / 10,542 |
+| same in float32 | 0.7 – 2.4 KB | 2,284 / 4,305 / 8,444 |
+| recursive LSTD-Q float32, k = 32 / 64 / 128 | 4.9 / 18 / 69 KB | 32,804 / 135,266 / 532,641 |
+| tabular Dyna-Q, 1,331 cells, n = 0 / 5 / 20 / 50 | 40 KB | 51 / 281 / 867 / 2,118 |
+
+Full learners on the M4 (smoke configs): compressed-replay network 6,936 B peak vs 16,400 B plain; dense tiles
+12,976 B vs hashed 13,264 B at similar cost; streaming network with continual backprop 2,088 B, ~21,300 instructions/step.
+
+Go1 reflex ladder, 10 episodes per cell, phase-locked (success = no fall and ≥ 2 m), roughness 0.08 / 0.10:
+B0 open loop 0.5 / 0.1 · B1 Tegotae 0.6 / 0.2 · B2 posture reflex 1.0 / 0.1 · B3 stumble reflex 1.0 / 0.7 ·
+B4 all three 0.6 / 0.1. Posture reflex lowered mean |roll|+|pitch| at 0.08 from 0.12 to 0.09 rad (sign check passed).
+
+(1+1)-ES over reflex gains, 25 evaluations × 2 terrains, roughness 0.10, one run: moved towards higher clearance
+(a_calf 0.35 → 0.51) with the stumble reflex on, posture gain 0. Very noisy; a pipeline check.
+
+Hash collisions (deterministic): see D37.
+
+Bugs found and fixed in this round:
+- Dyna-Q kernel under-counted planning cost (early steps had few modelled pairs to replay); the benchmark now
+  pre-fills the model to measure the steady state.
+- The FPU must be enabled in the reset handler for hard-float builds (CPACR), added for the kernel benchmarks.

@@ -1,14 +1,14 @@
 {
   "name": "smoke",
-  "_note": "Pipeline check only: tiny budgets, numbers mean nothing. ~1 min.",
+  "_note": "Pipeline check only: tiny budgets, numbers mean nothing. ~1 min. Used by CI (host == M4 check).",
   "task": {
     "name": "pendulum",
-    "obs_mode": "angle"
+    "obs_mode": "trig"
   },
   "run": {
-    "episodes": 60,
-    "decay_episodes": 40,
-    "eval_every": 20,
+    "steps": 12000,
+    "decay_steps": 8000,
+    "eval_every_steps": 4000,
     "eval_episodes": 2
   },
   "seeds": [
@@ -25,8 +25,8 @@
       },
       "sweep": {
         "bins": [
-          7,
-          15
+          5,
+          9
         ]
       }
     },
@@ -62,9 +62,76 @@
           8,
           16
         ]
+      }
+    },
+    {
+      "label": "net-stream",
+      "base": {
+        "kind": "mlp",
+        "alpha": 1.0,
+        "gamma": 0.95,
+        "lam": 0.8,
+        "obgd_kappa": 2.0,
+        "norm": 1,
+        "round_mode": 1
       },
-      "task": {
-        "obs_mode": "trig"
+      "sweep": {
+        "hidden": [
+          16
+        ]
+      }
+    },
+    {
+      "label": "table-stream",
+      "base": {
+        "kind": "tabular",
+        "alpha": 1.0,
+        "gamma": 0.95,
+        "bins": 9,
+        "lam": 0.8,
+        "obgd_kappa": 2.0,
+        "round_mode": 1
+      }
+    },
+    {
+      "label": "net-compact",
+      "base": {
+        "kind": "mlp",
+        "alpha": 0.02,
+        "gamma": 0.95,
+        "hidden": 8,
+        "td_clip": 1.0,
+        "target_period": 100,
+        "replay_cap": 500,
+        "batch": 4,
+        "replay_compact": 1
+      }
+    },
+    {
+      "label": "linear-dense",
+      "base": {
+        "kind": "linear",
+        "alpha": 0.2,
+        "gamma": 0.95,
+        "tilings": 8,
+        "tiles": 4,
+        "features": 1000,
+        "tile_dense": 1
+      }
+    },
+    {
+      "label": "net-stream-cbp",
+      "base": {
+        "kind": "mlp",
+        "alpha": 1.0,
+        "gamma": 0.95,
+        "lam": 0.8,
+        "obgd_kappa": 2.0,
+        "norm": 1,
+        "round_mode": 1,
+        "hidden": 16,
+        "cbp_period": 200,
+        "cbp_maturity": 1000
       }
     },
     {

@@ -44,8 +44,10 @@ SRAM = 128 * 1024
 
 def c_initializer(cfg: cbind.Cfg) -> str:
     d = cbind.cfg_dict(cfg)
+    rename = {"lam": "lambda"}            # `lambda` is a Python keyword
     parts = []
     for k, v in d.items():
+        k = rename.get(k, k)
         parts.append(f".{k} = {{{', '.join(str(x) for x in v)}}}" if isinstance(v, list) else f".{k} = {v}")
     return "{ " + ", ".join(parts) + " }"
 
@@ -100,7 +102,8 @@ def measure(spec, exp_name):
         for n in (N1, N2):
             size, err = build(cfg, arena, n, mode, base / f"m{mode}_n{n}")
             if size is None:
-                row["error"] = "link failed (does not fit in SRAM?)" if "RAM" in err or "static" in err else err.strip()[:120]
+                too_big = "static RAM too large" in err or "overflowed" in err
+                row["error"] = "does not fit in SRAM (link failed)" if too_big else "build failed: " + err.strip()[-160:]
                 row["peak_bytes_estimate"] = arena + 300  # rough, for plotting only
                 return row
             res[(mode, n)] = (size, run_qemu(base / f"m{mode}_n{n}" / "fw.elf"))

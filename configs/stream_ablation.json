@@ -1,0 +1,202 @@
+{
+  "name": "stream_ablation",
+  "_note": "Stage 3/5: which part of the Stream Q(lambda) recipe matters at tiny sizes? One change at a time, for all three learners (lambda is a shared factor, so the comparison stays about representation). Pendulum, cos/sin encoding.",
+  "task": {
+    "name": "pendulum",
+    "obs_mode": "trig"
+  },
+  "run": {
+    "steps": 300000,
+    "decay_steps": 180000,
+    "eval_every_steps": 10000,
+    "eval_episodes": 10
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "learners": [
+    {
+      "label": "table-sgd",
+      "base": {
+        "kind": "tabular",
+        "alpha": 0.3,
+        "gamma": 0.95,
+        "bins": 11
+      }
+    },
+    {
+      "label": "table-obgd",
+      "base": {
+        "kind": "tabular",
+        "alpha": 1.0,
+        "gamma": 0.95,
+        "bins": 11,
+        "obgd_kappa": 2.0
+      }
+    },
+    {
+      "label": "table-obgd-lam",
+      "base": {
+        "kind": "tabular",
+        "alpha": 1.0,
+        "gamma": 0.95,
+        "bins": 11,
+        "obgd_kappa": 2.0,
+        "lam": 0.8
+      }
+    },
+    {
+      "label": "table-obgd-lam-sr",
+      "base": {
+        "kind": "tabular",
+        "alpha": 1.0,
+        "gamma": 0.95,
+        "bins": 11,
+        "obgd_kappa": 2.0,
+        "lam": 0.8,
+        "round_mode": 1
+      }
+    },
+    {
+      "label": "linear-sgd",
+      "base": {
+        "kind": "linear",
+        "alpha": 0.2,
+        "gamma": 0.95,
+        "tilings": 8,
+        "tiles": 8,
+        "features": 1024
+      }
+    },
+    {
+      "label": "linear-obgd",
+      "base": {
+        "kind": "linear",
+        "alpha": 1.0,
+        "gamma": 0.95,
+        "tilings": 8,
+        "tiles": 8,
+        "features": 1024,
+        "obgd_kappa": 2.0
+      }
+    },
+    {
+      "label": "linear-obgd-lam",
+      "base": {
+        "kind": "linear",
+        "alpha": 1.0,
+        "gamma": 0.95,
+        "tilings": 8,
+        "tiles": 8,
+        "features": 1024,
+        "obgd_kappa": 2.0,
+        "lam": 0.8
+      }
+    },
+    {
+      "label": "linear-obgd-lam-sr",
+      "base": {
+        "kind": "linear",
+        "alpha": 1.0,
+        "gamma": 0.95,
+        "tilings": 8,
+        "tiles": 8,
+        "features": 1024,
+        "obgd_kappa": 2.0,
+        "lam": 0.8,
+        "round_mode": 1
+      }
+    },
+    {
+      "label": "net-sgd",
+      "base": {
+        "kind": "mlp",
+        "alpha": 0.02,
+        "gamma": 0.95,
+        "hidden": 32,
+        "td_clip": 1.0
+      }
+    },
+    {
+      "label": "net-replay-target",
+      "base": {
+        "kind": "mlp",
+        "alpha": 0.02,
+        "gamma": 0.95,
+        "hidden": 32,
+        "td_clip": 1.0,
+        "target_period": 100,
+        "replay_cap": 2000,
+        "batch": 8
+      }
+    },
+    {
+      "label": "net-obgd",
+      "base": {
+        "kind": "mlp",
+        "alpha": 1.0,
+        "gamma": 0.95,
+        "hidden": 32,
+        "obgd_kappa": 2.0
+      }
+    },
+    {
+      "label": "net-obgd-lam",
+      "base": {
+        "kind": "mlp",
+        "alpha": 1.0,
+        "gamma": 0.95,
+        "hidden": 32,
+        "obgd_kappa": 2.0,
+        "lam": 0.8
+      }
+    },
+    {
+      "label": "net-obgd-lam-ln",
+      "base": {
+        "kind": "mlp",
+        "alpha": 1.0,
+        "gamma": 0.95,
+        "hidden": 32,
+        "obgd_kappa": 2.0,
+        "lam": 0.8,
+        "norm": 1
+      }
+    },
+    {
+      "label": "net-obgd-lam-ln-sr",
+      "base": {
+        "kind": "mlp",
+        "alpha": 1.0,
+        "gamma": 0.95,
+        "hidden": 32,
+        "obgd_kappa": 2.0,
+        "lam": 0.8,
+        "norm": 1,
+        "round_mode": 1
+      }
+    },
+    {
+      "label": "random",
+      "base": {
+        "kind": "baseline_random"
+      }
+    },
+    {
+      "label": "zero-torque",
+      "base": {
+        "kind": "baseline_const",
+        "action": 1
+      }
+    }
+  ]
+}
