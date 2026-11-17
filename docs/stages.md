@@ -203,7 +203,15 @@ In a 10-episode probe the stumble reflex alone took success at roughness 0.10 fr
 (Q16.16 / float32 / q15, LSTD-Q, Dyna-Q) on the M4 and draws `results/figures/tradeoff_map.png`.
 `python3 scripts/tile_collisions.py` shows how full the hashed tile table is.
 
-**Hardware (optional, Nucleo-F446RE):** `m4/` builds for the F446 memory map
-already. To run on the board you need the STM32 startup and clock code, swap
-semihosting for UART output, and read the DWT cycle counter for timing. Only
-after that measurement exists can you make a timing claim.
+**Hardware (optional, Nucleo-F446RE): processor-in-the-loop.**
+
+```bash
+python3 scripts/pil_check.py                       # in QEMU: on-chip learning == host, bit for bit
+make -C m4/pil nucleo                              # USART2 (ST-LINK VCP), DWT cycles, 16 MHz HSI
+st-flash write build/pil/nucleo/pil.bin 0x8000000  # or copy pil.bin to the NUCLEO USB drive
+pip install pyserial
+python3 scripts/pil_check.py --no-qemu --link serial:/dev/ttyACM0
+```
+
+The Nucleo build has never run on hardware: expect to debug the UART first (a logic analyser or the ST-LINK
+VCP at 115200 baud). Only after this produces cycle counts can you make a timing claim, for that board and clock.
