@@ -11,8 +11,11 @@ cost against peak working memory.
 trade learning performance, adaptation speed and compute cost against peak
 working memory when learning online on a Cortex-M4-class platform?
 
-> **Status: reference implementation, every stage built and smoke-tested; first
-> experiments (Stage 2, pendulum first pass) recorded in [`docs/results.md`](docs/results.md).** Numbers seen while building are in
+> **Status: every stage built and tested; first measured results in [`docs/results.md`](docs/results.md):**
+> Stage 2 (table, 10 seeds) and a first pass of the main pendulum comparison (all learners, 5 seeds).
+> Raw logs: `results/raw_archive/`. Hardware timing still needs the Nucleo.
+
+![pendulum first pass](results/figures/pendulum_main_tuned_headline.png) Numbers seen while building are in
 > [`docs/build_notes.md`](docs/build_notes.md), from single seeds. They are
 > not results. A number enters [`docs/results.md`](docs/results.md) only after a
 > full run with ≥ 5 seeds, from a recorded commit and command. Hardware

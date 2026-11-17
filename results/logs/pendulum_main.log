@@ -1,0 +1,2 @@
+       table: best {'alpha': 0.30018406847847273}  score -912.38  (median of K=20: -970.40)
+      linear: best {'alpha': 0.300417304136544}  score -331.01  (median of K=20: -437.32)
