@@ -67,7 +67,8 @@
         "td_clip": 1.0,
         "target_period": 100,
         "replay_cap": 1000,
-        "batch": 4
+        "batch": 4,
+        "replay_compact": 1
       },
       "sweep": {
         "hidden": [

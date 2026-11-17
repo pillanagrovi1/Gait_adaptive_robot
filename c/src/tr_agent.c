@@ -104,7 +104,9 @@ int tr_init(tr_agent_t *ag, const tr_cfg_t *cfg, void *arena, size_t arena_bytes
     ag->rng = tr_rng_seed(seed);
     for (int i = 0; i < cfg->obs_dim; i++) {
         int64_t range = (int64_t)cfg->obs_hi[i] - cfg->obs_lo[i];
-        ag->inv_range[i] = q16_sat((1LL << 32) / range);
+        /* rounded, not truncated (decision D34): truncation biased every normalised value
+         * down by up to 1 LSB, so points exactly on a tile edge fell into the tile below */
+        ag->inv_range[i] = q16_sat(((1LL << 32) + range / 2) / range);
     }
 
     memset(arena, 0, need);
