@@ -27,7 +27,14 @@ def main():
     name = sys.argv[1]
     p = ROOT / "results" / "figures" / f"{name}_summary.csv"
     d = pd.read_csv(p)
-    commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
+    import json
+    commits = set()
+    for mf in (ROOT / "results" / "raw" / name).glob("*/seed*_meta.json"):
+        commits.add(json.loads(mf.read_text()).get("git_commit", "?"))
+    commits.discard("?")
+    commit = ", ".join(sorted(commits)) if commits else (
+        "not recorded (runs predate commit tracking; see docs/results.md) — HEAD now " +
+        subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip())
     print(f"**{name}** · commit `{commit}` · config `configs/{name}.json` · "
           f"command `bash scripts/run_experiment.sh {name.removesuffix('_tuned')}` · "
           f"seeds per config: {int(d['n_seeds'].min())}–{int(d['n_seeds'].max())} · intervals: {d['ci_method'].iloc[0]} 95%\n")
