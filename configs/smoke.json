@@ -94,6 +94,47 @@
       }
     },
     {
+      "label": "net-compact",
+      "base": {
+        "kind": "mlp",
+        "alpha": 0.02,
+        "gamma": 0.95,
+        "hidden": 8,
+        "td_clip": 1.0,
+        "target_period": 100,
+        "replay_cap": 500,
+        "batch": 4,
+        "replay_compact": 1
+      }
+    },
+    {
+      "label": "linear-dense",
+      "base": {
+        "kind": "linear",
+        "alpha": 0.2,
+        "gamma": 0.95,
+        "tilings": 8,
+        "tiles": 4,
+        "features": 1000,
+        "tile_dense": 1
+      }
+    },
+    {
+      "label": "net-stream-cbp",
+      "base": {
+        "kind": "mlp",
+        "alpha": 1.0,
+        "gamma": 0.95,
+        "lam": 0.8,
+        "obgd_kappa": 2.0,
+        "norm": 1,
+        "round_mode": 1,
+        "hidden": 16,
+        "cbp_period": 200,
+        "cbp_maturity": 1000
+      }
+    },
+    {
       "label": "random",
       "base": {
         "kind": "baseline_random"

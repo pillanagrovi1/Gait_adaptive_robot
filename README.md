@@ -32,6 +32,19 @@ working memory when learning online on a Cortex-M4-class platform?
 | Evaluation | step budget, 10 paired seeds, equal-budget tuning (`scripts/tune.py`), seed dots, paired differences, new adaptation metric, from-scratch reference | — |
 | Go1 | phase-locked decisions + pair bit + half-cycle IMU averaging (`go1_gait_v2`); terrain difficulty sweep (`scripts/go1_difficulty.py`) | open-loop success: 1.0 at roughness 0.05, 0.4–0.5 at 0.08–0.09 (10 episodes each: a lead) |
 
+## Second review (17 Nov evening): algorithm trade-offs and self-adapting gaits
+
+[`docs/research_review_2.md`](docs/research_review_2.md). Main message: on this chip compute is nearly free at 4–50 Hz;
+SRAM and real samples are scarce, so spend cycles to save samples without spending SRAM.
+
+| Added | Measured so far |
+|---|---|
+| Compressed replay (`replay_compact`), replay-ratio experiment (Stage 4 redefined) | buffer 2.67× smaller; M4 network 16.4 → 6.9 KB |
+| Dense tiles (`tile_dense: 1`), hash finaliser (`tile_dense: 2`), `scripts/tile_collisions.py` | default pendulum hashing shares 64% of slots; with finaliser 51% |
+| Continual backprop for the network, Q2.30 ObGD step | — |
+| Kernel trade-off map: Q16.16 vs float32 vs q15, LSTD-Q, Dyna-Q (`scripts/bench_kernels.py`) | float32 ≈ Q16.16 for table and tiles; network 14–20% fewer instructions in float (QEMU understates float cost); LSTD-Q k=64: 135k instr., 18 KB |
+| Go1 self-adapting gait: Tegotae phase feedback, IMU posture reflex, stumble reflex (B1–B4), ES over gains (B5), contacts, factored and persistent actions, `go1_gait_v3` | stumble reflex: success 0.1 → 0.7 at roughness 0.10 (10 episodes: a lead) |
+
 ## How it fits together
 
 ```mermaid
@@ -76,10 +89,10 @@ python3 scripts/view_go1.py            # watch the robot (needs a display)
 | 1 | Corridor, Q-learning by hand → Python → C | `python3 -m tinyrl.ref.corridor_ref` (in `python/`), `make test` | C matches Python bit for bit ✅ (test passes) |
 | 2 | Pendulum, table learner | `run_sweep.py stage2_pendulum_table`, `measure_m4.py …`, `make_plots.py …` | if the emulator costs > 6 h, measure RAM from the binary and move on |
 | 3 | Linear + network learners (incl. streaming network) | `… pendulum_main`, `… stream_ablation` | if the network will not learn stably, report it and continue with two |
-| 4 | Replay buffer | `… stage4_buffer` | — |
+| 4 | Replay ratio (compressed buffer) | `… replay_ratio`, `… stage4_buffer` | kill criterion in `replay_ratio.json` |
 | 5 | Cart-pole + sweeps | `… cartpole_main`, `… adaptation_pendulum` (+ `_scratch`) | no plot → cut the sweep until one exists |
 | 6 | Write-up | `docs/results.md` | — |
-| 7 | Gait adaptation on Go1 | `scripts/go1_difficulty.py`, `… go1_gait_v2`, `scripts/view_go1.py` | — |
+| 7 | Gait adaptation on Go1 | `scripts/go1_difficulty.py --ladder`, `scripts/go1_es.py`, `… go1_gait_v3`, `scripts/view_go1.py` | — |
 
 Step-by-step instructions, what to read in the code at each stage and how to
 rewrite each learner yourself: [`docs/stages.md`](docs/stages.md).
@@ -96,7 +109,9 @@ tools/qemu_plugin/  QEMU plugin that counts executed instructions
 python/tinyrl/  cbind.py (ctypes → C), envs/ (MuJoCo tasks), harness.py, sweep.py, analysis.py, plots.py
 python/tinyrl/ref/  Python references: bit-exact corridor mirror, float twins of the learners
 configs/        one JSON per experiment
-scripts/        run_sweep.py, tune.py, measure_m4.py, make_plots.py, go1_difficulty.py, view_go1.py, setup_ubuntu.sh
+scripts/        run_sweep.py, tune.py, measure_m4.py, make_plots.py, bench_kernels.py, tile_collisions.py,
+                go1_difficulty.py, go1_es.py, view_go1.py, setup_ubuntu.sh
+m4/kernels/     candidate update kernels for the trade-off map
 assets/unitree_go1/  Go1 model from MuJoCo Menagerie (BSD-3, see its LICENSE) + our rough-terrain scene
 docs/           architecture, decisions log, stages guide, research review, results log, build notes
 ```

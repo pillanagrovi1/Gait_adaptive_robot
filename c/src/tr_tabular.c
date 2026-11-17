@@ -97,5 +97,5 @@ q16_t tr_tab_trace(tr_agent_t *ag, const q16_t *obs, int a, q16_t decay, int64_t
     return ag->q[a];
 }
 
-void tr_tab_apply(tr_agent_t *ag, q16_t step) { tr_strace_apply(ag, &ag->u.tab.tr, ag->u.tab.table, step); }
+void tr_tab_apply(tr_agent_t *ag, q16_t step, int sh) { tr_strace_apply(ag, &ag->u.tab.tr, ag->u.tab.table, step, sh); }
 void tr_tab_clear(tr_agent_t *ag) { tr_strace_clear(&ag->u.tab.tr); }

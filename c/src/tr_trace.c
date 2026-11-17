@@ -60,10 +60,10 @@ int64_t tr_strace_norm1(const tr_strace_t *t)
     return s;
 }
 
-void tr_strace_apply(tr_agent_t *ag, const tr_strace_t *t, q16_t *w, q16_t step)
+void tr_strace_apply(tr_agent_t *ag, const tr_strace_t *t, q16_t *w, q16_t step, int sh)
 {
     for (uint32_t i = 0; i < t->n; i++) {
         q16_t *wi = &w[t->idx[i]];
-        *wi = q16_add(*wi, tr_mul_upd(ag, step, t->val[i]));
+        *wi = q16_add(*wi, tr_mul_upd_sh(ag, step, t->val[i], sh));
     }
 }

@@ -17,6 +17,12 @@
  * Parameter layout in p[]: W1 (H*d, row j = unit j), b1 (H), W2 (A*H), b2 (A).
  * Memory: params*4 (+ target params*4) (+ trace params*4) + 3*H*4 scratch.
  *
+ * Continual backprop (Dohare et al., Nature 2024), cbp_period > 0: every hidden unit
+ * keeps a running utility u_j = 0.99 u_j + 0.01 |h_j| sum_k |W2[k,j]|; every cbp_period
+ * updates the least useful unit older than cbp_maturity is re-initialised (fresh input
+ * weights, zero output weights, so Q does not jump). Restores plasticity after a
+ * dynamics change. Memory: 8 bytes per hidden unit.
+ *
  * LayerNorm as a target-network replacement: Gallici et al. 2025 (PQN) and
  * Elsayed et al. 2024 (Stream Q(lambda)). Their nets are >= 128 wide; whether it
  * helps at 8-64 units is an open question this project can answer.
@@ -39,7 +45,13 @@ size_t tr_mlp_mem(const tr_cfg_t *c)
     if (c->target_period > 0) m += TR_ALIGN4(np * sizeof(q16_t));
     if (tr_stream_on(c)) m += TR_ALIGN4(np * sizeof(q16_t));
     m += 3 * TR_ALIGN4((size_t)c->hidden * sizeof(q16_t));
+    if (c->cbp_period > 0) m += 2 * TR_ALIGN4((size_t)c->hidden * sizeof(uint32_t));
     return m;
+}
+
+static q16_t init_scale(int fan_in)
+{
+    return (q16_t)(((int64_t)Q16_ONE << 16) / q16_sqrt(fan_in * Q16_ONE));
 }
 
 /* uniform in [-s, s) */
@@ -62,6 +74,8 @@ int tr_mlp_init(tr_agent_t *ag, uint8_t **cursor)
     m->z  = (q16_t *)tr_carve(cursor, H * sizeof(q16_t));
     m->h  = (q16_t *)tr_carve(cursor, H * sizeof(q16_t));
     m->g  = (q16_t *)tr_carve(cursor, H * sizeof(q16_t));
+    m->util = c->cbp_period > 0 ? (q16_t *)tr_carve(cursor, H * sizeof(q16_t)) : NULL;
+    m->age  = c->cbp_period > 0 ? (uint32_t *)tr_carve(cursor, H * sizeof(uint32_t)) : NULL;
     m->inv_sigma = Q16_ONE;
 
     /* Uniform fan-in init: W ~ U(-1/sqrt(fan_in), 1/sqrt(fan_in)), biases 0. */
@@ -151,6 +165,41 @@ static void hidden_grad(tr_agent_t *ag, int a)
     }
 }
 
+/* Continual backprop bookkeeping; call after each update, with h from the forward on s. */
+static void cbp_step(tr_agent_t *ag)
+{
+    const tr_cfg_t *c = &ag->cfg;
+    tr_mlp_t *m = &ag->u.mlp;
+    if (!m->util) return;
+    const int d = c->obs_dim, H = c->hidden, A = c->n_actions;
+    q16_t *W1 = m->p, *b1 = m->p + H * d, *W2 = b1 + H;
+    const q16_t keep = 64881, gain = Q16_ONE - 64881;          /* 0.99 / 0.01 */
+    for (int j = 0; j < H; j++) {
+        int64_t out = 0;
+        for (int k = 0; k < A; k++) out += W2[k * H + j] < 0 ? -(int64_t)W2[k * H + j] : W2[k * H + j];
+        q16_t contrib = q16_mul(m->h[j], q16_sat(out));
+        m->util[j] = q16_add(q16_mul(m->util[j], keep), q16_mul(contrib, gain));
+        if (m->age[j] < UINT32_MAX) m->age[j]++;
+    }
+    if ((ag->n_updates + 1u) % (uint32_t)c->cbp_period != 0) return;
+    int worst = -1;
+    for (int j = 0; j < H; j++)
+        if (m->age[j] >= (uint32_t)c->cbp_maturity && (worst < 0 || m->util[j] < m->util[worst])) worst = j;
+    if (worst < 0) return;
+    q16_t s1 = init_scale(d);
+    for (int i = 0; i < d; i++) W1[worst * d + i] = uniform_sym(&ag->rng, s1);
+    b1[worst] = 0;
+    for (int k = 0; k < A; k++) W2[k * H + worst] = 0;
+    m->util[worst] = 0;
+    m->age[worst] = 0;
+    if (m->e) {                                                  /* forget its trace too */
+        q16_t *eW1 = m->e, *eb1 = m->e + H * d, *eW2 = eb1 + H;
+        for (int i = 0; i < d; i++) eW1[worst * d + i] = 0;
+        eb1[worst] = 0;
+        for (int k = 0; k < A; k++) eW2[k * H + worst] = 0;
+    }
+}
+
 void tr_mlp_update(tr_agent_t *ag, const q16_t *obs, int a, q16_t y)
 {
     const tr_cfg_t *c = &ag->cfg;
@@ -160,7 +209,7 @@ void tr_mlp_update(tr_agent_t *ag, const q16_t *obs, int a, q16_t y)
 
     forward(ag, m->p, obs, ag->q);
     q16_t delta = tr_clip_delta(c, q16_sub(y, ag->q[a]));
-    if (delta == 0) return;
+    if (delta == 0) { cbp_step(ag); return; }
     const q16_t lr = c->alpha;
     q16_t *w2a = &W2[a * H];
     const q16_t *x = ag->xn;
@@ -184,6 +233,8 @@ void tr_mlp_update(tr_agent_t *ag, const q16_t *obs, int a, q16_t y)
         for (int i = 0; i < d; i++) row[i] = q16_add(row[i], tr_mul3_upd(ag, lr, g, x[i]));
         b1[j] = q16_add(b1[j], tr_mul_upd(ag, lr, g));
     }
+    /* hidden error signals overwrote z; h (activations of s) is intact for CBP */
+    cbp_step(ag);
 }
 
 /* ---- streaming path ---- */
@@ -216,11 +267,12 @@ q16_t tr_mlp_trace(tr_agent_t *ag, const q16_t *obs, int a, q16_t decay, int64_t
     return ag->q[a];
 }
 
-void tr_mlp_apply(tr_agent_t *ag, q16_t step)
+void tr_mlp_apply(tr_agent_t *ag, q16_t step, int sh)
 {
     tr_mlp_t *m = &ag->u.mlp;
     for (uint32_t k = 0; k < m->n_params; k++)
-        if (m->e[k] != 0) m->p[k] = q16_add(m->p[k], tr_mul_upd(ag, step, m->e[k]));
+        if (m->e[k] != 0) m->p[k] = q16_add(m->p[k], tr_mul_upd_sh(ag, step, m->e[k], sh));
+    cbp_step(ag);
 }
 
 void tr_mlp_clear(tr_agent_t *ag)

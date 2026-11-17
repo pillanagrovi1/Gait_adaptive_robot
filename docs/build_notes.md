@@ -80,3 +80,34 @@ Bugs found and fixed in this round:
   build failed and was reported as "does not fit in SRAM". Error messages now distinguish the two.
 - With phase lock, 0.25 s was 12 CPG ticks of 0.02 s (not 12.5), so the decision phase drifted by 4% of a
   half cycle per decision. Phase lock now runs the CPG at 100 Hz (25 ticks).
+
+
+## Round 3 (17 Nov 2026 evening, after the second review): NOT results either
+
+M4 kernel costs (QEMU instructions per learning step, kernels only; `results/m4/kernels.csv`):
+
+| kernel | memory | instructions/step |
+|---|---|---|
+| table update (any size), Q16.16 / float32 / q15 | 1.5 KB – 120 KB (q15: half) | ~51 / ~50 / ~47 |
+| tile-coding update, 8 tilings, Q16.16 / float32 / q15 | 3.2 – 49 KB (q15: half) | ~412 / ~448 / ~413 |
+| network forward×2 + backward, H = 16 / 32 / 64, Q16.16 | 0.7 – 2.4 KB | 2,670 / 4,986 / 10,542 |
+| same in float32 | 0.7 – 2.4 KB | 2,284 / 4,305 / 8,444 |
+| recursive LSTD-Q float32, k = 32 / 64 / 128 | 4.9 / 18 / 69 KB | 32,804 / 135,266 / 532,641 |
+| tabular Dyna-Q, 1,331 cells, n = 0 / 5 / 20 / 50 | 40 KB | 51 / 281 / 867 / 2,118 |
+
+Full learners on the M4 (smoke configs): compressed-replay network 6,936 B peak vs 16,400 B plain; dense tiles
+12,976 B vs hashed 13,264 B at similar cost; streaming network with continual backprop 2,088 B, ~21,300 instructions/step.
+
+Go1 reflex ladder, 10 episodes per cell, phase-locked (success = no fall and ≥ 2 m), roughness 0.08 / 0.10:
+B0 open loop 0.5 / 0.1 · B1 Tegotae 0.6 / 0.2 · B2 posture reflex 1.0 / 0.1 · B3 stumble reflex 1.0 / 0.7 ·
+B4 all three 0.6 / 0.1. Posture reflex lowered mean |roll|+|pitch| at 0.08 from 0.12 to 0.09 rad (sign check passed).
+
+(1+1)-ES over reflex gains, 25 evaluations × 2 terrains, roughness 0.10, one run: moved towards higher clearance
+(a_calf 0.35 → 0.51) with the stumble reflex on, posture gain 0. Very noisy; a pipeline check.
+
+Hash collisions (deterministic): see D37.
+
+Bugs found and fixed in this round:
+- Dyna-Q kernel under-counted planning cost (early steps had few modelled pairs to replay); the benchmark now
+  pre-fills the model to measure the steady state.
+- The FPU must be enabled in the reset handler for hard-float builds (CPACR), added for the kernel benchmarks.

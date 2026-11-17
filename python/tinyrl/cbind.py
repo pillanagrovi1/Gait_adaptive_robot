@@ -15,7 +15,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 LIB_PATH = ROOT / "build" / "libtinyrl.so"
-MAX_OBS = 8
+MAX_OBS = 12
 KINDS = {"tabular": 0, "linear": 1, "mlp": 2}
 
 i32 = C.c_int32
@@ -33,6 +33,7 @@ class Cfg(C.Structure):
         ("hidden", i32), ("td_clip", i32), ("target_period", i32),
         ("replay_cap", i32), ("batch", i32),
         ("lam", i32), ("obgd_kappa", i32), ("round_mode", i32), ("norm", i32), ("trace_cap", i32),
+        ("replay_compact", i32), ("tile_dense", i32), ("cbp_period", i32), ("cbp_maturity", i32),
     ]
 
 
@@ -87,6 +88,12 @@ LEARNER_DEFAULTS = {
     "round_mode": 0,     # 1 = stochastic rounding of updates
     "norm": 0,           # MLP: 1 = parameter-free LayerNorm on the hidden layer
     "trace_cap": 0,      # table/linear sparse-trace entries, 0 = automatic
+    # second round (17 Nov)
+    "replay_compact": 0, # 1 = compressed replay (uint16 states, next state implied): ~2.7x smaller
+    "tile_dense": 0,     # linear: 1 = collision-free tile indices (needs features >= T*(tiles+1)^d),
+                         #         2 = hashed with a murmur3 finaliser (fewer collisions)
+    "cbp_period": 0,     # MLP continual backprop: replace one hidden unit every N updates
+    "cbp_maturity": 0,   # MLP continual backprop: minimum unit age (updates)
 }
 
 
@@ -110,6 +117,8 @@ def make_cfg(learner: dict, obs_lo, obs_hi, n_actions: int) -> Cfg:
     c.replay_cap, c.batch = int(p["replay_cap"]), int(p["batch"])
     c.lam, c.obgd_kappa = int(q16(p["lam"])), int(q16(p["obgd_kappa"]))
     c.round_mode, c.norm, c.trace_cap = int(p["round_mode"]), int(p["norm"]), int(p["trace_cap"])
+    c.replay_compact, c.tile_dense = int(p["replay_compact"]), int(p["tile_dense"])
+    c.cbp_period, c.cbp_maturity = int(p["cbp_period"]), int(p["cbp_maturity"])
     unknown = set(learner) - set(LEARNER_DEFAULTS) - {"kind"}
     if unknown:
         raise ValueError(f"unknown learner keys {sorted(unknown)}")

@@ -120,7 +120,17 @@ fails → fixed point.
 
 ---
 
-## Stage 4 — Replay buffer (23 Dec – 5 Jan)
+## Stage 4 — Replay buffer, redefined as "replay ratio" (23 Dec – 5 Jan)
+
+`docs/research_review_2.md`: compute is nearly free at these rates; samples and SRAM are not. So the sharper
+Stage 4 question is how much a few extra replay updates per real step (from a compressed buffer) buy:
+
+```bash
+python3 scripts/run_sweep.py replay_ratio --jobs 6 && python3 scripts/measure_m4.py replay_ratio && python3 scripts/make_plots.py replay_ratio
+```
+
+Kill criterion: if n = 5 does not improve the table's steps-to-threshold, stop and report the null result.
+The original buffer-size sweep is still available:
 
 **Read:** `tr_observe` in `tr_agent.c`; D12 in the decisions log.
 
@@ -178,6 +188,20 @@ can only win where the open-loop gait fails, so set `roughness` in `go1_gait_v2`
 sweep (success rate 0.4–0.8) before running it. `go1_gait_v2` also locks decisions to the gait phase
 and tells the learner which leg pair swings next (see D33). `go1_gait` (v1) is kept for comparison.
 A negative answer ("the learner only helps once open loop fails more than X% of the time") is still a result.
+
+**Self-adapting gaits first (no learning):** the reflex ladder shows how much the learner has to beat.
+
+```bash
+python3 scripts/go1_difficulty.py --phase-lock --ladder --episodes 30    # B0..B4 at several roughness levels
+python3 scripts/go1_es.py --evals 60 --roughness 0.10                    # B5: (1+1)-ES over reflex gains
+python3 scripts/run_sweep.py go1_gait_v3 --jobs 6                         # learner tunes the reflexive gait
+```
+
+In a 10-episode probe the stumble reflex alone took success at roughness 0.10 from 0.1 to 0.7: beat B3, not B0.
+
+**Algorithm trade-off map (any stage):** `python3 scripts/bench_kernels.py` measures candidate update kernels
+(Q16.16 / float32 / q15, LSTD-Q, Dyna-Q) on the M4 and draws `results/figures/tradeoff_map.png`.
+`python3 scripts/tile_collisions.py` shows how full the hashed tile table is.
 
 **Hardware (optional, Nucleo-F446RE):** `m4/` builds for the F446 memory map
 already. To run on the board you need the STM32 startup and clock code, swap

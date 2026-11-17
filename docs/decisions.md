@@ -157,13 +157,65 @@ Its theory is for wide networks; at 8–64 units it is an open question this pro
 
 **D34 — Normalisation reciprocal `inv_range` is truncated, so an observation exactly on a tile edge can land in the tile below (1 LSB).** Found while testing; left unchanged to keep earlier behaviour; rounding it would be a one-line change. **Status: to review.**
 
-### Review recommendations not implemented yet
+### Review recommendations from round 1: status
 
-| Recommendation (research_review.md) | Why not now |
+| Recommendation (research_review.md) | Status |
 |---|---|
-| Compressed FIFO replay (int16 states, next state implied) for a stream + small-buffer hybrid | Needs a buffer format change; Stage 4 work |
-| Dense (unhashed) tile indexing + hash load-factor sweep | Small new result; good Stage 3 exercise |
-| Continual backprop for the network after a shift | Adaptation work, Stage 5 |
-| Scalar α_eff in a finer format (Q2.30) | Wait for the underflow numbers on real runs |
-| Foot-contact observations, persistent / factored Go1 actions | Breaks "IMU only" / larger design change; Stage 7 |
-| rliable IQM / performance profiles across tasks | Only meaningful once all three tasks have results |
+| Compressed FIFO replay | built (D35) |
+| Dense (unhashed) tile indexing + hash load-factor sweep | built (D36, D37) |
+| Continual backprop for the network after a shift | built (D38) |
+| Scalar α_eff in a finer format (Q2.30) | built (D39) |
+| Foot-contact observations, persistent / factored Go1 actions | built (D41, D42) |
+| rliable IQM / performance profiles across tasks | not yet: only meaningful once all three tasks have results |
+| A stream + small-buffer hybrid | not built: traces need on-policy order (D23) |
+
+
+## Added 17 Nov 2026, round 2 (`docs/research_review_2.md`: algorithm trade-offs and self-adapting gaits)
+
+All opt-in, defaults unchanged (C regression errors identical, Stage 1 gate bit-exact, Go1 v1 reproduces its
+earlier distances exactly). **Status of every entry: to review.**
+
+**D35 — Compressed replay (`replay_compact: 1`).** s stored as a uint16 fraction of [lo, hi]; s′ not stored but taken
+from the next entry when it continues the same episode; action and flags in one byte. Lossy by ≤ range/65536.
+Measured: 2,000 × 3-D transitions 60,676 → 22,712 B; M4 smoke network 16,400 → 6,936 B peak.
+
+**D36 — Dense tile indexing (`tile_dense: 1`)**, collision-free when features ≥ T·(tiles+1)^d.
+
+**D37 — Hash finaliser option (`tile_dense: 2`, murmur3 fmix32).** `scripts/tile_collisions.py`: with the pendulum
+defaults (8 × 8 tiles, M = 1024, load 0.63) plain FNV puts 64% of tiles in shared slots; fmix32 51%; an ideal random
+hash 47%. Default left as plain FNV (bit-exact with earlier runs); `tile_collisions.json` compares all three.
+
+**D38 — Continual backprop for the network (`cbp_period`, `cbp_maturity`; Dohare et al. 2024)**: utility
+0.99/0.01 running average of |h|·Σ|W2|; replaced units get fresh input weights and zero output weights.
+
+**D39 — ObGD step kept in Q2.30 when it is smaller than Q16.16 can hold.** Measured effect on underflow: none for the
+network, because the zeros come from the final weight increment (step × trace below 1/65536 of a weight), not from the
+step. Remaining remedies: stochastic rounding (built) or wider weights (not built).
+
+**D40 — TR_MAX_OBS 8 → 12, TR_MAX_ACTIONS 16 → 32**, for Go1 contacts + parameters and factored actions. Cost: the
+agent struct grows by ~150 B on the M4 for every learner (e.g. table 9,312 → 9,460 B peak); equal for all learners.
+
+**D41 — Go1 contact features (`obs_mode: imu4pc`)**: contact fraction of the pair that should be in stance and of the
+pair that should be in swing over the last half cycle (CPG-RL: contacts were necessary to learn to walk).
+
+**D42 — Go1 action modes:** `factored` (18: height × pitch × roll, simultaneously) and `incremental` (7: nudge
+persistent clearance / posture-reflex gain / body height; parameters appended to the state).
+
+**D43 — Self-adapting gait mechanisms as non-learning baselines (B1 Tegotae load feedback, B2 IMU posture reflex,
+B3 stumble reflex, B4 all three), from Owaki et al., Kimura/Fukuoka/Cohen 2007.** Gains untuned (σ = 1, k = 0.5).
+10-episode probe (`go1_difficulty.py --ladder`): success at roughness 0.08 / 0.10: B0 0.5 / 0.1, B1 0.6 / 0.2,
+B2 1.0 / 0.1, B3 1.0 / 0.7, B4 0.6 / 0.1 (combining untuned reflexes hurt). A lead, not a result.
+
+**D44 — Go1 v3 (`go1_gait_v3`): the learner tunes a self-adapting gait** (stumble reflex on, incremental actions,
+10-D state with contacts and parameters) at roughness 0.10 against B0/B3/B4. A 10-D table only fits with 2 bins.
+
+**D45 — B5: (1+1)-ES over reflex gains (`scripts/go1_es.py`), host-side, one update per episode.** Two parameter
+vectors of memory. Kept as an outer-loop baseline, not a core learner (the brief retired ARS as a core comparison).
+
+**D46 — Candidate update kernels measured on the M4 (`scripts/bench_kernels.py`, `results/m4/kernels.csv`,
+`results/figures/tradeoff_map.png`): table, tile coding and network in Q16.16 / float32 / q15; recursive LSTD-Q in
+float32 (k = 32 / 64 / 128); tabular Dyna-Q with n = 0 / 5 / 20 / 50 planning steps.** Kernels exclude feature
+computation and action selection. QEMU counts float MACs (3 cycles) like integer ones (1 cycle), so float looks
+cheaper than it is. Dyna-Q's model table is a (tabular) world model, which the brief lists as out of scope:
+**scope decision needed before building Dyna into the learners.** Replay ratio (`replay_ratio.json`) uses stored real
+transitions and stays in scope.

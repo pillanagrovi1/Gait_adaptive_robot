@@ -11,8 +11,8 @@ pytestmark = pytest.mark.skipif(not cbind.LIB_PATH.exists(), reason="run `make` 
 
 
 def test_cfg_struct_matches_c():
-    # sizeof(tr_cfg_t) = 3 + 8 + 8 + 2 + 1 + 3 + 3 + 2 + 5 int32 fields
-    assert cbind.C.sizeof(cbind.Cfg) == 35 * 4
+    # sizeof(tr_cfg_t) = 3 + 12 + 12 + 2 + 1 + 3 + 3 + 2 + 5 + 4 int32 fields
+    assert cbind.C.sizeof(cbind.Cfg) == 47 * 4
 
 
 @pytest.mark.parametrize("kind,extra", [
@@ -104,3 +104,21 @@ def test_harness_step_budget(tmp_path):
     assert out["meta"]["env_steps"] == 1000 and out["meta"]["budget"] == "steps"
     assert (tmp_path / "seed0_eval.csv").exists() and (tmp_path / "seed0_meta.json").exists()
     assert out["meta"]["update_terms"] > 0
+
+
+@pytest.mark.parametrize("kw,n_act,obs_dim", [
+    ({}, 6, 4),
+    ({"obs_mode": "imu4pc", "phase_lock": True, "action_mode": "factored"}, 18, 7),
+    ({"obs_mode": "imu4pc", "phase_lock": True, "action_mode": "incremental", "stumble": True}, 7, 10),
+    ({"obs_mode": "imu4p", "phase_lock": True, "tegotae_sigma": 1.0, "posture_gain": 0.5}, 6, 5),
+])
+def test_go1_modes(kw, n_act, obs_dim):
+    pytest.importorskip("mujoco")
+    from tinyrl.envs.go1 import Go1Gait
+    env = Go1Gait(roughness=0.05, **kw)
+    assert env.n_actions == n_act and env.obs_dim == obs_dim
+    o = env.reset(seed=0)
+    for a in range(3):
+        o, r, term, trunc = env.step(a % n_act)
+        assert o.shape == (obs_dim,) and np.all(np.isfinite(o))
+    assert np.all(o >= env.obs_lo - 1.0) and np.all(o <= env.obs_hi + 1.0)
