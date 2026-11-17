@@ -18,3 +18,5 @@ jobs:
         run: |
           make -C tools/qemu_plugin
           python3 scripts/measure_m4.py smoke --check
+      - name: Processor-in-the-loop (learner on the emulated M4, MuJoCo on the host) == host, bit for bit
+        run: python3 scripts/pil_check.py --steps 1000

@@ -1,5 +1,50 @@
 # Decisions log
 
+## Decision review, 17 Nov 2026 (made by Claude at Rahul's request: "make some obvious decisions yourself")
+
+Every entry below was "to review". The clear-cut ones are now settled; the reason is given in one line.
+**Open** means the decision is genuinely Rahul's (it changes the research question, the scope or the claims).
+Re-open anything by adding a new entry; do not edit history.
+
+| ID | Topic | Status | Reason |
+|---|---|---|---|
+| D01 | pendulum encoding differs between learners | **changed → D25** | encoding is now a factor for every learner |
+| D02 | equal episode budget | **changed → D26** | equal step budget (Patterson et al. 2024) |
+| D03 | plain SGD, no Adam | **accepted** | Adam triples memory; the stream path (D23) gives the network a stable option |
+| D04 | γ per task, same for all learners | **accepted** | γ is part of the task definition; never tuned per learner |
+| D05 | Go1 task design v1 | **superseded → D44** | `go1_gait_v3` is the default Go1 experiment; v1/v2 kept for comparison |
+| D06 | Q16.16 everywhere | **accepted for the core** | float32 is measured as a factor at kernel level (D46); a full float build waits for Nucleo cycle counts |
+| D07 | round-half-up rounding | **accepted** | deterministic and host == M4; stochastic rounding is the opt-in remedy |
+| D08 | random tie-breaking | **accepted** | removes action-0 bias at zero initialisation |
+| D09 | hashed tile coding, T = 8 | **changed** | finaliser by default (D37); T = 8 for 2–3-D states, 16 for ≥ 4-D (Sutton & Barto's 4k rule), as in the configs |
+| D10 | 1 hidden ReLU layer, fan-in init | **accepted** | the research question is about tiny networks |
+| D11 | TD clip ±1 (replay network) | **accepted** | the stream path uses ObGD instead |
+| D12 | replay stored in Q16.16 | **changed → D35** | compressed replay is used in every config except one CI smoke learner |
+| D13 | time-outs bootstrap | **accepted** | standard (Pardo et al. 2018) |
+| D14 | fixed reward scales | **accepted** | keeps Q-values inside Q16.16; plots show unscaled returns |
+| D15 | peak SRAM = agent + arena + learner stack | **accepted** | — |
+| D16 | QEMU netduinoplus2 + F446 memory map | **accepted** | plus the real-board path (D47) |
+| D17 | `-O2`, soft-float ABI | **accepted** | soft-float is right for integer code; `-Os` can be a later factor |
+| D18 | instruction counts by differencing | **accepted** | — |
+| D19 | 5 seeds, t-intervals | **superseded → D27** | — |
+| D20 | ε linear 1 → 0.05 over the first 60% | **accepted** | in steps since D26 |
+| D21 | 90 % recovery metric | **superseded → D28** | — |
+| D22 | baselines in every experiment | **accepted** | extended by the Go1 reflex ladder (D43) |
+| D23–D33 | first-review features | **accepted** | all opt-in, tested, host == M4 |
+| D34 | truncated normalisation reciprocal | **changed (applied)** | rounded now; no results existed yet, so nothing is invalidated |
+| D35–D36 | compressed replay, dense tiles | **accepted** | — |
+| D37 | hash finaliser optional | **changed (applied)** | now the default (`tile_dense: 0`); plain FNV kept as `tile_dense: 2` for the comparison |
+| D38 | continual backprop | **accepted as an option** | used by `net-stream-cbp` in the adaptation experiments |
+| D39 | Q2.30 ObGD step | **accepted** | harmless; did not reduce underflow (documented) |
+| D40 | larger limits | **accepted** | +~150 B per agent, equal for all learners |
+| D41–D44 | Go1 contacts, actions, reflex baselines, v3 | **accepted** | — |
+| D45 | (1+1)-ES over reflex gains | **accepted as a baseline only** | the brief retired ARS-type methods as core learners |
+| D46 | Dyna-Q | **decided: not in the learners** | the brief lists world models as out of scope; Dyna stays a measured point on the trade-off map |
+| D29 | tune once at the middle of each sweep, 100k-step tuning budget | **open** | Stage 2 showed the table is still learning at 100k steps, so tuning rewards fast starters. Rahul: keep (cheap, equal) or tune at the full budget (3× cost)? |
+| D47 | processor-in-the-loop | **accepted** | see below |
+| — | float32 learner library | **open** | worth it only if Nucleo cycle counts show float is not slower (QEMU cannot tell) |
+
+
 Format: **ID — decision.** Why. Alternatives. Status.
 
 Every entry below was made by Claude while building the reference
@@ -219,3 +264,19 @@ computation and action selection. QEMU counts float MACs (3 cycles) like integer
 cheaper than it is. Dyna-Q's model table is a (tabular) world model, which the brief lists as out of scope:
 **scope decision needed before building Dyna into the learners.** Replay ratio (`replay_ratio.json`) uses stored real
 transitions and stays in scope.
+
+
+## Added 17 Nov 2026, round 3
+
+**D47 — Processor-in-the-loop learning (`m4/pil`, `python/tinyrl/pil.py`, `scripts/pil_check.py`).** The learner runs
+on the microcontroller; the laptop runs MuJoCo and relays observations, rewards and actions over a UART (QEMU: a TCP
+socket with `nodelay=on`, ~2 ms per step; Nucleo: ST-LINK virtual COM port, 115200 baud). Any learner config runs
+on the chip by adding `"pil": "tcp:HOST:PORT"` or `"pil": "serial:/dev/ttyACM0"`. Check: on-chip learning in QEMU
+reproduces the host learning curve bit for bit for table, linear, compressed-replay network and streaming network.
+The Nucleo build (USART2, DWT cycle counter, HSI 16 MHz or PLL 180 MHz) is written from the reference manual and
+**has not run on hardware**. Peak stack is reported with a 256-byte painting margin (a value of 256 means ≤ 256 B).
+**Status: accepted.**
+
+**D48 — First experiments run by Claude in the cloud workspace (2 cores), recorded in `docs/results.md` with commit
+and command.** Stage 2 with 10 seeds; pendulum_main as a first pass with 5 seeds (the protocol asks for 10: rerun with
+`bash scripts/run_experiment.sh pendulum_main` before citing). **Status: accepted.**

@@ -37,6 +37,20 @@ from .envs import make_env
 ROOT = Path(__file__).resolve().parents[2]
 RESULTS = ROOT / "results" / "raw"
 
+def _git_commit() -> str:
+    """Commit of the code that produced a run (provenance for docs/results.md)."""
+    import subprocess
+    try:
+        c = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True, timeout=5)
+        dirty = subprocess.run(["git", "status", "--porcelain", "--", "c", "python/tinyrl"], cwd=ROOT,
+                               capture_output=True, text=True, timeout=5).stdout.strip()
+        return c.stdout.strip() + ("+dirty" if dirty else "")
+    except Exception:
+        return "unknown"
+
+
+GIT_COMMIT = _git_commit()
+
 RUN_DEFAULTS = {
     "episodes": 300,
     "eps_start": 1.0, "eps_end": 0.05, "decay_episodes": 150,
@@ -104,7 +118,10 @@ def run(task: dict, learner: dict, seed: int, run_cfg: dict | None = None,
     step_mode = r.get("steps") is not None
     env = make_env(task)
     eval_env = make_env(task)
-    if learner["kind"].startswith("baseline"):
+    if learner.get("pil"):
+        from .pil import PilAgent
+        agent = PilAgent(learner, env.obs_lo, env.obs_hi, env.n_actions, seed=seed + 1)
+    elif learner["kind"].startswith("baseline"):
         agent = BaselineAgent(learner, env.n_actions, seed=seed + 1)
     elif learner["kind"].endswith("_float"):
         from .ref.float_agents import FloatAgent
@@ -171,6 +188,13 @@ def run(task: dict, learner: dict, seed: int, run_cfg: dict | None = None,
                      "epsilon": round(eps, 4), "updates": updates, "eval_return": ev})
         ep += 1
     under = agent.underflow() if hasattr(agent, "underflow") else (0, 0)
+    pil = None
+    if hasattr(agent, "stats"):
+        cl = agent.cycle_log
+        pil = {**agent.stats(), "cpu_hz": agent.cpu_hz,
+               "mean_act_cycles": float(np.mean(cl["act"])) if cl["act"] else None,
+               "mean_observe_cycles": float(np.mean(cl["observe"])) if cl["observe"] else None}
+        agent.close()
     meta = {
         "task": task, "learner": learner, "run": r, "seed": seed, "budget": "steps" if step_mode else "episodes",
         "cfg_id": agent.id, "arena_bytes": agent.mem_bytes, "params": agent.params,
@@ -178,7 +202,8 @@ def run(task: dict, learner: dict, seed: int, run_cfg: dict | None = None,
         "n_actions": env.n_actions, "env_steps": t_global, "episodes": ep, "updates": updates,
         "underflow": under[0], "update_terms": under[1],
         "underflow_frac": round(under[0] / under[1], 4) if under[1] else None,
-        "wall_s": round(time.time() - t0, 2),
+        "pil": pil,
+        "wall_s": round(time.time() - t0, 2), "git_commit": GIT_COMMIT,
     }
     if out_dir is not None:
         out_dir.mkdir(parents=True, exist_ok=True)

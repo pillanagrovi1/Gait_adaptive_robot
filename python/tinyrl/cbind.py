@@ -90,8 +90,8 @@ LEARNER_DEFAULTS = {
     "trace_cap": 0,      # table/linear sparse-trace entries, 0 = automatic
     # second round (17 Nov)
     "replay_compact": 0, # 1 = compressed replay (uint16 states, next state implied): ~2.7x smaller
-    "tile_dense": 0,     # linear: 1 = collision-free tile indices (needs features >= T*(tiles+1)^d),
-                         #         2 = hashed with a murmur3 finaliser (fewer collisions)
+    "tile_dense": 0,     # linear: 0 = hashed (FNV + murmur3 finaliser, default), 1 = collision-free
+                         #         dense indices (needs features >= T*(tiles+1)^d), 2 = legacy plain FNV
     "cbp_period": 0,     # MLP continual backprop: replace one hidden unit every N updates
     "cbp_maturity": 0,   # MLP continual backprop: minimum unit age (updates)
 }

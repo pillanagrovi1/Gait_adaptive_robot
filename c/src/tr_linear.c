@@ -13,9 +13,10 @@
  * Memory: M * n_actions * 4 bytes, independent of obs_dim. That is the
  * point of hashing: the feature count is a free memory knob.
  *
- * tile_dense: 0 = hashed (FNV-1a, original), 1 = collision-free dense indices,
- *             2 = hashed + murmur3 fmix32 finaliser (scripts/tile_collisions.py: at
- *                 load 0.63 shared slots drop from 64% to 51%, the random-hash level)
+ * tile_dense: 0 = hashed: FNV-1a + murmur3 fmix32 finaliser (DEFAULT since decision D37:
+ *                 at load 0.63 shared slots drop from 64% to 51%, the random-hash level)
+ *             1 = collision-free dense indices
+ *             2 = legacy plain FNV-1a (kept only for the tile_collisions comparison)
  *
  * Speed (17 Nov 2026 revision, same results bit for bit):
  *   - tiling offsets precomputed once (no 64-bit modulo/division per step)
@@ -116,9 +117,9 @@ static const uint32_t *active_features(tr_agent_t *ag, const q16_t *obs)
             stride *= side;
         }
         if (c->tile_dense == 1) { idx[t] = dense; continue; }
-        if (c->tile_dense == 2) {            /* murmur3 fmix32: FNV alone mixes small integers poorly */
+        if (c->tile_dense == 0) {            /* murmur3 fmix32: FNV alone mixes small integers poorly */
             h ^= h >> 16; h *= 0x85EBCA6Bu; h ^= h >> 13; h *= 0xC2B2AE35u; h ^= h >> 16;
-        }
+        }                                    /* tile_dense == 2: legacy plain FNV-1a (comparison only) */
         idx[t] = L->mask ? (h & L->mask) : (h % (uint32_t)c->features);
     }
     L->idx = idx;

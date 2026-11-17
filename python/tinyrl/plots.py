@@ -65,7 +65,7 @@ def learning_curves(exp: dict, specs, path: Path):
             if df is not None:
                 eps, M, xlabel = analysis.eval_matrix(df, ev)
                 base_curves.append((s["run_id"], eps, np.nanmean(M, 0)))
-    fig, axes = plt.subplots(1, len(labels), figsize=(4.2 * len(labels), 3.4),
+    fig, axes = plt.subplots(1, len(labels), figsize=(max(7.0, 4.2 * len(labels)), 3.6),
                              sharey=True, squeeze=False, facecolor=SURFACE)
     shift_at = analysis._shift_point(exp)
     for ax, lab in zip(axes[0], labels):
@@ -97,36 +97,30 @@ def learning_curves(exp: dict, specs, path: Path):
     plt.close(fig)
 
 
-def headline(exp: dict, summ, path: Path, y="final", ylabel="final performance (greedy eval return)",
-             exp_path=None):
-    exp_path = exp_path or exp["name"]
-    fig, ax = plt.subplots(figsize=(7.0, 4.4), facecolor=SURFACE)
+def _headline_panel(ax, exp_path, summ, base, y):
     _style(ax)
-    base = summ[summ["kind"].str.startswith("baseline")]
-    summ = summ[~summ["kind"].str.startswith("baseline")]
     for _, r in base.iterrows():
         if np.isnan(r.get(f"{y}_mean", np.nan)):
             continue
         ax.axhline(r[f"{y}_mean"], color=INK2, linestyle=":", linewidth=1)
         ax.annotate(f"baseline: {r['label']}", (0.99, r[f"{y}_mean"]), xycoords=("axes fraction", "data"),
                     xytext=(0, 3), textcoords="offset points", fontsize=7, color=INK2, ha="right")
-    # one line per learner LABEL (e.g. "net" and "net-stream" are separate lines),
-    # colour and marker by learner KIND
+    # one line per learner LABEL (e.g. "net" and "net-stream" are separate lines); colour and
+    # marker by learner KIND; streaming variants dashed
     for label in dict.fromkeys(summ["label"]):
         d = summ[summ["label"] == label].sort_values("peak_bytes")
         kind = d["kind"].iloc[0]
         if kind not in KIND_COLOR:
             continue
         c, mk = KIND_COLOR[kind], KIND_MARKER[kind]
-        dashed = "stream" in label
         ax.plot(d["peak_bytes"], d[f"{y}_mean"], color=c, linewidth=1.2, alpha=0.6,
-                linestyle="--" if dashed else "-")
+                linestyle="--" if "stream" in label else "-")
         for _, r in d.iterrows():
             # every seed as a small dot: shows bimodality (solved / failed) the mean hides
             try:
-                vals = analysis.per_seed(exp_path, r["run_id"], y).to_numpy(float)
-                jitter = np.exp(np.random.default_rng(0).uniform(-0.04, 0.04, len(vals)))
-                ax.scatter(r["peak_bytes"] * jitter, vals, s=9, color=c, alpha=0.35, linewidths=0, zorder=2)
+                seed_vals = analysis.per_seed(exp_path, r["run_id"], y).to_numpy(float)
+                jitter = np.exp(np.random.default_rng(0).uniform(-0.04, 0.04, len(seed_vals)))
+                ax.scatter(r["peak_bytes"] * jitter, seed_vals, s=9, color=c, alpha=0.35, linewidths=0, zorder=2)
             except (FileNotFoundError, KeyError):
                 pass
             measured = r["peak_source"] == "m4-qemu"
@@ -138,23 +132,44 @@ def headline(exp: dict, summ, path: Path, y="final", ylabel="final performance (
                     textcoords="offset points", fontsize=8, color=INK2, va="bottom",
                     bbox=dict(boxstyle="round,pad=0.15", fc=SURFACE, ec="none", alpha=0.85))
     ax.axvline(F446_SRAM, color=INK2, linestyle="--", linewidth=0.8)
-    ax.text(F446_SRAM, ax.get_ylim()[0], " STM32F446RE SRAM (128 KB)", color=INK2,
-            fontsize=7, rotation=90, va="bottom", ha="right")
+    ax.text(F446_SRAM, ax.get_ylim()[1], "STM32F446RE SRAM (128 KB) ", color=INK2,
+            fontsize=7, rotation=90, va="top", ha="right")
     ax.set_xscale("log")
     ax.set_xlabel("peak learner SRAM, bytes (log scale)", color=INK2, fontsize=9)
-    ax.set_ylabel(ylabel, color=INK2, fontsize=9)
-    # legend: kinds + measured/estimate
+
+
+def headline(exp: dict, summ, path: Path, y="final", ylabel="final performance (greedy eval return)",
+             exp_path=None):
+    """Performance vs peak SRAM. With a task_sweep (e.g. obs_mode), one panel per task variant
+    (small multiples), so lines never join points from different tasks."""
+    exp_path = exp_path or exp["name"]
+    tcols = [f"sweep_{k}" for k in exp.get("task_sweep", {}) if f"sweep_{k}" in summ]
+    panels = list(dict.fromkeys(summ[tcols[0]].tolist())) if tcols else [None]
+    fig, axes = plt.subplots(1, len(panels), figsize=(7.0 if len(panels) == 1 else 6.2 * len(panels), 4.6),
+                             sharey=True, squeeze=False, facecolor=SURFACE)
+    for ax, pv in zip(axes[0], panels):
+        sub = summ if pv is None else summ[summ[tcols[0]] == pv]
+        base = sub[sub["kind"].str.startswith("baseline")]
+        learn = sub[~sub["kind"].str.startswith("baseline")]
+        _headline_panel(ax, exp_path, learn, base, y)
+        if pv is not None:
+            ax.set_title(f"{tcols[0][6:]} = {pv}", color=INK, fontsize=10, loc="left")
+    axes[0][0].set_ylabel(ylabel, color=INK2, fontsize=9)
     from matplotlib.lines import Line2D
+    learn_all = summ[~summ["kind"].str.startswith("baseline")]
     handles = [Line2D([], [], marker=KIND_MARKER[k], color=KIND_COLOR[k], linestyle="", markersize=7,
-                      label=KIND_NAME[k]) for k in ("tabular", "linear", "mlp") if (summ["kind"] == k).any()]
+                      label=KIND_NAME[k]) for k in ("tabular", "linear", "mlp") if (learn_all["kind"] == k).any()]
+    if learn_all["label"].str.contains("stream").any():
+        handles.append(Line2D([], [], color=INK2, linestyle="--", label="streaming variant"))
     handles += [Line2D([], [], marker="o", color=INK2, linestyle="", markersize=7, label="memory measured (QEMU M4)"),
                 Line2D([], [], marker="o", color=INK2, markerfacecolor=SURFACE, linestyle="", markersize=7,
                        label="memory estimated (host)")]
-    ax.legend(handles=handles, fontsize=7, frameon=False, labelcolor=INK2, loc="best")
+    fig.legend(handles=handles, fontsize=7, frameon=False, labelcolor=INK2, loc="lower center",
+               ncol=len(handles), bbox_to_anchor=(0.5, 0.0))
     n = int(summ["n_seeds"].min()) if len(summ) else 0
-    ax.set_title(f"{exp['name']}: performance vs peak working memory  (error bars: 95% CI, n>={n} seeds)",
-                 color=INK, fontsize=10, loc="left")
-    fig.tight_layout()
+    fig.suptitle(f"{exp['name']}: performance vs peak working memory  ·  error bars: 95% CI over n ≥ {n} seeds; "
+                 f"dots: individual seeds", color=INK, fontsize=10, x=0.01, ha="left")
+    fig.tight_layout(rect=(0, 0.06, 1, 1))
     fig.savefig(path, dpi=150, facecolor=SURFACE)
     plt.close(fig)
 
