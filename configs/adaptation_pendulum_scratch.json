@@ -1,0 +1,99 @@
+{
+  "name": "adaptation_pendulum_scratch",
+  "_note": "From-scratch reference for adaptation_pendulum: the heavy rod from step 0, for the same 150k steps as the post-shift window. Forward transfer = post-shift AUC (adaptation_pendulum) - AUC here. Exploration decays over the window, as it would for a fresh learner.",
+  "task": {
+    "name": "pendulum",
+    "obs_mode": "trig"
+  },
+  "run": {
+    "steps": 150000,
+    "decay_steps": 90000,
+    "eval_every_steps": 5000,
+    "eval_episodes": 10,
+    "shift_at_step": 0,
+    "shift_level": 0.5
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19
+  ],
+  "learners": [
+    {
+      "label": "table",
+      "base": {
+        "kind": "tabular",
+        "alpha": 0.3,
+        "gamma": 0.95,
+        "bins": 11
+      },
+      "task": {
+        "obs_mode": "angle"
+      }
+    },
+    {
+      "label": "linear",
+      "base": {
+        "kind": "linear",
+        "alpha": 0.2,
+        "gamma": 0.95,
+        "tilings": 8,
+        "tiles": 8,
+        "features": 1024
+      },
+      "task": {
+        "obs_mode": "angle"
+      }
+    },
+    {
+      "label": "net",
+      "base": {
+        "kind": "mlp",
+        "alpha": 0.02,
+        "gamma": 0.95,
+        "hidden": 32,
+        "td_clip": 1.0,
+        "target_period": 100,
+        "replay_cap": 2000,
+        "batch": 8
+      }
+    },
+    {
+      "label": "net-stream",
+      "base": {
+        "kind": "mlp",
+        "alpha": 1.0,
+        "gamma": 0.95,
+        "lam": 0.8,
+        "obgd_kappa": 2.0,
+        "norm": 1,
+        "round_mode": 1,
+        "hidden": 32
+      }
+    },
+    {
+      "label": "zero-torque",
+      "base": {
+        "kind": "baseline_const",
+        "action": 1
+      }
+    }
+  ]
+}

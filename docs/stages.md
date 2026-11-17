@@ -11,6 +11,20 @@ Every stage is already built. The work in each stage is now:
 
 Run all commands from the repo root with the venv active (`source .venv/bin/activate`).
 
+**Protocol (revised 17 Nov after `docs/research_review.md`):** budgets are in environment steps,
+10 paired seeds (20 for adaptation), and hyperparameters come from `scripts/tune.py`, which gives
+every learner the same number of tries on separate tuning seeds. The standard loop for any experiment `E`:
+
+```bash
+python3 scripts/tune.py E               # -> configs/E_tuned.json (equal budget per learner)
+python3 scripts/run_sweep.py E_tuned --jobs 6
+python3 scripts/measure_m4.py E_tuned
+python3 scripts/make_plots.py E_tuned
+```
+
+To compare two learners, put the interval on their per-seed differences:
+`python3 -c "import sys; sys.path.insert(0,'python'); from tinyrl import analysis; print(analysis.paired_diff('E_tuned', 'RUN_A', 'RUN_B'))"`
+
 ---
 
 ## Stage 1 — Corridor (18–24 Nov)
@@ -54,10 +68,14 @@ If not, one more week.
 `analysis.py` (metric definitions), `m4/bench_main.c`, `m4/link.ld`, `scripts/measure_m4.py`.
 
 ```bash
-python3 scripts/run_sweep.py stage2_pendulum_table --jobs 6   # 6 resolutions × 5 seeds (+ baselines)
-python3 scripts/measure_m4.py stage2_pendulum_table
-python3 scripts/make_plots.py stage2_pendulum_table
+python3 scripts/tune.py stage2_pendulum_table                       # alpha for the table, K = 20
+python3 scripts/run_sweep.py stage2_pendulum_table_tuned --jobs 6   # 6 resolutions × 10 seeds (+ baselines)
+python3 scripts/measure_m4.py stage2_pendulum_table_tuned
+python3 scripts/make_plots.py stage2_pendulum_table_tuned
 ```
+
+New figure: `*_underflow.png`, the share of update products that rounded to exactly zero.
+Record the table's number in `results.md`: it decides whether stochastic rounding (`round_mode: 1`) is needed.
 
 Outputs: `results/figures/stage2_pendulum_table_{curves,headline,compute}.png`: your first
 learning curve and first RAM figure.
@@ -80,12 +98,19 @@ plus scratch. Check against `results/m4/stage2_pendulum_table.csv`.
 `tr_mlp_update`. Tests: `c/tests/test_core.c` (`test_regression`) checks each
 learner can fit a known function.
 
+**Read also:** `learn_stream` in `tr_agent.c`, `tr_trace.c`, and the "Stream Q(λ)" section of
+`docs/research_review.md`. Draw the trace for 3 steps of the corridor on paper first.
+
 ```bash
-python3 scripts/run_sweep.py pendulum_main --jobs 6
-python3 scripts/measure_m4.py pendulum_main
-python3 scripts/make_plots.py pendulum_main
-python3 scripts/run_sweep.py state_dim_pendulum --jobs 6   # resolves decision D01
+python3 scripts/tune.py pendulum_main && python3 scripts/run_sweep.py pendulum_main_tuned --jobs 6
+python3 scripts/measure_m4.py pendulum_main_tuned && python3 scripts/make_plots.py pendulum_main_tuned
+python3 scripts/run_sweep.py stream_ablation --jobs 6     # one stream ingredient at a time, all learners
 ```
+
+`pendulum_main` now runs every learner on both encodings (θ and cos/sin), which resolves D01, and
+has two networks: `net` (SGD + target net + 2000-transition replay) and `net-stream` (Stream Q(λ): ObGD,
+traces, LayerNorm, stochastic rounding, no replay, no target). The question for Stage 3: does
+`net-stream` learn stably at 8–64 hidden units? No published result covers this size.
 
 **Debugging tool:** if the C network misbehaves, run the same config with
 `"kind": "mlp_float"`. Float fails too → algorithm or hyperparameters. Only C
@@ -112,10 +137,15 @@ Question to answer with the plot: *how much performance does each extra kilobyte
 ## Stage 5 — Cart-pole and sweeps (6–19 Jan)
 
 ```bash
-for e in cartpole_main adaptation_pendulum; do
+python3 scripts/tune.py cartpole_main
+for e in cartpole_main_tuned adaptation_pendulum adaptation_pendulum_scratch; do
   python3 scripts/run_sweep.py $e --jobs 6 && python3 scripts/measure_m4.py $e && python3 scripts/make_plots.py $e
 done
 ```
+
+Adaptation numbers: `post_auc` (main), `recovery` (steps to get back within 10% of the pre-shift
+level, missing if never), `recovered_frac`. Forward transfer = `post_auc` in `adaptation_pendulum`
+minus `auc` in `adaptation_pendulum_scratch` for the same learner.
 
 Cart-pole is 4-D: watch the table's memory explode (`bins^4`). Some table
 configurations will not fit in 128 KB. `measure_m4.py` reports this as a link
@@ -138,14 +168,16 @@ in the project brief (verify every citation before using it).
 
 ```bash
 python3 scripts/view_go1.py                   # nominal trot
-python3 scripts/view_go1.py --roughness 0.09  # what the shift does to it
-python3 scripts/run_sweep.py go1_gait --jobs 6  # slow: about 0.8 s per episode
-python3 scripts/measure_m4.py go1_gait && python3 scripts/make_plots.py go1_gait
+python3 scripts/go1_difficulty.py --phase-lock --episodes 30   # where does the open-loop trot fail?
+python3 scripts/run_sweep.py go1_gait_v2 --jobs 6               # slow: about 0.8 s per episode
+python3 scripts/measure_m4.py go1_gait_v2 && python3 scripts/make_plots.py go1_gait_v2
 ```
 
-First question: **does any learner beat the `nominal-trot` baseline?** In the
-single-seed probes during the build, they did not clearly. Treat the task
-design (actions, observation, reward) as open.
+First question: **does any learner beat the `nominal-trot` baseline?** The literature says a learner
+can only win where the open-loop gait fails, so set `roughness` in `go1_gait_v2` from the difficulty
+sweep (success rate 0.4–0.8) before running it. `go1_gait_v2` also locks decisions to the gait phase
+and tells the learner which leg pair swings next (see D33). `go1_gait` (v1) is kept for comparison.
+A negative answer ("the learner only helps once open loop fails more than X% of the time") is still a result.
 
 **Hardware (optional, Nucleo-F446RE):** `m4/` builds for the F446 memory map
 already. To run on the board you need the STM32 startup and clock code, swap

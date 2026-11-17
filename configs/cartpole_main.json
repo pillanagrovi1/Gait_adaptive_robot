@@ -1,21 +1,26 @@
 {
   "name": "cartpole_main",
-  "_note": "Stage 5: 4-D state. The table pays bins^4. Network settings are a starting point: in smoke tests it was unstable here (Stage 3 gate). bins=12 (~166 KB) deliberately does not fit in the F446's SRAM.",
+  "_note": "Stage 5: 4-D state. The table pays bins^4; bins=12 (~166 KB) deliberately does not fit in the F446's SRAM. Step budget: an equal-episode budget would give good balancers ~10x more data.",
   "task": {
     "name": "cartpole"
   },
   "run": {
-    "episodes": 1000,
-    "decay_episodes": 600,
-    "eval_every": 50,
-    "eval_episodes": 5
+    "steps": 200000,
+    "decay_steps": 120000,
+    "eval_every_steps": 10000,
+    "eval_episodes": 10
   },
   "seeds": [
     0,
     1,
     2,
     3,
-    4
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
   ],
   "metrics": {
     "threshold": 475
@@ -44,7 +49,7 @@
         "kind": "linear",
         "alpha": 0.1,
         "gamma": 0.99,
-        "tilings": 8,
+        "tilings": 16,
         "tiles": 6
       },
       "sweep": {
@@ -75,10 +80,90 @@
       }
     },
     {
+      "label": "net-stream",
+      "base": {
+        "kind": "mlp",
+        "alpha": 1.0,
+        "gamma": 0.99,
+        "lam": 0.8,
+        "obgd_kappa": 2.0,
+        "norm": 1,
+        "round_mode": 1
+      },
+      "sweep": {
+        "hidden": [
+          16,
+          32,
+          64
+        ]
+      }
+    },
+    {
       "label": "random",
       "base": {
         "kind": "baseline_random"
       }
     }
-  ]
+  ],
+  "tune": {
+    "k": 20,
+    "seeds": [
+      1000,
+      1001,
+      1002
+    ],
+    "score": "auc",
+    "run": {
+      "steps": 80000
+    },
+    "space": {
+      "table": {
+        "alpha": {
+          "log_uniform": [
+            0.05,
+            1.0
+          ]
+        }
+      },
+      "linear": {
+        "alpha": {
+          "log_uniform": [
+            0.05,
+            1.0
+          ]
+        }
+      },
+      "net": {
+        "alpha": {
+          "log_uniform": [
+            0.002,
+            0.05
+          ]
+        },
+        "target_period": {
+          "choice": [
+            50,
+            100,
+            500
+          ]
+        }
+      },
+      "net-stream": {
+        "obgd_kappa": {
+          "choice": [
+            1.5,
+            2.0,
+            3.0
+          ]
+        },
+        "lam": {
+          "choice": [
+            0.6,
+            0.8,
+            0.9
+          ]
+        }
+      }
+    }
+  }
 }

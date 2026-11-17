@@ -11,11 +11,11 @@ OUT     ?= ../build/m4/default
 OPT     ?= -O2
 
 CFLAGS   = -mcpu=cortex-m4 -mthumb -mfloat-abi=soft $(OPT) -std=c11 \
-           -ffunction-sections -fdata-sections -Wall -Wextra -g
+           -ffunction-sections -fdata-sections -Wall -Wextra -g -DTR_NO_DIAG
 INC      = -I$(CFG_DIR) -I. -I$(ROOT)/c/include -I$(ROOT)/c/src
 SRC      = bench_main.c startup.c \
            $(ROOT)/c/src/tr_agent.c $(ROOT)/c/src/tr_tabular.c \
-           $(ROOT)/c/src/tr_linear.c $(ROOT)/c/src/tr_mlp.c
+           $(ROOT)/c/src/tr_linear.c $(ROOT)/c/src/tr_mlp.c $(ROOT)/c/src/tr_trace.c
 LDFLAGS  = -T link.ld -nostartfiles --specs=nano.specs -Wl,--gc-sections \
            -Wl,-Map=$(OUT)/fw.map
 

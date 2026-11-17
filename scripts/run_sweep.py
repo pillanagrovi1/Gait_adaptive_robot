@@ -27,7 +27,7 @@ def _one(args):
     out = harness.RESULTS / exp_name / spec["run_id"]
     t = time.time()
     res = harness.run(spec["task"], spec["learner"], seed, spec["run"], out_dir=out)
-    evals = [r["eval_return"] for r in res["rows"] if r["eval_return"] != ""]
+    evals = [e["eval_return"] for e in res["evals"]]
     return spec["run_id"], seed, evals[-1] if evals else None, time.time() - t
 
 

@@ -1,16 +1,16 @@
 {
   "name": "adaptation_pendulum",
-  "_note": "Adaptation speed: after 1000 episodes the rod becomes 50% heavier. How fast does each learner recover?",
+  "_note": "Adaptation: after 300k steps the rod becomes 50% heavier. Metrics: post-shift AUC, steps to reach 90% of the pre-shift level (censored if never), fraction recovered. Compare with adaptation_pendulum_scratch (forward transfer). 20 seeds.",
   "task": {
     "name": "pendulum",
     "obs_mode": "trig"
   },
   "run": {
-    "episodes": 1600,
-    "decay_episodes": 900,
-    "eval_every": 25,
-    "eval_episodes": 5,
-    "shift_at": 1000,
+    "steps": 450000,
+    "decay_steps": 180000,
+    "eval_every_steps": 5000,
+    "eval_episodes": 10,
+    "shift_at_step": 300000,
     "shift_level": 0.5
   },
   "seeds": [
@@ -18,7 +18,22 @@
     1,
     2,
     3,
-    4
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19
   ],
   "learners": [
     {
@@ -61,9 +76,16 @@
       }
     },
     {
-      "label": "random",
+      "label": "net-stream",
       "base": {
-        "kind": "baseline_random"
+        "kind": "mlp",
+        "alpha": 1.0,
+        "gamma": 0.95,
+        "lam": 0.8,
+        "obgd_kappa": 2.0,
+        "norm": 1,
+        "round_mode": 1,
+        "hidden": 32
       }
     },
     {

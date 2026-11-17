@@ -4,7 +4,7 @@
 CC      ?= gcc
 CFLAGS  ?= -O2 -std=c11 -Wall -Wextra -Wpedantic -Wshadow
 INC      = -Ic/include -Ic/src -Ic/envs
-SRC      = c/src/tr_agent.c c/src/tr_tabular.c c/src/tr_linear.c c/src/tr_mlp.c
+SRC      = c/src/tr_agent.c c/src/tr_tabular.c c/src/tr_linear.c c/src/tr_mlp.c c/src/tr_trace.c
 HDR      = $(wildcard c/include/*.h c/src/*.h c/envs/*.h)
 BUILD    = build
 
