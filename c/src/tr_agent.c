@@ -25,6 +25,10 @@ static int cfg_valid(const tr_cfg_t *c)
     if (c->alpha <= 0) return 0;
     if (c->replay_cap < 0 || c->replay_cap > 65535) return 0;
     if (c->replay_cap > 0 && (c->batch < 1 || c->batch > c->replay_cap)) return 0;
+    if (c->lambda < 0 || c->lambda > Q16_ONE || c->obgd_kappa < 0) return 0;
+    if (c->round_mode < 0 || c->round_mode > 1 || c->norm < 0 || c->norm > 1 || c->trace_cap < 0) return 0;
+    if (c->norm != 0 && c->kind != TR_MLP) return 0;
+    if (tr_stream_on(c) && c->replay_cap > 0) return 0;   /* traces need on-policy order */
     switch (c->kind) {
     case TR_TABULAR:
         if (c->bins < 1) return 0;
@@ -64,6 +68,8 @@ size_t tr_mem_bytes(const tr_cfg_t *c)
 }
 
 size_t tr_agent_sizeof(void) { return sizeof(tr_agent_t); }
+uint32_t tr_underflow_count(const tr_agent_t *ag) { return ag->n_underflow; }
+uint32_t tr_update_terms(const tr_agent_t *ag) { return ag->n_upd_terms; }
 
 uint32_t tr_param_count(const tr_cfg_t *c)
 {
@@ -188,9 +194,78 @@ static void learn_one(tr_agent_t *ag, const q16_t *s, int a, q16_t r, const q16_
         tr_mlp_sync_target(ag);
 }
 
+int tr_is_stream(const tr_cfg_t *cfg) { return tr_stream_on(cfg); }
+
+void tr_episode_start(tr_agent_t *ag)
+{
+    if (!tr_stream_on(&ag->cfg)) return;
+    switch (ag->cfg.kind) {
+    case TR_TABULAR: tr_tab_clear(ag); break;
+    case TR_LINEAR:  tr_lin_clear(ag); break;
+    case TR_MLP:     tr_mlp_clear(ag); break;
+    }
+}
+
+/*
+ * Streaming update: Watkins Q(lambda) with an ObGD step-size cap
+ * (Elsayed, Vasan & Mahmood 2024, "Streaming Deep RL Finally Works").
+ *
+ *   y      = r + gamma * max_a' Q_target(s', a')      (r if terminal): the SAME target
+ *   e      <- gamma*lambda * e + grad Q(s, a)          e <- grad Q(s,a) if a was exploratory
+ *   delta  = y - Q(s, a)
+ *   ObGD:  dbar = max(|delta|, 1);  alpha_eff = alpha * min(1, 1 / (kappa * dbar * ||e||_1))
+ *   w      <- w + alpha_eff * delta * e
+ *   e      <- 0 at terminal states and at episode start (tr_episode_start)
+ *
+ * With lambda = 0 and kappa = 0 this is exactly the one-step update.
+ */
+static void learn_stream(tr_agent_t *ag, const q16_t *s, int a, q16_t r, const q16_t *s2, int done)
+{
+    const tr_cfg_t *c = &ag->cfg;
+    q16_t y = r;
+    if (!done) {
+        q_all(ag, s2, ag->q, 1);
+        q16_t m = ag->q[0];
+        for (int k = 1; k < c->n_actions; k++) if (ag->q[k] > m) m = ag->q[k];
+        y = q16_add(r, q16_mul(c->gamma, m));
+    }
+    q16_t gl = q16_mul(c->gamma, c->lambda);
+    int64_t n1 = 0;
+    q16_t qsa = 0;
+    switch (c->kind) {
+    case TR_TABULAR: qsa = tr_tab_trace(ag, s, a, gl, &n1); break;
+    case TR_LINEAR:  qsa = tr_lin_trace(ag, s, a, gl, &n1); break;
+    case TR_MLP:     qsa = tr_mlp_trace(ag, s, a, gl, &n1); break;
+    }
+    q16_t delta = tr_clip_delta(c, q16_sub(y, qsa));
+    q16_t step = q16_mul(c->alpha, delta);
+    if (c->obgd_kappa > 0) {
+        q16_t ad = delta < 0 ? -delta : delta;
+        q16_t dbar = ad > Q16_ONE ? ad : Q16_ONE;
+        int64_t denom = ((int64_t)q16_mul(c->obgd_kappa, dbar) * n1) >> 16;   /* Q16.16 */
+        if (denom > Q16_ONE) step = q16_sat(((int64_t)step << 16) / denom);
+    }
+    if (step != 0) {
+        switch (c->kind) {
+        case TR_TABULAR: tr_tab_apply(ag, step); break;
+        case TR_LINEAR:  tr_lin_apply(ag, step); break;
+        case TR_MLP:     tr_mlp_apply(ag, step); break;
+        }
+    }
+    if (done) tr_episode_start(ag);
+    ag->n_updates++;
+    if (c->kind == TR_MLP && c->target_period > 0 &&
+        (ag->n_updates % (uint32_t)c->target_period) == 0)
+        tr_mlp_sync_target(ag);
+}
+
 int tr_observe(tr_agent_t *ag, const q16_t *s, int a, q16_t r, const q16_t *s2, int done)
 {
     const tr_cfg_t *c = &ag->cfg;
+    if (tr_stream_on(c)) {
+        learn_stream(ag, s, a, r, s2, done);
+        return 1;
+    }
     if (c->replay_cap == 0) {
         learn_one(ag, s, a, r, s2, done);
         return 1;

@@ -1,6 +1,6 @@
 {
   "name": "go1_gait",
-  "_note": "Stage 7 (the robot): learners pick gait adjustments for a CPG trot on rough ground. Terrain gets 50% rougher at episode 300. UNTUNED.",
+  "_note": "Stage 7 (the robot): learners pick gait adjustments for a CPG trot on rough ground. Terrain gets 50% rougher at episode 300. UNTUNED. Original design kept for comparison; see go1_gait_v2 for the phase-locked revision.",
   "task": {
     "name": "go1",
     "obs_mode": "imu4",
@@ -19,7 +19,12 @@
     1,
     2,
     3,
-    4
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
   ],
   "learners": [
     {

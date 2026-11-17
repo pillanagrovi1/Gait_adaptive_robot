@@ -1,22 +1,27 @@
 {
   "name": "stage4_buffer",
-  "_note": "Stage 4: what does a replay buffer buy, per byte? Same pendulum task; buffer size swept for the linear and network learners.",
+  "_note": "Stage 4: what does a replay buffer buy, per byte, compared with the streaming recipe that needs none? Buffers cannot be combined with traces in this code (traces need on-policy order); a compressed FIFO buffer for a stream+buffer hybrid is future work (docs/research_review.md).",
   "task": {
     "name": "pendulum",
     "obs_mode": "trig"
   },
   "run": {
-    "episodes": 1500,
-    "decay_episodes": 900,
-    "eval_every": 50,
-    "eval_episodes": 5
+    "steps": 300000,
+    "decay_steps": 180000,
+    "eval_every_steps": 10000,
+    "eval_episodes": 10
   },
   "seeds": [
     0,
     1,
     2,
     3,
-    4
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
   ],
   "learners": [
     {
@@ -57,6 +62,19 @@
           1000,
           2000
         ]
+      }
+    },
+    {
+      "label": "net-stream",
+      "base": {
+        "kind": "mlp",
+        "alpha": 1.0,
+        "gamma": 0.95,
+        "lam": 0.8,
+        "obgd_kappa": 2.0,
+        "norm": 1,
+        "round_mode": 1,
+        "hidden": 32
       }
     },
     {
