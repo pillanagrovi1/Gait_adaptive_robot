@@ -122,3 +122,44 @@ def test_go1_modes(kw, n_act, obs_dim):
         o, r, term, trunc = env.step(a % n_act)
         assert o.shape == (obs_dim,) and np.all(np.isfinite(o))
     assert np.all(o >= env.obs_lo - 1.0) and np.all(o <= env.obs_hi + 1.0)
+
+
+def test_pil_roundtrip_qemu():
+    """Learner on the emulated M4 (processor-in-the-loop) == learner on the host, bit for bit."""
+    import shutil
+    import socket
+    import subprocess
+    import time
+    from pathlib import Path
+    if not shutil.which("qemu-system-arm") or not shutil.which("arm-none-eabi-gcc"):
+        pytest.skip("QEMU / ARM toolchain not installed")
+    root = Path(__file__).resolve().parents[2]
+    subprocess.run(["make", "-s", "-C", str(root / "m4" / "pil"), "qemu"], check=True, capture_output=True)
+    s = socket.socket()
+    s.bind(("127.0.0.1", 0))
+    port = s.getsockname()[1]
+    s.close()
+    q = subprocess.Popen(["qemu-system-arm", "-M", "netduinoplus2", "-nographic", "-monitor", "none",
+                          "-serial", f"tcp:127.0.0.1:{port},server=on,wait=off,nodelay=on",
+                          "-kernel", str(root / "build" / "pil" / "qemu" / "pil.elf")],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        time.sleep(0.3)
+        from tinyrl.pil import PilAgent
+        L = {"kind": "mlp", "hidden": 8, "alpha": 1.0, "obgd_kappa": 2.0, "lam": 0.8, "norm": 1, "round_mode": 1}
+        lo, hi = np.array([-1.0, -1.0]), np.array([1.0, 1.0])
+        chip = PilAgent({**L, "pil": f"tcp:127.0.0.1:{port}"}, lo, hi, 3, seed=5)
+        host = cbind.Agent(L, lo, hi, 3, seed=5)
+        rng = np.random.default_rng(1)
+        for k in range(300):
+            s1, s2 = rng.uniform(-1, 1, 2), rng.uniform(-1, 1, 2)
+            if k % 50 == 0:
+                chip.episode_start()
+                host.episode_start()
+            a1, a2 = chip.act(s1, 0.2), host.act(s1, 0.2)
+            assert a1 == a2
+            assert chip.observe(s1, a1, 0.1, s2, k % 50 == 49) == host.observe(s1, a2, 0.1, s2, k % 50 == 49)
+        assert chip.greedy(np.array([0.3, -0.2])) == host.greedy(np.array([0.3, -0.2]))
+        chip.close()
+    finally:
+        q.kill()

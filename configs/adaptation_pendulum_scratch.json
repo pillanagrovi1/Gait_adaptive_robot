@@ -90,6 +90,21 @@
       }
     },
     {
+      "label": "net-stream-cbp",
+      "base": {
+        "kind": "mlp",
+        "alpha": 1.0,
+        "gamma": 0.95,
+        "lam": 0.8,
+        "obgd_kappa": 2.0,
+        "norm": 1,
+        "round_mode": 1,
+        "hidden": 32,
+        "cbp_period": 500,
+        "cbp_maturity": 5000
+      }
+    },
+    {
       "label": "zero-torque",
       "base": {
         "kind": "baseline_const",

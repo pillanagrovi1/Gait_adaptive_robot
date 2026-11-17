@@ -111,3 +111,13 @@ Bugs found and fixed in this round:
 - Dyna-Q kernel under-counted planning cost (early steps had few modelled pairs to replay); the benchmark now
   pre-fills the model to measure the steady state.
 - The FPU must be enabled in the reset handler for hard-float builds (CPACR), added for the kernel benchmarks.
+
+
+## Round 4 (17 Nov 2026, night)
+
+- Processor-in-the-loop in QEMU: table, linear, compressed-replay network and streaming network learn on the
+  emulated chip exactly as on the laptop (2,000 steps of pendulum each; `results/m4/pil_check.json`).
+  ~2 ms per step over the TCP UART. Bug found: QEMU's socket chardev without `nodelay=on` made each message wait
+  ~45 ms (Nagle + delayed ACK).
+- Stage 2 tuning: with a 100k-step tuning budget the table's tuning scores (−843 best, −917 median over K = 20)
+  show it is still far from solving the swing-up at 100k steps; see the open D29.

@@ -115,3 +115,27 @@ The Go1 learner does not output joint angles. It sits on top of a fixed CPG:
       ▲                                                                         │
       └───────────────────── IMU: roll, pitch, roll rate, pitch rate ◀──────────┘
 ```
+
+
+## 6. Processor-in-the-loop (since 17 Nov)
+
+```mermaid
+sequenceDiagram
+    participant H as laptop: harness + MuJoCo (python/tinyrl/pil.py)
+    participant B as Cortex-M4: m4/pil/pil_main.c
+    H->>B: 0x01 INIT  tr_cfg_t + seed
+    B-->>H: rc, arena bytes
+    loop every step
+        H->>B: 0x02 ACT  obs (Q16.16) + epsilon
+        B-->>H: action, cycles
+        Note over H: env.step(action) in MuJoCo
+        H->>B: 0x04 OBSERVE  s, a, r, s', done
+        B-->>H: updates, cycles
+    end
+    H->>B: 0x06 STATS
+    B-->>H: peak stack, max cycles
+```
+
+Frames: `0xA5 | type | len (u16) | payload | sum`. The board polls the UART (no interrupts, no DMA), so the
+timing it reports is the learner's alone. In QEMU the UART is a TCP socket; `nodelay=on` matters (without it
+every message waited ~45 ms for a delayed TCP acknowledgement).

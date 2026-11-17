@@ -11,8 +11,8 @@ cost against peak working memory.
 trade learning performance, adaptation speed and compute cost against peak
 working memory when learning online on a Cortex-M4-class platform?
 
-> **Status: reference implementation, every stage built and smoke-tested.
-> No results yet.** Numbers seen while building are in
+> **Status: reference implementation, every stage built and smoke-tested; first
+> experiments (Stage 2, pendulum first pass) recorded in [`docs/results.md`](docs/results.md).** Numbers seen while building are in
 > [`docs/build_notes.md`](docs/build_notes.md), from single seeds. They are
 > not results. A number enters [`docs/results.md`](docs/results.md) only after a
 > full run with ≥ 5 seeds, from a recorded commit and command. Hardware
@@ -44,6 +44,21 @@ SRAM and real samples are scarce, so spend cycles to save samples without spendi
 | Continual backprop for the network, Q2.30 ObGD step | — |
 | Kernel trade-off map: Q16.16 vs float32 vs q15, LSTD-Q, Dyna-Q (`scripts/bench_kernels.py`) | float32 ≈ Q16.16 for table and tiles; network 14–20% fewer instructions in float (QEMU understates float cost); LSTD-Q k=64: 135k instr., 18 KB |
 | Go1 self-adapting gait: Tegotae phase feedback, IMU posture reflex, stumble reflex (B1–B4), ES over gains (B5), contacts, factored and persistent actions, `go1_gait_v3` | stumble reflex: success 0.1 → 0.7 at roughness 0.10 (10 episodes: a lead) |
+
+## Learning on the chip: processor-in-the-loop (17 Nov, round 3)
+
+The learner can run **on the microcontroller** while the laptop only simulates the robot:
+
+```
+ laptop: MuJoCo task + harness  ──UART frames: obs, reward──▶  Cortex-M4: tr_act / tr_observe in SRAM
+                                ◀──── action, cycle count ────
+```
+
+Add `"pil": "tcp:HOST:PORT"` (QEMU) or `"pil": "serial:/dev/ttyACM0"` (Nucleo-F446RE) to any learner config.
+`python3 scripts/pil_check.py` starts the firmware in QEMU and checks that on-chip learning reproduces the host
+learning curve **bit for bit** (passes for table, linear, compressed-replay network and streaming network; also in CI).
+On a Nucleo it records cycles per `act()` / `observe()`: the first timing numbers the project may claim.
+The Nucleo build (`make -C m4/pil nucleo`) has **not been run on hardware yet**.
 
 ## How it fits together
 
@@ -109,11 +124,13 @@ tools/qemu_plugin/  QEMU plugin that counts executed instructions
 python/tinyrl/  cbind.py (ctypes → C), envs/ (MuJoCo tasks), harness.py, sweep.py, analysis.py, plots.py
 python/tinyrl/ref/  Python references: bit-exact corridor mirror, float twins of the learners
 configs/        one JSON per experiment
-scripts/        run_sweep.py, tune.py, measure_m4.py, make_plots.py, bench_kernels.py, tile_collisions.py,
-                go1_difficulty.py, go1_es.py, view_go1.py, setup_ubuntu.sh
+scripts/        run_experiment.sh (tune + sweep + M4 + plots), run_sweep.py, tune.py, measure_m4.py, make_plots.py,
+                pil_check.py, bench_kernels.py, tile_collisions.py, go1_difficulty.py, go1_es.py, view_go1.py, setup_ubuntu.sh
 m4/kernels/     candidate update kernels for the trade-off map
+m4/pil/         processor-in-the-loop firmware: QEMU and Nucleo-F446RE builds (board.h)
 assets/unitree_go1/  Go1 model from MuJoCo Menagerie (BSD-3, see its LICENSE) + our rough-terrain scene
-docs/           architecture, decisions log, stages guide, research review, results log, build notes
+docs/           architecture, decisions log (with the 17 Nov decision review), stages guide, research reviews
+                + raw research notes, results log, build notes
 ```
 
 ## Ground rules
