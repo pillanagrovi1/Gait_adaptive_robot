@@ -1,0 +1,29 @@
+<!--
+  Go1 on procedurally generated rough ground (this file is ours, not Menagerie's).
+  The height field's values are written at runtime by python/tinyrl/envs/go1.py,
+  so roughness can change between episodes (and mid-training, for adaptation).
+-->
+<mujoco model="go1 rough scene">
+  <include file="go1.xml"/>
+
+  <option timestep="0.002"/>
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
+    <global azimuth="120" elevation="-20" offwidth="1280" offheight="720"/>
+  </visual>
+
+  <asset>
+    <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3"
+      markrgb="0.8 0.8 0.8" width="300" height="300"/>
+    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.0"/>
+    <!-- 16 m x 8 m, 0.05 m cells; elevation scale (3rd size value) is set per episode -->
+    <hfield name="terrain" nrow="160" ncol="320" size="8 4 0.05 0.1"/>
+  </asset>
+
+  <worldbody>
+    <light pos="0 -1 2" dir="0 0.5 -0.9"/>
+    <light pos="0 0 1.5" dir="0 0 -1" directional="true"/>
+    <geom name="terrain" type="hfield" hfield="terrain" pos="6 0 0" material="groundplane"/>
+  </worldbody>
+</mujoco>

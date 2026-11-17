@@ -1,0 +1,20 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi qemu-system-arm libglib2.0-dev pkg-config
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install -r requirements.txt
+      - name: Host build and tests (includes the Stage 1 corridor gate)
+        run: make test
+      - name: Cortex-M4 build, QEMU run, host == M4 bit-exact check
+        run: |
+          make -C tools/qemu_plugin
+          python3 scripts/measure_m4.py smoke --check

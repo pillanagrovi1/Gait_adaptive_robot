@@ -1,0 +1,84 @@
+{
+  "name": "cartpole_main",
+  "_note": "Stage 5: 4-D state. The table pays bins^4. Network settings are a starting point: in smoke tests it was unstable here (Stage 3 gate). bins=12 (~166 KB) deliberately does not fit in the F446's SRAM.",
+  "task": {
+    "name": "cartpole"
+  },
+  "run": {
+    "episodes": 1000,
+    "decay_episodes": 600,
+    "eval_every": 50,
+    "eval_episodes": 5
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "metrics": {
+    "threshold": 475
+  },
+  "learners": [
+    {
+      "label": "table",
+      "base": {
+        "kind": "tabular",
+        "alpha": 0.2,
+        "gamma": 0.99
+      },
+      "sweep": {
+        "bins": [
+          4,
+          6,
+          8,
+          10,
+          12
+        ]
+      }
+    },
+    {
+      "label": "linear",
+      "base": {
+        "kind": "linear",
+        "alpha": 0.1,
+        "gamma": 0.99,
+        "tilings": 8,
+        "tiles": 6
+      },
+      "sweep": {
+        "features": [
+          256,
+          1024,
+          4096
+        ]
+      }
+    },
+    {
+      "label": "net",
+      "base": {
+        "kind": "mlp",
+        "alpha": 0.005,
+        "gamma": 0.99,
+        "td_clip": 1.0,
+        "target_period": 200,
+        "replay_cap": 2000,
+        "batch": 8
+      },
+      "sweep": {
+        "hidden": [
+          16,
+          32,
+          64
+        ]
+      }
+    },
+    {
+      "label": "random",
+      "base": {
+        "kind": "baseline_random"
+      }
+    }
+  ]
+}

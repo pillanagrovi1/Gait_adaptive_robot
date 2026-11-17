@@ -1,0 +1,76 @@
+{
+  "name": "stage4_buffer",
+  "_note": "Stage 4: what does a replay buffer buy, per byte? Same pendulum task; buffer size swept for the linear and network learners.",
+  "task": {
+    "name": "pendulum",
+    "obs_mode": "trig"
+  },
+  "run": {
+    "episodes": 1500,
+    "decay_episodes": 900,
+    "eval_every": 50,
+    "eval_episodes": 5
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "learners": [
+    {
+      "label": "linear",
+      "base": {
+        "kind": "linear",
+        "alpha": 0.2,
+        "gamma": 0.95,
+        "tilings": 8,
+        "tiles": 8,
+        "features": 1024,
+        "batch": 4
+      },
+      "sweep": {
+        "replay_cap": [
+          0,
+          250,
+          1000,
+          2000
+        ]
+      }
+    },
+    {
+      "label": "net",
+      "base": {
+        "kind": "mlp",
+        "alpha": 0.02,
+        "gamma": 0.95,
+        "hidden": 32,
+        "td_clip": 1.0,
+        "target_period": 100,
+        "batch": 8
+      },
+      "sweep": {
+        "replay_cap": [
+          0,
+          250,
+          1000,
+          2000
+        ]
+      }
+    },
+    {
+      "label": "random",
+      "base": {
+        "kind": "baseline_random"
+      }
+    },
+    {
+      "label": "zero-torque",
+      "base": {
+        "kind": "baseline_const",
+        "action": 1
+      }
+    }
+  ]
+}
