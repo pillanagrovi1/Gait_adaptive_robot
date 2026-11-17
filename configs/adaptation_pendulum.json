@@ -72,7 +72,8 @@
         "td_clip": 1.0,
         "target_period": 100,
         "replay_cap": 2000,
-        "batch": 8
+        "batch": 8,
+        "replay_compact": 1
       }
     },
     {

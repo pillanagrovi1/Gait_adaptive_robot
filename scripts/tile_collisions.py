@@ -7,7 +7,7 @@ exists: tilings * (tiles+1)^d of them. Reports, for each feature count M:
 
   load factor       = tiles that exist / M
   shared fraction   = fraction of tiles whose weight slot is shared with another tile,
-                      for plain FNV (tile_dense = 0), FNV + fmix32 (tile_dense = 2) and an ideal
+                      for legacy plain FNV (tile_dense = 2), the default FNV + fmix32 (tile_dense = 0) and an ideal
                       random hash (1 - exp(-load))
   dense fits        = whether tile_dense=1 is possible (M >= tilings * (tiles+1)^d)
 
@@ -29,7 +29,7 @@ def fnv_index(t, coords, M, fmix=False):
     for c in coords:
         h ^= c
         h = (h * 16777619) & M32
-    if fmix:                                    # tile_dense = 2 in C
+    if fmix:                                    # tile_dense = 0 (default) in C; plain FNV is tile_dense = 2
         h ^= h >> 16
         h = (h * 0x85EBCA6B) & M32
         h ^= h >> 13
@@ -48,7 +48,7 @@ def main():
     side = a.tiles + 1
     n_tiles = a.tilings * side ** a.dims
     print(f"d={a.dims}, tiles={a.tiles}, tilings={a.tilings}: {n_tiles} tiles exist")
-    print(f"{'M':>6}  {'load':>6}  {'shared FNV':>10}  {'shared +fmix':>12}  {'random hash':>11}  dense fits")
+    print(f"{'M':>6}  {'load':>6}  {'legacy FNV':>10}  {'default fmix':>12}  {'random hash':>11}  dense fits")
     for M in a.features:
         shared = []
         for fmix in (False, True):
