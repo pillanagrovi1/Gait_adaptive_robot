@@ -1,0 +1,84 @@
+{
+  "name": "smoke",
+  "_note": "Pipeline check only: tiny budgets, numbers mean nothing. ~1 min.",
+  "task": {
+    "name": "pendulum",
+    "obs_mode": "angle"
+  },
+  "run": {
+    "episodes": 60,
+    "decay_episodes": 40,
+    "eval_every": 20,
+    "eval_episodes": 2
+  },
+  "seeds": [
+    0,
+    1
+  ],
+  "learners": [
+    {
+      "label": "table",
+      "base": {
+        "kind": "tabular",
+        "alpha": 0.3,
+        "gamma": 0.95
+      },
+      "sweep": {
+        "bins": [
+          7,
+          15
+        ]
+      }
+    },
+    {
+      "label": "linear",
+      "base": {
+        "kind": "linear",
+        "alpha": 0.2,
+        "gamma": 0.95,
+        "tilings": 8,
+        "tiles": 8
+      },
+      "sweep": {
+        "features": [
+          256,
+          1024
+        ]
+      }
+    },
+    {
+      "label": "net",
+      "base": {
+        "kind": "mlp",
+        "alpha": 0.02,
+        "gamma": 0.95,
+        "td_clip": 1.0,
+        "target_period": 100,
+        "replay_cap": 500,
+        "batch": 4
+      },
+      "sweep": {
+        "hidden": [
+          8,
+          16
+        ]
+      },
+      "task": {
+        "obs_mode": "trig"
+      }
+    },
+    {
+      "label": "random",
+      "base": {
+        "kind": "baseline_random"
+      }
+    },
+    {
+      "label": "zero-torque",
+      "base": {
+        "kind": "baseline_const",
+        "action": 1
+      }
+    }
+  ]
+}
