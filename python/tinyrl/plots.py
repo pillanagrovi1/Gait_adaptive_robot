@@ -65,7 +65,7 @@ def learning_curves(exp: dict, specs, path: Path):
             if df is not None:
                 eps, M, xlabel = analysis.eval_matrix(df, ev)
                 base_curves.append((s["run_id"], eps, np.nanmean(M, 0)))
-    fig, axes = plt.subplots(1, len(labels), figsize=(4.2 * len(labels), 3.4),
+    fig, axes = plt.subplots(1, len(labels), figsize=(max(7.0, 4.2 * len(labels)), 3.6),
                              sharey=True, squeeze=False, facecolor=SURFACE)
     shift_at = analysis._shift_point(exp)
     for ax, lab in zip(axes[0], labels):
@@ -138,8 +138,8 @@ def headline(exp: dict, summ, path: Path, y="final", ylabel="final performance (
                     textcoords="offset points", fontsize=8, color=INK2, va="bottom",
                     bbox=dict(boxstyle="round,pad=0.15", fc=SURFACE, ec="none", alpha=0.85))
     ax.axvline(F446_SRAM, color=INK2, linestyle="--", linewidth=0.8)
-    ax.text(F446_SRAM, ax.get_ylim()[0], " STM32F446RE SRAM (128 KB)", color=INK2,
-            fontsize=7, rotation=90, va="bottom", ha="right")
+    ax.text(F446_SRAM, ax.get_ylim()[1], "STM32F446RE SRAM (128 KB) ", color=INK2,
+            fontsize=7, rotation=90, va="top", ha="right")
     ax.set_xscale("log")
     ax.set_xlabel("peak learner SRAM, bytes (log scale)", color=INK2, fontsize=9)
     ax.set_ylabel(ylabel, color=INK2, fontsize=9)
@@ -152,8 +152,9 @@ def headline(exp: dict, summ, path: Path, y="final", ylabel="final performance (
                        label="memory estimated (host)")]
     ax.legend(handles=handles, fontsize=7, frameon=False, labelcolor=INK2, loc="best")
     n = int(summ["n_seeds"].min()) if len(summ) else 0
-    ax.set_title(f"{exp['name']}: performance vs peak working memory  (error bars: 95% CI, n>={n} seeds)",
-                 color=INK, fontsize=10, loc="left")
+    ax.set_title(f"{exp['name']}: performance vs peak working memory\n"
+                 f"error bars: 95% CI over n ≥ {n} seeds; dots: individual seeds",
+                 color=INK, fontsize=9, loc="left")
     fig.tight_layout()
     fig.savefig(path, dpi=150, facecolor=SURFACE)
     plt.close(fig)

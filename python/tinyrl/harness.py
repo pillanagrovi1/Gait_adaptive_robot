@@ -37,6 +37,20 @@ from .envs import make_env
 ROOT = Path(__file__).resolve().parents[2]
 RESULTS = ROOT / "results" / "raw"
 
+def _git_commit() -> str:
+    """Commit of the code that produced a run (provenance for docs/results.md)."""
+    import subprocess
+    try:
+        c = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True, timeout=5)
+        dirty = subprocess.run(["git", "status", "--porcelain", "--", "c", "python/tinyrl"], cwd=ROOT,
+                               capture_output=True, text=True, timeout=5).stdout.strip()
+        return c.stdout.strip() + ("+dirty" if dirty else "")
+    except Exception:
+        return "unknown"
+
+
+GIT_COMMIT = _git_commit()
+
 RUN_DEFAULTS = {
     "episodes": 300,
     "eps_start": 1.0, "eps_end": 0.05, "decay_episodes": 150,
@@ -189,7 +203,7 @@ def run(task: dict, learner: dict, seed: int, run_cfg: dict | None = None,
         "underflow": under[0], "update_terms": under[1],
         "underflow_frac": round(under[0] / under[1], 4) if under[1] else None,
         "pil": pil,
-        "wall_s": round(time.time() - t0, 2),
+        "wall_s": round(time.time() - t0, 2), "git_commit": GIT_COMMIT,
     }
     if out_dir is not None:
         out_dir.mkdir(parents=True, exist_ok=True)
