@@ -10,6 +10,11 @@ int main(void);
 
 void Reset_Handler(void)
 {
+#if defined(__ARM_FP)
+    /* hard-float builds (m4/kernels): enable the FPU, CP10 + CP11 full access */
+    *(volatile uint32_t *)0xE000ED88u |= (0xFu << 20);
+    __asm__ volatile("dsb\n isb" ::: "memory");
+#endif
     uint32_t *src = &_sidata, *dst = &_sdata;
     while (dst < &_edata) *dst++ = *src++;
     for (dst = &_sbss; dst < &_ebss; dst++) *dst = 0;

@@ -203,6 +203,101 @@ static void test_stochastic_rounding(void)
     }
 }
 
+/* Corridor with any config tweak; returns worst |Q(c,right) - Q*|. Observations at cell centres. */
+static double corridor_worst(tr_cfg_t *c, int episodes)
+{
+    static uint8_t arena[1 << 16];
+    static tr_agent_t ag;
+    if (tr_init(&ag, c, arena, sizeof(arena), 9) != TR_OK) return 99.0;
+    for (int ep = 0; ep < episodes; ep++) {
+        int pos = 0, done = 0, steps = 0;
+        tr_episode_start(&ag);
+        while (!done && steps++ < 100) {
+            q16_t s = pos * Q16_ONE + Q16_HALF;
+            int a = tr_act(&ag, &s, Q16(0.2));
+            pos += a ? 1 : -1; if (pos < 0) pos = 0;
+            done = pos == 5;
+            q16_t s2 = pos * Q16_ONE + Q16_HALF;
+            tr_observe(&ag, &s, a, done ? Q16_ONE : 0, &s2, done);
+        }
+    }
+    double worst = 0;
+    for (int cell = 0; cell < 5; cell++) {
+        q16_t s = cell * Q16_ONE + Q16_HALF, q[2];
+        tr_qvalues(&ag, &s, q);
+        double e = fabs(f(q[1]) - pow(0.9, 4 - cell));
+        if (e > worst) worst = e;
+    }
+    return worst;
+}
+
+static void corridor_cfg(tr_cfg_t *c, int kind)
+{
+    memset(c, 0, sizeof(*c));
+    c->kind = kind; c->obs_dim = 1; c->n_actions = 2;
+    c->obs_lo[0] = 0; c->obs_hi[0] = 6 * Q16_ONE;
+    c->bins = 6; c->tilings = 1; c->tiles = 6; c->features = 64; c->hidden = 16;
+    c->alpha = Q16(0.5); c->gamma = Q16(0.9);
+}
+
+static void test_compact_replay(void)
+{
+    tr_cfg_t c; corridor_cfg(&c, TR_TABULAR);
+    c.replay_cap = 200; c.batch = 4; c.replay_compact = 1;
+    double w = corridor_worst(&c, 300);
+    printf("  compact replay corridor (table): worst |Q - Q*| = %.4f\n", w);
+    CHECK(w < 0.02, "compact replay corridor err %.4f", w);
+
+    tr_cfg_t p; base_cfg(&p, TR_MLP, 3, 3);
+    p.replay_cap = 2000; p.batch = 8;
+    size_t plain = tr_mem_bytes(&p);
+    p.replay_compact = 1;
+    size_t compact = tr_mem_bytes(&p);
+    printf("  replay 2000 x 3-D: plain %zu B, compact %zu B (%.2fx smaller)\n", plain, compact, (double)plain / compact);
+    CHECK(compact < plain, "compact replay must be smaller");
+}
+
+static void test_dense_tiles(void)
+{
+    tr_cfg_t c; corridor_cfg(&c, TR_LINEAR);
+    c.tile_dense = 1;                                 /* 1 tiling x 7 cells <= 64 features */
+    double w = corridor_worst(&c, 300);
+    printf("  dense tiles corridor: worst |Q - Q*| = %.4f\n", w);
+    CHECK(w < 0.02, "dense tiles corridor err %.4f", w);
+    tr_cfg_t b; base_cfg(&b, TR_LINEAR, 4, 2);
+    b.tile_dense = 1; b.tiles = 8; b.tilings = 8; b.features = 1024;   /* needs 8 * 9^4 = 52488 */
+    CHECK(tr_mem_bytes(&b) == 0, "dense tiles that do not fit must be rejected");
+}
+
+static void test_cbp(void)
+{
+    tr_cfg_t c; base_cfg(&c, TR_MLP, 2, 2);
+    c.alpha = Q16(0.02); c.cbp_period = 200; c.cbp_maturity = 1000;
+    static uint8_t arena[1 << 16];
+    static tr_agent_t ag;
+    CHECK(tr_init(&ag, &c, arena, sizeof(arena), 7) == TR_OK, "cbp init");
+    uint32_t rng = 12345;
+    for (int it = 0; it < 40000; it++) {
+        q16_t s[2] = { (q16_t)((int32_t)(tr_rng_next(&rng) >> 15) - Q16_ONE),
+                       (q16_t)((int32_t)(tr_rng_next(&rng) >> 15) - Q16_ONE) };
+        int a = (int)(tr_rng_next(&rng) & 1);
+        tr_observe(&ag, s, a, q16_mul(s[0], a ? Q16(0.5) : Q16(-0.5)), s, 1);
+    }
+    double err = 0; int n = 0;
+    for (double x = -0.9; x <= 0.9; x += 0.3) {
+        q16_t s[2] = { Q16(x), Q16(0.2) }, q[2];
+        tr_qvalues(&ag, s, q);
+        err += fabs(f(q[1]) - 0.5 * x) + fabs(f(q[0]) + 0.5 * x);
+        n += 2;
+    }
+    err /= n;
+    uint32_t young = 0;
+    for (int j = 0; j < c.hidden; j++) young += ag.u.mlp.age[j] < 40000u;
+    printf("  continual backprop: err %.4f, %u of %d units were replaced at least once\n", err, young, c.hidden);
+    CHECK(err < 0.08, "cbp err %.4f", err);
+    CHECK(young > 0, "cbp should have replaced some units");
+}
+
 int main(void)
 {
     test_fixed();
@@ -220,6 +315,9 @@ int main(void)
     test_qlambda_corridor(TR_LINEAR);
     test_stream_cfg_rules();
     test_stochastic_rounding();
+    test_compact_replay();
+    test_dense_tiles();
+    test_cbp();
     printf("%s (%d failures)\n", failures ? "FAILED" : "OK", failures);
     return failures ? 1 : 0;
 }

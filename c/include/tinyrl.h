@@ -29,8 +29,8 @@
 #include <stdint.h>
 #include "tr_fixed.h"
 
-#define TR_MAX_OBS      8
-#define TR_MAX_ACTIONS  16
+#define TR_MAX_OBS      12   /* raised from 8 (17 Nov): Go1 with contacts + gait parameters */
+#define TR_MAX_ACTIONS  32   /* raised from 16: Go1 factored actions (18) */
 #define TR_MAX_TILINGS  32
 
 enum { TR_TABULAR = 0, TR_LINEAR = 1, TR_MLP = 2 };
@@ -73,14 +73,26 @@ typedef struct {
     int32_t round_mode;               /* 0 = round to nearest, 1 = stochastic rounding of updates */
     int32_t norm;                     /* MLP only: 0 = none, 1 = parameter-free LayerNorm on hidden layer */
     int32_t trace_cap;                /* table/linear: sparse-trace entries kept, 0 = automatic */
+    /* ---- added 17 Nov 2026, second round ---- */
+    int32_t replay_compact;           /* 1 = compressed replay: uint16 states, next state implied */
+    int32_t tile_dense;               /* linear: 1 = collision-free (unhashed) tile indices */
+    int32_t cbp_period;               /* MLP: continual backprop, replace 1 unit every N updates, 0 = off */
+    int32_t cbp_maturity;             /* MLP: units younger than this many updates are never replaced */
 } tr_cfg_t;
 
 typedef struct {
+    /* plain layout (replay_compact = 0): full Q16.16 copies of s and s' */
     q16_t   *s;        /* replay_cap * obs_dim */
     q16_t   *s2;       /* replay_cap * obs_dim */
-    q16_t   *r;        /* replay_cap */
     uint8_t *a;        /* replay_cap */
     uint8_t *done;     /* replay_cap */
+    /* compressed layout (replay_compact = 1): s as uint16 fraction of [lo, hi],
+     * s' = the next entry's s (flag bit 7 says the successor continues this episode) */
+    uint16_t *su;      /* replay_cap * obs_dim */
+    uint8_t  *af;      /* replay_cap: action (bits 0-5) | done (bit 6) | has_next (bit 7) */
+    q16_t    *last_s2; /* obs_dim: s' of the newest entry, to detect continuity */
+    q16_t    *ds, *ds2;/* obs_dim each: decode scratch */
+    q16_t   *r;        /* replay_cap (both layouts) */
     uint32_t head, size;
 } tr_replay_t;
 
@@ -123,6 +135,8 @@ typedef struct {
     q16_t *h;                         /* hidden activations, scratch */
     q16_t *g;                         /* dQ/dz scratch (norm or trace paths) */
     q16_t *e;                         /* eligibility trace, n_params (NULL if no traces) */
+    q16_t *util;                      /* continual backprop: unit utility, hidden (NULL if off) */
+    uint32_t *age;                    /* continual backprop: updates since (re)initialisation */
     q16_t  inv_sigma;                 /* LayerNorm 1/sigma of the last forward pass */
     uint32_t n_params;
 } tr_mlp_t;

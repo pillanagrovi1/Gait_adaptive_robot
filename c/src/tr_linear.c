@@ -13,6 +13,10 @@
  * Memory: M * n_actions * 4 bytes, independent of obs_dim. That is the
  * point of hashing: the feature count is a free memory knob.
  *
+ * tile_dense: 0 = hashed (FNV-1a, original), 1 = collision-free dense indices,
+ *             2 = hashed + murmur3 fmix32 finaliser (scripts/tile_collisions.py: at
+ *                 load 0.63 shared slots drop from 64% to 51%, the random-hash level)
+ *
  * Speed (17 Nov 2026 revision, same results bit for bit):
  *   - tiling offsets precomputed once (no 64-bit modulo/division per step)
  *   - 32-bit arithmetic for tile coordinates (needs tiles < 32768)
@@ -28,9 +32,23 @@ static uint32_t trace_cap(const tr_cfg_t *c)
     return c->trace_cap > 0 ? (uint32_t)c->trace_cap : 8u * (uint32_t)c->tilings;
 }
 
+/* Dense (unhashed) layout: tiling t, coordinates c_i in 0..tiles  ->
+ *   index = t * (tiles+1)^d + sum_i c_i * (tiles+1)^i     (collision-free)
+ * Needs features >= tilings * (tiles+1)^d. Returns 0 if it does not fit. */
+static uint32_t dense_cells(const tr_cfg_t *c)
+{
+    uint64_t n = (uint64_t)c->tilings;
+    for (int i = 0; i < c->obs_dim; i++) {
+        n *= (uint64_t)(c->tiles + 1);
+        if (n > (uint64_t)c->features) return 0;
+    }
+    return (uint32_t)n;
+}
+
 size_t tr_lin_mem(const tr_cfg_t *c)
 {
     if (c->tiles >= 32768) return 0;
+    if (c->tile_dense == 1 && dense_cells(c) == 0) return 0;
     size_t m = TR_ALIGN4((size_t)c->features * c->n_actions * sizeof(q16_t))
              + TR_ALIGN4((size_t)c->tilings * c->obs_dim * sizeof(int32_t))          /* offsets */
              + 2 * (TR_ALIGN4((size_t)c->obs_dim * sizeof(q16_t))                    /* cache */
@@ -82,13 +100,24 @@ static const uint32_t *active_features(tr_agent_t *ag, const q16_t *obs)
     uint32_t *idx = L->cache.idx[s];
     q16_t *u = ag->xn;
     tr_normalise01(ag, obs, u);
+    const uint32_t side = (uint32_t)c->tiles + 1u;
+    uint32_t per_tiling = 1u;
+    if (c->tile_dense == 1) for (int i = 0; i < d; i++) per_tiling *= side;
     for (int t = 0; t < T; t++) {
         uint32_t h = 2166136261u ^ ((uint32_t)t * 0x9E3779B1u);
+        uint32_t dense = (uint32_t)t * per_tiling, stride = 1u;
         const int32_t *off = &L->off[t * d];
         for (int i = 0; i < d; i++) {
             uint32_t scaled = (uint32_t)u[i] * (uint32_t)c->tiles + (uint32_t)off[i];  /* Q16.16 */
-            h ^= scaled >> 16;                                                       /* 0 .. tiles */
+            uint32_t coord = scaled >> 16;                                           /* 0 .. tiles */
+            h ^= coord;
             h *= 16777619u;                                                          /* FNV-1a prime */
+            dense += coord * stride;
+            stride *= side;
+        }
+        if (c->tile_dense == 1) { idx[t] = dense; continue; }
+        if (c->tile_dense == 2) {            /* murmur3 fmix32: FNV alone mixes small integers poorly */
+            h ^= h >> 16; h *= 0x85EBCA6Bu; h ^= h >> 13; h *= 0xC2B2AE35u; h ^= h >> 16;
         }
         idx[t] = L->mask ? (h & L->mask) : (h % (uint32_t)c->features);
     }
@@ -141,11 +170,11 @@ q16_t tr_lin_trace(tr_agent_t *ag, const q16_t *obs, int a, q16_t decay, int64_t
     return ag->q[a];
 }
 
-void tr_lin_apply(tr_agent_t *ag, q16_t step)
+void tr_lin_apply(tr_agent_t *ag, q16_t step, int sh)
 {
     /* Without ObGD the step must be divided by T, as in the one-step update. */
     if (ag->cfg.obgd_kappa == 0) step /= ag->cfg.tilings;
-    tr_strace_apply(ag, &ag->u.lin.tr, ag->u.lin.w, step);
+    tr_strace_apply(ag, &ag->u.lin.tr, ag->u.lin.w, step, sh);
 }
 
 void tr_lin_clear(tr_agent_t *ag) { tr_strace_clear(&ag->u.lin.tr); }

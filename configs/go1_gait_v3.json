@@ -1,0 +1,112 @@
+{
+  "name": "go1_gait_v3",
+  "_note": "Stage 7, after docs/research_review_2.md: the learner TUNES a self-adapting gait instead of replacing it. Stumble reflex on; persistent parameters (clearance, posture-reflex gain, body height) nudged every half cycle; state = half-cycle IMU + pair bit + foot-contact mismatch + the 3 parameters (10-D). Baselines: B0 open loop, B3 stumble reflex alone, B4 all reflexes (untuned gains). Roughness 0.10, where the 10-episode probe gave B0 0.1 and B3 0.7 success. A 10-D table only fits with 2 bins: that is the curse of dimensionality, reported, not hidden. UNTUNED.",
+  "task": {
+    "name": "go1",
+    "obs_mode": "imu4pc",
+    "phase_lock": true,
+    "roughness": 0.1,
+    "action_mode": "incremental",
+    "stumble": true
+  },
+  "run": {
+    "steps": 20000,
+    "decay_steps": 8000,
+    "eval_every_steps": 1000,
+    "eval_episodes": 5,
+    "shift_at_step": 12000,
+    "shift_level": 0.2
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "learners": [
+    {
+      "label": "table",
+      "base": {
+        "kind": "tabular",
+        "alpha": 0.2,
+        "gamma": 0.9,
+        "bins": 2
+      }
+    },
+    {
+      "label": "linear",
+      "base": {
+        "kind": "linear",
+        "alpha": 0.1,
+        "gamma": 0.9,
+        "tilings": 16,
+        "tiles": 3
+      },
+      "sweep": {
+        "features": [
+          1024,
+          4096
+        ]
+      }
+    },
+    {
+      "label": "net-stream",
+      "base": {
+        "kind": "mlp",
+        "alpha": 1.0,
+        "gamma": 0.9,
+        "lam": 0.8,
+        "obgd_kappa": 2.0,
+        "norm": 1,
+        "round_mode": 1,
+        "hidden": 32
+      },
+      "sweep": {
+        "hidden": [
+          16,
+          32
+        ]
+      }
+    },
+    {
+      "label": "B0-open-loop",
+      "base": {
+        "kind": "baseline_const",
+        "action": 0
+      },
+      "task": {
+        "stumble": false
+      }
+    },
+    {
+      "label": "B3-stumble",
+      "base": {
+        "kind": "baseline_const",
+        "action": 0
+      }
+    },
+    {
+      "label": "B4-all-reflexes",
+      "base": {
+        "kind": "baseline_const",
+        "action": 0
+      },
+      "task": {
+        "tegotae_sigma": 1.0,
+        "posture_gain": 0.5
+      }
+    },
+    {
+      "label": "random",
+      "base": {
+        "kind": "baseline_random"
+      }
+    }
+  ]
+}

@@ -35,24 +35,38 @@ from tinyrl.envs.go1 import Go1Gait  # noqa: E402
 OUT = ROOT / "results" / "figures"
 
 
+# Non-learning baselines from docs/research_review_2.md (B0..B4). Gains are untuned starting points.
+LADDER = {
+    "B0 open loop": {},
+    "B1 Tegotae": {"tegotae_sigma": 1.0},
+    "B2 posture reflex": {"posture_gain": 0.5},
+    "B3 stumble reflex": {"stumble": True},
+    "B4 all three": {"tegotae_sigma": 1.0, "posture_gain": 0.5, "stumble": True},
+}
+
+
 def run_level(args):
-    rough, n, phase_lock, friction, seed0, min_dist = args
+    rough, n, phase_lock, friction, seed0, min_dist, extra = args
     env = Go1Gait(roughness=rough, phase_lock=phase_lock,
                   friction_range=tuple(friction) if friction else None,
-                  obs_mode="imu4p" if phase_lock else "imu4")
-    falls, fails, dist = 0, 0, []
+                  obs_mode="imu4p" if phase_lock else "imu4",
+                  **{k: v for k, v in extra.items() if not k.startswith("_")})
+    falls, fails, dist, tilt = 0, 0, [], []
     for k in range(n):
         env.reset(seed=seed0 + k)
         x0 = float(env.data.qpos[0])
         done = term = False
         while not done:
-            _, _, term, trunc = env.step(0)
+            o, _, term, trunc = env.step(0)
+            tilt.append(abs(o[0]) + abs(o[1]))
             done = term or trunc
         falls += int(term)
         dist.append(float(env.data.qpos[0]) - x0)
         fails += int(term or dist[-1] < min_dist)       # fell, or got stuck
-    return {"roughness": rough, "episodes": n, "success_rate": 1 - fails / n, "fall_rate": falls / n,
-            "mean_distance_m": float(np.mean(dist)), "std_distance_m": float(np.std(dist))}
+    return {"variant": extra.get("_name", "B0 open loop"), "roughness": rough, "episodes": n,
+            "success_rate": 1 - fails / n, "fall_rate": falls / n,
+            "mean_distance_m": float(np.mean(dist)), "std_distance_m": float(np.std(dist)),
+            "mean_abs_tilt_rad": float(np.mean(tilt))}
 
 
 def main():
@@ -66,9 +80,18 @@ def main():
     ap.add_argument("--min-distance", type=float, default=2.0,
                     help="metres an episode must cover to count as a success (flat ground: ~4 m in 10 s)")
     ap.add_argument("--jobs", type=int, default=2)
+    ap.add_argument("--ladder", action="store_true",
+                    help="also run the non-learning reflex baselines B1-B4 at every level")
     a = ap.parse_args()
 
-    jobs = [(r, a.episodes, a.phase_lock, a.friction, 50_000, a.min_distance) for r in a.levels]
+    variants = LADDER if a.ladder else {"B0 open loop": {}}
+    jobs = []
+    for name, kw in variants.items():
+        for r in a.levels:
+            jobs.append((r, a.episodes, a.phase_lock, a.friction, 50_000, a.min_distance, {**kw}))
+    names = [n for n in variants for _ in a.levels]
+    for j, name in zip(jobs, names):
+        j[-1]["_name"] = name
     with ProcessPoolExecutor(max_workers=a.jobs) as pool:
         rows = list(pool.map(run_level, jobs))
     OUT.mkdir(parents=True, exist_ok=True)
@@ -77,20 +100,27 @@ def main():
         w.writeheader()
         w.writerows(rows)
     lo, hi = a.band
-    print(f"{'roughness':>9}  {'success':>7}  {'falls':>5}  {'distance (m)':>12}")
+    print(f"{'variant':>20}  {'roughness':>9}  {'success':>7}  {'falls':>5}  {'tilt':>5}  {'distance (m)':>12}")
     for r in rows:
-        mark = "  <- candidate" if lo <= r["success_rate"] <= hi else ""
-        print(f"{r['roughness']:9.3f}  {r['success_rate']:7.2f}  {r['fall_rate']:5.2f}  {r['mean_distance_m']:8.2f} ± {r['std_distance_m']:.2f}{mark}")
+        mark = "  <- room to learn" if lo <= r["success_rate"] <= hi else ""
+        print(f"{r['variant']:>20}  {r['roughness']:9.3f}  {r['success_rate']:7.2f}  {r['fall_rate']:5.2f}  "
+              f"{r['mean_abs_tilt_rad']:5.2f}  {r['mean_distance_m']:8.2f} ± {r['std_distance_m']:.2f}{mark}")
 
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    xs = [r["roughness"] for r in rows]
     fig, ax = plt.subplots(figsize=(6.5, 3.6), facecolor="#fcfcfb")
     ax.set_facecolor("#fcfcfb")
     ax.axhspan(lo, hi, color="#2a78d6", alpha=0.08, linewidth=0)
-    ax.text(xs[0], hi, " room to learn", color="#52514e", fontsize=7, va="bottom")
-    ax.plot(xs, [r["success_rate"] for r in rows], marker="o", color="#2a78d6", linewidth=1.5)
+    ax.text(a.levels[0], hi, " room to learn", color="#52514e", fontsize=7, va="bottom")
+    colors = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#6250d6"]
+    markers = ["o", "s", "^", "D", "v"]
+    for k, name in enumerate(variants):
+        rr = [r for r in rows if r["variant"] == name]
+        ax.plot([r["roughness"] for r in rr], [r["success_rate"] for r in rr], marker=markers[k % 5],
+                color=colors[k % 5], linewidth=1.5, label=name)
+    if len(variants) > 1:
+        ax.legend(fontsize=7, frameon=False)
     for s in ("top", "right"):
         ax.spines[s].set_visible(False)
     ax.grid(True, color="#e4e3df", linewidth=0.6)

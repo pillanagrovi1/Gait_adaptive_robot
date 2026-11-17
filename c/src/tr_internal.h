@@ -31,17 +31,18 @@ uint32_t tr_mlp_nparams(const tr_cfg_t *c);
 /* ---- Streaming path (Watkins Q(lambda) + ObGD), used when tr_is_stream(cfg) ----
  * X_trace: forward on (s, ·) leaving Q(s, ·) in ag->q, then
  *          e <- decay * e + grad_w Q(s, a); writes ||e||_1 to *norm1; returns Q(s, a).
- * X_apply: w <- w + step * e.
+ * X_apply: w <- w + (step * e) >> sh   (sh = 16: step is Q16.16; sh = 30: step is Q2.30,
+ *          used by ObGD when the effective step is too small for Q16.16).
  * X_clear: e <- 0.
  */
 q16_t tr_tab_trace(tr_agent_t *ag, const q16_t *obs, int a, q16_t decay, int64_t *norm1);
-void  tr_tab_apply(tr_agent_t *ag, q16_t step);
+void  tr_tab_apply(tr_agent_t *ag, q16_t step, int sh);
 void  tr_tab_clear(tr_agent_t *ag);
 q16_t tr_lin_trace(tr_agent_t *ag, const q16_t *obs, int a, q16_t decay, int64_t *norm1);
-void  tr_lin_apply(tr_agent_t *ag, q16_t step);
+void  tr_lin_apply(tr_agent_t *ag, q16_t step, int sh);
 void  tr_lin_clear(tr_agent_t *ag);
 q16_t tr_mlp_trace(tr_agent_t *ag, const q16_t *obs, int a, q16_t decay, int64_t *norm1);
-void  tr_mlp_apply(tr_agent_t *ag, q16_t step);
+void  tr_mlp_apply(tr_agent_t *ag, q16_t step, int sh);
 void  tr_mlp_clear(tr_agent_t *ag);
 
 /* ---- Sparse trace (tr_trace.c) ---- */
@@ -50,7 +51,7 @@ void    tr_strace_init(tr_strace_t *t, uint8_t **cursor, uint32_t cap);
 void    tr_strace_decay(tr_strace_t *t, q16_t decay);
 void    tr_strace_add(tr_strace_t *t, uint32_t index, q16_t v);
 int64_t tr_strace_norm1(const tr_strace_t *t);
-void    tr_strace_apply(tr_agent_t *ag, const tr_strace_t *t, q16_t *w, q16_t step);
+void    tr_strace_apply(tr_agent_t *ag, const tr_strace_t *t, q16_t *w, q16_t step, int sh);
 static inline void tr_strace_clear(tr_strace_t *t) { t->n = 0; }
 
 static inline int tr_stream_on(const tr_cfg_t *c) { return c->lambda > 0 || c->obgd_kappa > 0; }
@@ -89,6 +90,17 @@ static inline q16_t tr_mul_upd(tr_agent_t *ag, q16_t a, q16_t b)
     if (ag->cfg.round_mode == 1)
         return tr_count_upd(ag, p, q16_sat((p + (int64_t)(tr_rng_next(&ag->rng) >> 16)) >> 16));
     return tr_count_upd(ag, p, q16_sat((p + (1LL << 15)) >> 16));
+}
+
+/* (a * b) >> sh with the configured rounding; sh = 16 is tr_mul_upd. */
+static inline q16_t tr_mul_upd_sh(tr_agent_t *ag, q16_t a, q16_t b, int sh)
+{
+    int64_t p = (int64_t)a * (int64_t)b;
+    if (ag->cfg.round_mode == 1) {
+        int64_t r = (int64_t)(tr_rng_next(&ag->rng) >> (32 - sh));   /* uniform in [0, 2^sh) */
+        return tr_count_upd(ag, p, q16_sat((p + r) >> sh));
+    }
+    return tr_count_upd(ag, p, q16_sat((p + (1LL << (sh - 1))) >> sh));
 }
 
 static inline q16_t tr_mul3_upd(tr_agent_t *ag, q16_t a, q16_t b, q16_t c)

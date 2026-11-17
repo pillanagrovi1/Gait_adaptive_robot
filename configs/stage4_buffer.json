@@ -1,6 +1,6 @@
 {
   "name": "stage4_buffer",
-  "_note": "Stage 4: what does a replay buffer buy, per byte, compared with the streaming recipe that needs none? Buffers cannot be combined with traces in this code (traces need on-policy order); a compressed FIFO buffer for a stream+buffer hybrid is future work (docs/research_review.md).",
+  "_note": "Stage 4 (original form): what does a replay buffer buy, per byte, compared with the streaming recipe that needs none? See replay_ratio.json for the redefined Stage 4 (compressed buffer, updates per step). Traces cannot be combined with a buffer in this code (on-policy order).",
   "task": {
     "name": "pendulum",
     "obs_mode": "trig"
