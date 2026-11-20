@@ -12,6 +12,11 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
       - run: pip install -r requirements.txt
+      - name: C tests under the undefined-behaviour sanitizer
+        run: |
+          make build/test_core CFLAGS="-O1 -g -std=c11 -fsanitize=undefined -fno-sanitize-recover=all"
+          ./build/test_core
+          make clean
       - name: Host build and tests (includes the Stage 1 corridor gate)
         run: make test
       - name: Cortex-M4 build, QEMU run, host == M4 bit-exact check

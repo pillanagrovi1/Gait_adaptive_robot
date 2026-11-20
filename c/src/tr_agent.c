@@ -339,9 +339,9 @@ static void learn_stream(tr_agent_t *ag, const q16_t *s, int a, q16_t r, const q
             /* ... unless ObGD shrinks it: then keep 14 extra fraction bits (Q2.30), so a
              * step of e.g. 1e-4 is not rounded to 6 LSBs (or 0) before it multiplies e.
              * One division per update, never per weight. */
-            int64_t step30 = ((int64_t)q16_mul(c->alpha, delta) << 30) / denom;
+            int64_t step30 = ((int64_t)q16_mul(c->alpha, delta) * (1LL << 30)) / denom;
             if (step30 > -(1LL << 31) && step30 < (1LL << 31)) { step = (q16_t)step30; sh = 30; }
-            else step = q16_sat(((int64_t)step << 16) / denom);
+            else step = q16_sat(((int64_t)step * 65536) / denom);
         }
     }
     if (step != 0) {
