@@ -4,6 +4,7 @@
 #   bash scripts/run_experiment.sh pendulum_main --seeds 0 1 2 3 4    # fewer seeds (say so when reporting)
 #   JOBS=6 bash scripts/run_experiment.sh pendulum_main
 set -euo pipefail
+export PYTHONUNBUFFERED=1
 cd "$(dirname "$0")/.."
 E="$1"; shift
 JOBS="${JOBS:-$(($(nproc) > 1 ? $(nproc) - 0 : 1))}"
