@@ -11,19 +11,106 @@ Single-seed observations from the build are in `build_notes.md`, not here.
 | 17 Nov 2026 | 2 | Table learner cost on the Cortex-M4 (QEMU) is flat in table size | 523–535 instructions per act + learn step; peak SRAM as above; host == M4 bit-exact for all 6 configs | ff8d592 | same | `_compute.png` |
 | 17 Nov 2026 | M4 | Learning on the emulated chip (processor-in-the-loop) reproduces host learning bit for bit | 4/4 learners (table, linear, compressed-replay net, stream net), 2,000 pendulum steps each | 1e15897 | `python3 scripts/pil_check.py` | `results/m4/pil_check.json` |
 
-| 17 Nov 2026 | 3 (first pass) | Pendulum, all learners, equal 300k-step budget, equal tuning (K = 20 each), both encodings. **Per byte, the streaming network is the most memory-efficient learner; per instruction it is the most expensive** | streaming net (θ input): 1.8 KB −281 ± 106 · 2.8 KB −179 ± 41, at 17.6k–32.1k instructions/step · table (θ): 6.0 KB −342 ± 191 at 534 instr. · linear (θ): 4.0 KB −221 ± 58 at 1.8k instr. | c3888b4 | `bash scripts/run_experiment.sh pendulum_main --seeds 0 1 2 3 4` | `results/figures/pendulum_main_tuned_headline.png` |
-| 17 Nov 2026 | 3 (first pass) | Best final performance at any memory: linear tile coding with cos/sin input | 1,024 features (13.3 KB): −142 ± 13 · 4,096 features (50.1 KB): −125 ± 9 · replay network (2,000-transition compressed buffer, H = 64, 27.2 KB): −137 ± 32 · table (cos/sin, 21 bins, 111.8 KB): −236 ± 26 | c3888b4 | same | same |
-| 17 Nov 2026 | 3 (first pass) | Q16.16 update underflow differs by learner | share of update products rounded to zero: table ≤ 0.3% · linear ≤ 2.4% · replay network 0.9–12.6% (grows with width) · streaming network 25–51% (stochastic rounding on, so unbiased but noisy) | c3888b4 | same | `_underflow.png` |
-| 17 Nov 2026 | 3 (first pass) | Input encoding (D01) changes the ranking | cos/sin costs the table bins³ instead of bins² (21 bins: 111.8 KB vs 6.0 KB) and hurts small tile codings (256 features: −722 ± 94 vs −221 ± 58), but helps linear from 1,024 features | c3888b4 | same | same |
-
-All "first pass" rows: **n = 5 seeds** (the protocol asks for 10), 95% t-intervals, all memory and instruction numbers
-measured on the M4 in QEMU (host == M4 bit-exact for all 34 learner configs), runs by Claude in the cloud workspace.
-Rerun with `bash scripts/run_experiment.sh pendulum_main` (10 seeds) before citing. The pendulum_main log file was
-truncated by a git operation during the run; the data (per-seed CSVs, metadata with the commit) is complete.
-
 Notes on the Stage 2 entry: no table configuration reached the usual "solved" level (≈ −150) within
 300k steps; the largest table was still improving (see the curves). The tuning budget (100k steps) is
-shorter than the table needs (open decision D29).
+shorter than the table needs (D29; from 22 Nov tuning uses the full budget, D49).
+
+## Stage 3: pendulum, all learners, both input encodings (18 Nov 2026, written up 22 Nov)
+
+![pendulum: final return vs peak SRAM](../results/figures/pendulum_main_tuned_headline.png)
+
+A first pass with 5 seeds (17 Nov, `c3888b4`, archived at `4efe16f`) came before this 10-seed run; finding 1 compares them.
+
+**Provenance.** Results committed in `c3f4a55` · seeds 0–9, 300,000 environment steps · tuning: K = 20 draws per learner,
+seeds 1000–1002, 100,000 steps (`results/tuning/pendulum_main.csv`) · runs
+`results/raw_archive/pendulum_main_tuned.tar.gz` · log `results/logs/pendulum_main.log` · library versions were not
+recorded with this run · instructions and memory `results/m4/pendulum_main_tuned.csv` (QEMU, synthetic workload;
+instruction counts, not timing) · tables by `scripts/results_table.py` and `scripts/compare.py`.
+
+**pendulum_main_tuned** · commit `3e55364` · config `configs/pendulum_main_tuned.json` · command `bash scripts/run_experiment.sh pendulum_main` · seeds per config: 10–10 · intervals: t 95%
+
+| config | final eval return | mean eval (AUC) | online return | peak SRAM (B) | instr./step (M4) | update underflow |
+|---|---|---|---|---|---|---|
+| table_obs_modeangle_bins5 | -935 ± 70 | -1028 ± 16 | -965 ± 13 | 1008 | 525 | 0.0% |
+| table_obs_modeangle_bins7 | -850 ± 72 | -936 ± 19 | -859 ± 10 | 1296 | 525 | 0.0% |
+| table_obs_modeangle_bins11 | -669 ± 42 | -828 ± 18 | -765 ± 25 | 2160 | 529 | 0.0% |
+| table_obs_modeangle_bins15 | -460 ± 91 | -676 ± 28 | -609 ± 20 | 3408 | 532 | 0.0% |
+| table_obs_modeangle_bins21 | -327 ± 95 | -508 ± 21 | -393 ± 19 | 6000 | 534 | 0.0% |
+| table_obs_modetrig_bins5 | -854 ± 51 | -951 ± 20 | -866 ± 17 | 2212 | 634 | 0.0% |
+| table_obs_modetrig_bins7 | -698 ± 49 | -834 ± 18 | -757 ± 16 | 4828 | 639 | 0.0% |
+| table_obs_modetrig_bins11 | -363 ± 87 | -582 ± 33 | -493 ± 19 | 16684 | 641 | 0.0% |
+| table_obs_modetrig_bins15 | -250 ± 85 | -486 ± 31 | -360 ± 8 | 41212 | 644 | 0.0% |
+| table_obs_modetrig_bins21 | -227 ± 18 | -549 ± 21 | -363 ± 12 | 111844 | 639 | 0.3% |
+| linear_obs_modeangle_features64 | -961 ± 94 | -1110 ± 36 | -1135 ± 62 | 1700 | 2280 | 0.0% |
+| linear_obs_modeangle_features256 | -224 ± 35 | -458 ± 23 | -364 ± 19 | 4004 | 1814 | 0.2% |
+| linear_obs_modeangle_features1024 | -158 ± 35 | -231 ± 10 | -222 ± 5 | 13220 | 1815 | 0.5% |
+| linear_obs_modeangle_features4096 | -151 ± 37 | -219 ± 11 | -218 ± 7 | 50084 | 1818 | 0.5% |
+| linear_obs_modetrig_features64 | -1157 ± 49 | -1135 ± 24 | -1222 ± 23 | 1744 | 1990 | 0.0% |
+| linear_obs_modetrig_features256 | -769 ± 72 | -964 ± 36 | -933 ± 48 | 4048 | 1989 | 0.0% |
+| linear_obs_modetrig_features1024 | -143 ± 8 | -321 ± 12 | -251 ± 9 | 13264 | 1990 | 0.5% |
+| linear_obs_modetrig_features4096 | -124 ± 5 | -219 ± 13 | -185 ± 3 | 50128 | 2183 | 2.4% |
+| net_obs_modeangle_hidden8 | -625 ± 350 | -832 ± 201 | -756 ± 242 | 19356 | 24426 | 1.7% |
+| net_obs_modeangle_hidden16 | -574 ± 260 | -578 ± 228 | -531 ± 244 | 19836 | 40088 | 3.4% |
+| net_obs_modeangle_hidden32 | -381 ± 109 | -435 ± 78 | -406 ± 76 | 20796 | 71321 | 7.3% |
+| net_obs_modeangle_hidden64 | -226 ± 85 | -276 ± 26 | -248 ± 18 | 22716 | 135233 | 12.1% |
+| net_obs_modetrig_hidden8 | -868 ± 138 | -881 ± 70 | -835 ± 98 | 23436 | 27262 | 0.9% |
+| net_obs_modetrig_hidden16 | -293 ± 77 | -426 ± 50 | -378 ± 28 | 23980 | 44823 | 3.8% |
+| net_obs_modetrig_hidden32 | -177 ± 31 | -215 ± 30 | -243 ± 15 | 25068 | 80043 | 7.2% |
+| net_obs_modetrig_hidden64 | -133 ± 14 | -178 ± 10 | -200 ± 6 | 27244 | 149541 | 11.3% |
+| net-stream_obs_modeangle_hidden8 | -450 ± 237 | -857 ± 103 | -466 ± 124 | 1348 | 10531 | 28.7% |
+| net-stream_obs_modeangle_hidden16 | -262 ± 63 | -582 ± 57 | -280 ± 50 | 1828 | 17640 | 37.0% |
+| net-stream_obs_modeangle_hidden32 | -172 ± 32 | -412 ± 56 | -213 ± 12 | 2788 | 32082 | 44.6% |
+| net-stream_obs_modeangle_hidden64 | -171 ± 45 | -328 ± 24 | -203 ± 5 | 4708 | 61431 | 50.6% |
+| net-stream_obs_modetrig_hidden8 | -433 ± 164 | -858 ± 155 | -582 ± 126 | 1416 | 11828 | 24.3% |
+| net-stream_obs_modetrig_hidden16 | -202 ± 65 | -485 ± 30 | -327 ± 25 | 1960 | 19785 | 32.2% |
+| net-stream_obs_modetrig_hidden32 | -241 ± 115 | -384 ± 36 | -283 ± 23 | 3048 | 36414 | 40.2% |
+| net-stream_obs_modetrig_hidden64 | -158 ± 48 | -389 ± 29 | -246 ± 9 | 5224 | 68885 | 50.1% |
+| random_obs_modeangle | -1147 ± 20 | -1133 ± 5 | -1233 ± 12 | — | — | — |
+| random_obs_modetrig | -1147 ± 20 | -1133 ± 5 | -1233 ± 12 | — | — | — |
+| zero-torque_obs_modeangle | -1068 ± 0 | -1068 ± 0 | -1229 ± 11 | — | — | — |
+| zero-torque_obs_modetrig | -1068 ± 0 | -1068 ± 0 | -1229 ± 11 | — | — | — |
+
+**Metrics.** Final = mean of the last 3 evaluations (10 episodes each). AUC = mean evaluation return over training
+(30 evaluations; higher = learned sooner). Online = mean training return over the last 20% of episodes.
+
+**Reproducibility.** The 190 runs shared with the first pass (cloud) are byte-identical to this laptop run, episode
+and evaluation files alike. That shows determinism on x86-64 Linux, not correctness; ARM and macOS are untested.
+
+**Paired differences.** This experiment was not pre-registered: both comparisons were chosen after seeing the
+results, and stay at 10 seeds (D50).
+
+| A − B | metric | status | pairs | mean | 95% CI | verdict |
+|---|---|---|---|---|---|---|
+| net_obs_modetrig_hidden64 − linear_obs_modetrig_features4096 | final | not pre-registered | 10 | -8.73 | [-25.28, +7.82] | inconclusive |
+| net_obs_modetrig_hidden64 − linear_obs_modetrig_features4096 | auc | not pre-registered | 10 | +40.9 | [+20.6, +61.2] | A higher |
+| net-stream_obs_modeangle_hidden32 − linear_obs_modeangle_features256 | final | not pre-registered | 10 | +51.4 | [-2.9, +105.8] | inconclusive |
+| net-stream_obs_modeangle_hidden32 − linear_obs_modeangle_features256 | auc | not pre-registered | 10 | +45.4 | [-7.9, +98.8] | inconclusive |
+
+**Findings** (one task, equal tuning budget).
+
+1. The first pass held for final and online return: all 38 ten-seed means lie inside their 5-seed intervals. For AUC
+   37 of 38 do; the exception is linear, angle, 256 features (moved by −20.0, 5-seed half-width 17.9).
+2. The replay network (cos/sin, 64 hidden, 27.2 KB) and linear tile coding (cos/sin, 4,096 features, 50.1 KB) are
+   inconclusive on final return. The network learns faster, at 68.5x the instructions per step as measured.
+3. The streaming network (angle, 32 hidden, 2.8 KB) and linear tile coding (angle, 256 features, 4.0 KB) are
+   inconclusive on final return and on AUC. The streaming network costs 17.7x the instructions per step.
+4. Descriptive: every point on the mean final-return frontier above 1,296 B and up to 5.2 KB is a streaming
+   network. From 13.3 KB the frontier is linear tile coding and the replay network. The table is on it only at
+   1,008 B and 1,296 B.
+5. Descriptive: streaming networks with 32–64 hidden units have mean AUC −328 to −412; with 8–16 hidden units −485 to
+   −858. Networks with 8 hidden units vary widely between seeds (see the dots).
+6. The input encoding is a real factor (D01): with cos/sin the 21-bin table costs 111.8 KB instead of 6.0 KB, and
+   linear coding with 256 features has a mean final return of −769 instead of −224.
+7. Update underflow: table ≤ 0.4%, linear ≤ 2.4%, replay network 0.9–12.1%, streaming network 24–51% (stochastic
+   rounding on).
+
+**Limits.**
+
+- Tuning used a third of the step budget, which favours fast starters, and only the angle encoding (D49).
+- The linear learner's instructions per step are path dependent (one or two hashes per step, see Stage 5): its
+  configurations read 1,814–2,280 although the table size does not matter, so ratios against it carry that uncertainty.
+- The committed counts for the 8 streaming networks are 1 instruction per step higher than current code, which has
+  the undefined-behaviour fix `6e8904b`. Learned values are identical.
 
 ## Stage 4: replay ratio on the pendulum, table arm (22 Nov 2026)
 
