@@ -87,6 +87,10 @@ def learning_curves(exp: dict, specs, path: Path):
         if shift_at is not None:
             ax.axvline(shift_at, color=INK2, linestyle="--", linewidth=0.8)
             ax.text(shift_at, ax.get_ylim()[1], " shift", color=INK2, fontsize=7, va="top")
+            back = exp.get("run", {}).get("shift_back_at_step")
+            if back is not None:
+                ax.axvline(back, color=INK2, linestyle="--", linewidth=0.8)
+                ax.text(back, ax.get_ylim()[1], " back", color=INK2, fontsize=7, va="top")
         ax.set_title(lab, color=INK, fontsize=10, loc="left")
         ax.set_xlabel(xlabel, color=INK2, fontsize=8)
         ax.legend(fontsize=7, frameon=False, labelcolor=INK2)

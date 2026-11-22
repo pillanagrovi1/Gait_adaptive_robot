@@ -1,17 +1,18 @@
 {
   "name": "adaptation_pendulum",
-  "_note": "Adaptation: after 300k steps the rod becomes 50% heavier. Metrics: post-shift AUC, steps to reach 90% of the pre-shift level (censored if never), fraction recovered. Compare with adaptation_pendulum_scratch (forward transfer). 20 seeds.",
+  "_note": "Adaptation A->B->A (D57): after 300k steps the rod becomes 50% heavier, after 450k it is restored. Metrics: post-shift AUC and recovery on the heavy-rod window only, fraction recovered, forgetting (return right after the switch back - pre-shift level). Compare with adaptation_pendulum_scratch (forward transfer). 20 seeds.",
   "task": {
     "name": "pendulum",
     "obs_mode": "trig"
   },
   "run": {
-    "steps": 450000,
+    "steps": 600000,
     "decay_steps": 180000,
     "eval_every_steps": 5000,
     "eval_episodes": 10,
     "shift_at_step": 300000,
-    "shift_level": 0.5
+    "shift_level": 0.5,
+    "shift_back_at_step": 450000
   },
   "seeds": [
     0,
