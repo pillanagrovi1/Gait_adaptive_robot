@@ -250,7 +250,7 @@ def make_all(exp_name: str):
     headline(exp, summ, OUT / f"{name}_headline.png", exp_path=exp_name)
     if analysis._shift_point(exp) is not None and "post_auc_mean" in summ:
         headline(exp, summ, OUT / f"{name}_adaptation.png", y="post_auc",
-                 ylabel="mean eval return after the shift (higher = adapts better)", exp_path=exp_name)
+                 ylabel="mean eval return after the shift", exp_path=exp_name)
         files.append(OUT / f"{name}_adaptation.png")
     if "underflow_frac" in summ and summ["underflow_frac"].notna().any():
         underflow_plot(exp, summ, OUT / f"{name}_underflow.png")
