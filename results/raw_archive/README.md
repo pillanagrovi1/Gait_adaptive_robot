@@ -3,6 +3,7 @@
 Every number in `docs/results.md` can be recomputed from these archives without rerunning anything:
 
 ```bash
+mkdir -p results/raw      # tar -C fails if the folder does not exist
 tar -xzf results/raw_archive/pendulum_main_tuned.tar.gz -C results/raw
 python3 scripts/make_plots.py pendulum_main_tuned        # figures + summary CSV
 python3 scripts/results_table.py pendulum_main_tuned     # the table in docs/results.md
