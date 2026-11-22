@@ -25,6 +25,12 @@ Patterson et al. 2024, Colas et al. 2019, Agarwal et al. 2021).
                                     (censored: counted in recovered_frac, never dropped silently)
                         post_auc  = mean eval return over all post-shift points (fixed window)
                         drop      = first post-shift eval - P
+                      With a switch back (A -> B -> A, D57) post_auc and recovery use the B
+                      window only, and:
+                        back      = return on A right after the switch back, before more learning
+                        a2_auc    = mean eval return over the second A window
+                        forgetting        = paired_diff(e, run, run, "back", metric_b="final")
+                        forward transfer  = paired_diff(e, run, run, "post_auc", exp_b=scratch, metric_b="auc")
   underflow_frac      share of learning-update products that were non-zero before
                       rounding and exactly zero after (Q16.16 underflow), from the host run.
   peak SRAM           from results/m4/<experiment>.csv (QEMU, Cortex-M4):
@@ -132,9 +138,10 @@ def _shift_point(exp: dict):
     return None if not x else x
 
 
-def _per_seed_metrics(xs, M, shift, threshold, df):
+def _per_seed_metrics(xs, M, shift, threshold, df, back=None, metas=None):
     out = []
     pre = xs <= (shift if shift is not None else np.inf)
+    in_b = ~pre & (xs <= (back if back is not None else np.inf))
     xcol = "env_steps" if "env_steps" in df and df.attrs.get("step_mode") else "episode"
     for k, row in enumerate(M):
         m = {}
@@ -152,8 +159,12 @@ def _per_seed_metrics(xs, M, shift, threshold, df):
             tail = tr["train_return"].to_numpy()
             if len(tail):
                 m["online"] = float(np.mean(tail[-max(1, len(tail) // 5):]))
-        if shift is not None and (~pre).sum() >= K_LAST:
-            post, post_x = row[~pre], xs[~pre]
+        if shift is not None and back is not None:
+            m["a2_auc"] = float(np.nanmean(row[xs > back]))
+            v = (metas or {}).get(seed, {}).get("eval_after_shift_back")
+            m["back"] = np.nan if v is None else v
+        if shift is not None and in_b.sum() >= K_LAST:
+            post, post_x = row[in_b], xs[in_b]
             P = m["final"]
             target = P - 0.1 * abs(P)
             smooth = np.convolve(post, np.ones(3) / 3, mode="valid")
@@ -171,6 +182,7 @@ def summarize(exp_name_or_path) -> pd.DataFrame:
     specs = sweep.expand(exp)
     m4 = load_m4(exp["name"])
     shift = _shift_point(exp)
+    back = exp.get("run", {}).get("shift_back_at_step")
     threshold = exp.get("metrics", {}).get("threshold")
     rows = []
     for s in specs:
@@ -181,7 +193,7 @@ def summarize(exp_name_or_path) -> pd.DataFrame:
         seeds = sorted(df["seed"].unique())
         df = df.set_index("seed").loc[seeds].reset_index()
         xs, M, _ = eval_matrix(df, ev)
-        ps = _per_seed_metrics(xs, M, shift, threshold, df)
+        ps = _per_seed_metrics(xs, M, shift, threshold, df, back, metas)
         row = {"run_id": s["run_id"], "label": s["label"], "kind": s["learner"]["kind"],
                **{f"sweep_{k}": v for k, v in s["sweep_values"].items()},
                "n_seeds": len(ps), "ci_method": ci_method(len(ps)),
@@ -214,27 +226,30 @@ def summarize(exp_name_or_path) -> pd.DataFrame:
 def per_seed(exp_name_or_path, run_id: str, metric: str = "final") -> pd.Series:
     """Per-seed values of one metric for one configuration, indexed by seed."""
     exp = sweep.load(exp_name_or_path)
-    df, ev, _, _ = load_run(exp["name"], run_id)
+    df, ev, _, metas = load_run(exp["name"], run_id)
     if df is None:
         raise FileNotFoundError(run_id)
     df.attrs["step_mode"] = ev is not None
     seeds = sorted(df["seed"].unique())
     df = df.set_index("seed").loc[seeds].reset_index()
     xs, M, _ = eval_matrix(df, ev)
-    ps = _per_seed_metrics(xs, M, _shift_point(exp), exp.get("metrics", {}).get("threshold"), df)
+    ps = _per_seed_metrics(xs, M, _shift_point(exp), exp.get("metrics", {}).get("threshold"), df,
+                           exp.get("run", {}).get("shift_back_at_step"), metas)
     ps.index = seeds
     return ps[metric]
 
 
-def paired_diff(exp_name_or_path, run_a: str, run_b: str, metric: str = "final") -> dict:
+def paired_diff(exp_name_or_path, run_a: str, run_b: str, metric: str = "final",
+                exp_b=None, metric_b: str | None = None) -> dict:
     """A - B on the seeds both share (training seeds are common random numbers:
     seed k gives both learners the same episode start states). Interval on the
-    per-seed DIFFERENCES, as recommended by Patterson et al. 2024."""
+    per-seed DIFFERENCES, as recommended by Patterson et al. 2024.
+    B may come from another experiment (exp_b) or be another metric (metric_b)."""
     a = per_seed(exp_name_or_path, run_a, metric)
-    b = per_seed(exp_name_or_path, run_b, metric)
+    b = per_seed(exp_b or exp_name_or_path, run_b, metric_b or metric)
     common = a.index.intersection(b.index)
     d = (a.loc[common] - b.loc[common]).to_numpy(float)
-    return {"metric": metric, "a": run_a, "b": run_b, "n": int(len(d)),
+    return {"metric": metric, "metric_b": metric_b or metric, "a": run_a, "b": run_b, "n": int(len(d)),
             "mean_diff": float(np.nanmean(d)) if len(d) else float("nan"),
             "ci95": t95(d), "ci_method": "t",
             "a_better_frac": float(np.mean(d > 0)) if len(d) else float("nan")}

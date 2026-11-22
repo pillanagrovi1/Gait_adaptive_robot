@@ -17,6 +17,8 @@ on fixed seeds (no learning, no exploration). Their mean return is the
 
 Adaptation: if `shift_at` (or `shift_at_step`) is set, env.set_shift(shift_level)
 is applied from that point on (evaluation uses the shifted task too).
+A -> B -> A (D57, step budgets only): `shift_back_at_step` restores the first task. The return
+on it right then, before any further learning, is meta["eval_after_shift_back"].
 
 Eligibility traces are cleared at the start of every episode (agent.episode_start()).
 meta.json also records how many learning-update products rounded to zero
@@ -128,11 +130,17 @@ def run(task: dict, learner: dict, seed: int, run_cfg: dict | None = None,
         agent = FloatAgent(learner, env.obs_lo, env.obs_hi, env.n_actions, seed=seed + 1)
     else:
         agent = Agent(learner, env.obs_lo, env.obs_hi, env.n_actions, seed=seed + 1)
+    back_at = r.get("shift_back_at_step")
+    if back_at is not None:
+        first = r.get("shift_at_step")
+        if not step_mode or first is None or not first < back_at < r["steps"]:
+            raise ValueError("shift_back_at_step needs a step budget and shift_at_step < shift_back_at_step < steps")
     scale = env.reward_scale
     rows, evals = [], []
     t0 = time.time()
     updates, t_global, ep = 0, 0, 0
     shifted = False
+    after_back = None
     if step_mode:
         budget, horizon = int(r["steps"]), int(r.get("decay_steps", r["steps"] // 2))
         every = int(r.get("eval_every_steps", max(1, budget // 30)))
@@ -179,6 +187,10 @@ def run(task: dict, learner: dict, seed: int, run_cfg: dict | None = None,
                 if shift_at is not None and not shifted and t_global >= shift_at:
                     do_shift()                   # after the eval: the checkpoint at shift_at is pre-shift (D58)
                     shifted = True
+                if back_at is not None and after_back is None and t_global >= back_at:
+                    env.set_shift(0.0)
+                    eval_env.set_shift(0.0)
+                    after_back = evaluate(eval_env, agent, r["eval_episodes"])
                 if t_global >= budget:
                     break
         ev = ""
@@ -202,7 +214,7 @@ def run(task: dict, learner: dict, seed: int, run_cfg: dict | None = None,
         "n_actions": env.n_actions, "env_steps": t_global, "episodes": ep, "updates": updates,
         "underflow": under[0], "update_terms": under[1],
         "underflow_frac": round(under[0] / under[1], 4) if under[1] else None,
-        "pil": pil,
+        "pil": pil, "eval_after_shift_back": after_back,
         "wall_s": round(time.time() - t0, 2), "git_commit": GIT_COMMIT,
     }
     if out_dir is not None:
