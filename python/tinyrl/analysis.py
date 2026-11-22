@@ -33,6 +33,8 @@ Patterson et al. 2024, Colas et al. 2019, Agarwal et al. 2021).
                         forward transfer  = paired_diff(e, run, run, "post_auc", exp_b=scratch, metric_b="auc")
   underflow_frac      share of learning-update products that were non-zero before
                       rounding and exactly zero after (Q16.16 underflow), from the host run.
+  saturation_frac     share of those update terms whose product or weight write was clipped
+                      to the int32 range (D55), from the host run.
   peak SRAM           from results/m4/<experiment>.csv (QEMU, Cortex-M4):
                       sizeof(agent) + arena + learner stack. If a configuration
                       was not measured, `peak_source` says "host-estimate" and the
@@ -206,6 +208,8 @@ def summarize(exp_name_or_path) -> pd.DataFrame:
         if metas:
             uf = [m.get("underflow_frac") for m in metas.values() if m.get("underflow_frac") is not None]
             row["underflow_frac"] = float(np.mean(uf)) if uf else np.nan
+            sat = [m.get("saturation_frac") for m in metas.values() if m.get("saturation_frac") is not None]
+            row["saturation_frac"] = float(np.mean(sat)) if sat else np.nan
             row["updates_per_step"] = float(np.mean([m["updates"] / max(1, m["env_steps"])
                                                      for m in metas.values() if "env_steps" in m]))
         mm = m4.get(s["run_id"])

@@ -153,6 +153,12 @@ typedef struct {
     uint32_t n_upd_terms;             /* weight-update products computed */
     uint32_t n_underflow;             /* ... of which were non-zero before rounding, zero after */
     union { tr_tab_t tab; tr_lin_t lin; tr_mlp_t mlp; } u;
+#ifndef TR_NO_DIAG
+    /* Last, and absent from the M4 build, so its memory and instruction counts are untouched (D55). */
+    uint32_t n_saturated;             /* update terms whose product or weight write was clipped */
+    uint32_t term_saturated;          /* the current term is already counted */
+    uint32_t step_saturated;          /* streaming: the step shared by this update's terms was clipped */
+#endif
 } tr_agent_t;
 
 /* Bytes of arena this configuration needs (0 if the config is invalid). */
@@ -178,6 +184,8 @@ void tr_episode_start(tr_agent_t *ag);
 /* Diagnostics: how many update products rounded to exactly zero (Q16.16 underflow). */
 uint32_t tr_underflow_count(const tr_agent_t *ag);
 uint32_t tr_update_terms(const tr_agent_t *ag);
+/* ... and how many were clipped to the int32 range (always 0 with TR_NO_DIAG). */
+uint32_t tr_saturation_count(const tr_agent_t *ag);
 /* 1 if this config uses the streaming path (lambda > 0 or ObGD on). */
 int  tr_is_stream(const tr_cfg_t *cfg);
 

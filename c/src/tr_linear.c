@@ -152,7 +152,7 @@ void tr_lin_update(tr_agent_t *ag, const q16_t *obs, int a, q16_t y)
     q16_t step = tr_mul_upd(ag, ag->u.lin.alpha_t, delta);
     for (int t = 0; t < c->tilings; t++) {
         q16_t *w = &ag->u.lin.w[idx[t] * A + a];
-        *w = q16_add(*w, step);
+        *w = tr_add_upd(ag, *w, step);
     }
 }
 

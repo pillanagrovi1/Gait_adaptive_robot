@@ -64,6 +64,6 @@ void tr_strace_apply(tr_agent_t *ag, const tr_strace_t *t, q16_t *w, q16_t step,
 {
     for (uint32_t i = 0; i < t->n; i++) {
         q16_t *wi = &w[t->idx[i]];
-        *wi = q16_add(*wi, tr_mul_upd_sh(ag, step, t->val[i], sh));
+        *wi = tr_add_upd(ag, *wi, tr_mul_upd_sh(ag, step, t->val[i], sh));
     }
 }
