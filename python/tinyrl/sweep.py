@@ -68,6 +68,13 @@ def expand(exp: dict) -> list[dict]:
     return runs
 
 
+def ran_as(spec: dict, meta: dict) -> bool:
+    """Did the run that wrote this meta file use this spec's learner, task and run settings?"""
+    run = meta.get("run", {})
+    return (meta.get("learner") == spec["learner"] and meta.get("task") == spec["task"]
+            and all(run.get(k) == v for k, v in spec["run"].items()))
+
+
 if __name__ == "__main__":
     import sys
     exp = load(sys.argv[1])

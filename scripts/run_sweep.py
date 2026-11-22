@@ -7,9 +7,11 @@
     python3 scripts/run_sweep.py pendulum_main --dry-run
 
 A (run, seed) whose meta file exists (written last) is skipped, so you can stop and restart.
+If that file was written with another config, nothing is run: the sweep stops and says so.
 Delete results/raw/<experiment>/ to start over.
 """
 import argparse
+import json
 import os
 import sys
 import time
@@ -45,11 +47,17 @@ def main():
     if a.only:
         specs = [s for s in specs if s["label"] == a.only]
     seeds = a.seeds if a.seeds is not None else exp["seeds"]
-    todo = []
+    todo, stale = [], []
     for s in specs:
         for seed in seeds:
-            if not (harness.RESULTS / exp["name"] / s["run_id"] / f"seed{seed}_meta.json").exists():
+            mf = harness.RESULTS / exp["name"] / s["run_id"] / f"seed{seed}_meta.json"
+            if not mf.exists():
                 todo.append((exp["name"], s, seed))
+            elif not sweep.ran_as(s, json.loads(mf.read_text())):
+                stale.append(f"{s['run_id']} seed {seed}")
+    if stale:
+        sys.exit(f"{len(stale)} finished runs used another config (first: {stale[0]}). "
+                 f"Move results/raw/{exp['name']}/ away or restore the config.")
     print(f"{exp['name']}: {len(specs)} configs x {len(seeds)} seeds, {len(todo)} to run, {a.jobs} jobs")
     if a.dry_run:
         for _, s, seed in todo:

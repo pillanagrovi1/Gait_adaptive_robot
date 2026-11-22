@@ -20,8 +20,9 @@ def build(root, commits=("abc1234", "abc1234"), in_summary=("table_bins5", "tabl
     for run in raw_runs:
         d = root / "results/raw/e" / run
         d.mkdir(parents=True)
+        ran = {"task": exp["task"], "run": {}, "learner": {"kind": "tabular", "bins": int(run[len("table_bins"):])}}
         for seed, c in enumerate(commits):
-            (d / f"seed{seed}_meta.json").write_text(json.dumps({"git_commit": c} if c else {}))
+            (d / f"seed{seed}_meta.json").write_text(json.dumps({**ran, **({"git_commit": c} if c else {})}))
     pd.DataFrame([{"run_id": r, "kind": "tabular", "n_seeds": n_seeds, "ci_method": "t", "final_mean": -300.0,
                    "final_ci95": 20.0, "auc_mean": -500.0, "auc_ci95": 10.0, "online_mean": -600.0,
                    "online_ci95": 5.0, "peak_bytes": 1008, "peak_source": "m4-qemu"} for r in in_summary]
@@ -110,5 +111,52 @@ def test_flash_and_saturation_columns_only_if_measured(tmp_path, monkeypatch, ca
     d.to_csv(p, index=False)
     code, out, _ = table(tmp_path, monkeypatch, capsys)
     assert code == 0
-    assert "flash, whole bench firmware (B) | update saturation |" in out
+    assert "flash, bench firmware with all three learners (B) | update saturation |" in out
     assert "| 15540 | 0.00042% |" in out and "| — | — |\n" in out
+
+
+def edit_summary(root, **cols):
+    p = root / "results/figures/e_summary.csv"
+    d = pd.read_csv(p)
+    for k, v in cols.items():
+        d[k] = v
+    d.to_csv(p, index=False)
+
+
+def test_refuses_runs_of_another_config(tmp_path, monkeypatch, capsys):     # 14
+    build(tmp_path)
+    p = tmp_path / "configs/e.json"
+    exp = json.loads(p.read_text())
+    exp["learners"][0]["base"]["alpha"] = 0.9
+    p.write_text(json.dumps(exp))
+    code, out, err = table(tmp_path, monkeypatch, capsys)
+    assert (code, out) == (1, "") and "differ from configs/e.json" in err
+
+
+def test_refuses_host_m4_mismatch(tmp_path, monkeypatch, capsys):           # 13
+    build(tmp_path)
+    edit_summary(tmp_path, host_match=[1, 0])
+    code, out, err = table(tmp_path, monkeypatch, capsys)
+    assert (code, out) == (1, "") and "host != M4" in err
+
+
+def test_marks_what_does_not_fit(tmp_path, monkeypatch, capsys):            # 16
+    build(tmp_path)
+    edit_summary(tmp_path, fits_f446=[1, 0], peak_bytes=[1008, 166188], peak_source=["m4-qemu", "host-estimate"])
+    _, out, _ = table(tmp_path, monkeypatch, capsys)
+    assert "| 166188 (est.), does not fit |" in out
+
+
+def test_adaptation_columns(tmp_path, monkeypatch, capsys):                 # 17
+    build(tmp_path)
+    edit_summary(tmp_path, post_auc_mean=-400.0, post_auc_ci95=30.0, back_mean=-250.0, back_ci95=25.0,
+                 recovered_mean=0.75)
+    _, out, _ = table(tmp_path, monkeypatch, capsys)
+    assert "post-shift AUC (B window)" in out and "-400 ± 30" in out and "-250 ± 25" in out and "75%" in out
+
+
+def test_small_returns_keep_a_decimal(tmp_path, monkeypatch, capsys):       # 19
+    build(tmp_path)
+    edit_summary(tmp_path, final_mean=18.46, final_ci95=0.31)
+    _, out, _ = table(tmp_path, monkeypatch, capsys)
+    assert "| 18.5 ± 0.3 |" in out

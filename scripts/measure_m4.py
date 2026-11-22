@@ -130,6 +130,18 @@ FIELDS = ["experiment", "run_id", "cfg_id", "kind", "fits", "peak_bytes", "agent
           "flash_text", "ram_data", "ram_bss", "host_match", "peak_bytes_estimate", "error"]
 
 
+def broken(rows) -> list[str]:
+    """Runs whose measurement cannot be used. Not fitting into the SRAM is a result, not a failure."""
+    out = []
+    for r in rows:
+        err = str(r.get("error") or "")
+        if err.startswith("does not fit"):
+            continue
+        if err or str(r.get("host_match")) != "1":
+            out.append(r["run_id"])
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("experiment")
@@ -149,8 +161,10 @@ def main():
     if path.exists():
         with open(path) as f:
             old = {r["run_id"]: r for r in csv.DictReader(f)}
+    measured = []
     for k, s in enumerate(specs, 1):
         row = measure(s, exp["name"])
+        measured.append(row)
         old[s["run_id"]] = row
         print(f"[{k}/{len(specs)}] {s['run_id']:40s} peak {row.get('peak_bytes', 'n/a')!s:>7} B  "
               f"learn {row.get('insns_learn_step', 'n/a')!s:>9} insn/step  host==m4 {row.get("host_match", "n/a")}  {row.get('error', '')}", flush=True)
@@ -160,6 +174,9 @@ def main():
         for r in old.values():
             w.writerow(r)
     print("wrote", path.relative_to(ROOT))
+    unusable = broken(measured)
+    if unusable:
+        sys.exit(f"MEASUREMENT FAILED (build, run or host != M4) for: {', '.join(unusable)}")
     if a.check:
         bad = [r["run_id"] for r in old.values()
                if str(r.get("host_match")) != "1" or r.get("error")]
