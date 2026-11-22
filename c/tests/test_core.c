@@ -203,6 +203,48 @@ static void test_stochastic_rounding(void)
     }
 }
 
+/* Saturation counter (D55): one count per update term that was clipped. */
+static void test_saturation(void)
+{
+    static uint8_t arena[8192];
+    static tr_agent_t ag;
+    for (int kind = TR_TABULAR; kind <= TR_LINEAR; kind++) {
+        for (int stream = 0; stream <= 1; stream++) {
+            tr_cfg_t c; base_cfg(&c, kind, 1, 2);
+            c.bins = 1; c.tilings = 1; c.td_clip = 0;
+            c.alpha = Q16(1.5);
+            if (stream) c.lambda = Q16(0.5);
+            q16_t s = 0;
+            CHECK(tr_init(&ag, &c, arena, sizeof(arena), 1) == TR_OK, "init");
+            tr_observe(&ag, &s, 0, Q16(20000), &s, 1);     /* weight = 30000: in range */
+            CHECK(tr_saturation_count(&ag) == 0, "kind %d stream %d: in range", kind, stream);
+            tr_observe(&ag, &s, 0, Q16(32000), &s, 1);     /* 30000 + 3000: the write clips */
+            CHECK(tr_saturation_count(&ag) == 1, "kind %d stream %d: clipped write, got %u",
+                  kind, stream, tr_saturation_count(&ag));
+            c.alpha = Q16(2.0);
+            tr_init(&ag, &c, arena, sizeof(arena), 1);
+            tr_observe(&ag, &s, 0, Q16(20000), &s, 1);     /* 2 * 20000: the product clips */
+            CHECK(tr_saturation_count(&ag) == 1, "kind %d stream %d: clipped product or step counts once, got %u",
+                  kind, stream, tr_saturation_count(&ag));
+        }
+    }
+    for (int stream = 0; stream <= 1; stream++) {
+        tr_cfg_t c; base_cfg(&c, TR_MLP, 1, 2);
+        c.td_clip = 0;
+        c.alpha = Q16(2.0);
+        if (stream) c.lambda = Q16(0.5);
+        q16_t s = 0;
+        CHECK(tr_init(&ag, &c, arena, sizeof(arena), 1) == TR_OK, "init");
+        for (int k = 0; k < 4; k++) tr_observe(&ag, &s, 0, k % 2 ? Q16(-30000) : Q16(30000), &s, 1);
+        uint32_t n = tr_saturation_count(&ag);
+        CHECK(n > 0 && n <= tr_update_terms(&ag), "mlp stream %d: %u", stream, n);
+        c.alpha = Q16(0.01);
+        tr_init(&ag, &c, arena, sizeof(arena), 1);
+        tr_observe(&ag, &s, 0, Q16(0.5), &s, 1);
+        CHECK(tr_saturation_count(&ag) == 0, "mlp stream %d: small update", stream);
+    }
+}
+
 /* Corridor with any config tweak; returns worst |Q(c,right) - Q*|. Observations at cell centres. */
 static double corridor_worst(tr_cfg_t *c, int episodes)
 {
@@ -315,6 +357,7 @@ int main(void)
     test_qlambda_corridor(TR_LINEAR);
     test_stream_cfg_rules();
     test_stochastic_rounding();
+    test_saturation();
     test_compact_replay();
     test_dense_tiles();
     test_cbp();

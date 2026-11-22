@@ -22,7 +22,7 @@ on it right then, before any further learning, is meta["eval_after_shift_back"].
 
 Eligibility traces are cleared at the start of every episode (agent.episode_start()).
 meta.json also records how many learning-update products rounded to zero
-(`underflow_frac`): the Q16.16 underflow diagnostic.
+(`underflow_frac`) and how many were clipped (`saturation_frac`): the Q16.16 diagnostics.
 """
 from __future__ import annotations
 
@@ -200,6 +200,7 @@ def run(task: dict, learner: dict, seed: int, run_cfg: dict | None = None,
                      "epsilon": round(eps, 4), "updates": updates, "eval_return": ev})
         ep += 1
     under = agent.underflow() if hasattr(agent, "underflow") else (0, 0)
+    saturated = agent.saturation() if hasattr(agent, "saturation") else None
     pil = None
     if hasattr(agent, "stats"):
         cl = agent.cycle_log
@@ -214,6 +215,8 @@ def run(task: dict, learner: dict, seed: int, run_cfg: dict | None = None,
         "n_actions": env.n_actions, "env_steps": t_global, "episodes": ep, "updates": updates,
         "underflow": under[0], "update_terms": under[1],
         "underflow_frac": round(under[0] / under[1], 4) if under[1] else None,
+        "saturated": saturated,
+        "saturation_frac": saturated / under[1] if saturated is not None and under[1] else None,
         "pil": pil, "eval_after_shift_back": after_back,
         "wall_s": round(time.time() - t0, 2), "git_commit": GIT_COMMIT,
     }

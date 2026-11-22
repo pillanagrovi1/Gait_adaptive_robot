@@ -223,15 +223,15 @@ void tr_mlp_update(tr_agent_t *ag, const q16_t *obs, int a, q16_t y)
         for (int j = 0; j < H; j++) m->z[j] = q16_mul(delta, m->g[j]);
     }
 
-    for (int j = 0; j < H; j++) w2a[j] = q16_add(w2a[j], tr_mul3_upd(ag, lr, delta, m->h[j]));
-    b2[a] = q16_add(b2[a], tr_mul_upd(ag, lr, delta));
+    for (int j = 0; j < H; j++) w2a[j] = tr_add_upd(ag, w2a[j], tr_mul3_upd(ag, lr, delta, m->h[j]));
+    b2[a] = tr_add_upd(ag, b2[a], tr_mul_upd(ag, lr, delta));
 
     for (int j = 0; j < H; j++) {
         q16_t g = m->z[j];
         if (g == 0) continue;
         q16_t *row = &W1[j * d];
-        for (int i = 0; i < d; i++) row[i] = q16_add(row[i], tr_mul3_upd(ag, lr, g, x[i]));
-        b1[j] = q16_add(b1[j], tr_mul_upd(ag, lr, g));
+        for (int i = 0; i < d; i++) row[i] = tr_add_upd(ag, row[i], tr_mul3_upd(ag, lr, g, x[i]));
+        b1[j] = tr_add_upd(ag, b1[j], tr_mul_upd(ag, lr, g));
     }
     /* hidden error signals overwrote z; h (activations of s) is intact for CBP */
     cbp_step(ag);
@@ -271,7 +271,7 @@ void tr_mlp_apply(tr_agent_t *ag, q16_t step, int sh)
 {
     tr_mlp_t *m = &ag->u.mlp;
     for (uint32_t k = 0; k < m->n_params; k++)
-        if (m->e[k] != 0) m->p[k] = q16_add(m->p[k], tr_mul_upd_sh(ag, step, m->e[k], sh));
+        if (m->e[k] != 0) m->p[k] = tr_add_upd(ag, m->p[k], tr_mul_upd_sh(ag, step, m->e[k], sh));
     cbp_step(ag);
 }
 

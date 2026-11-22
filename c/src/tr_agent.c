@@ -81,6 +81,16 @@ size_t tr_agent_sizeof(void) { return sizeof(tr_agent_t); }
 uint32_t tr_underflow_count(const tr_agent_t *ag) { return ag->n_underflow; }
 uint32_t tr_update_terms(const tr_agent_t *ag) { return ag->n_upd_terms; }
 
+uint32_t tr_saturation_count(const tr_agent_t *ag)
+{
+#ifndef TR_NO_DIAG
+    return ag->n_saturated;
+#else
+    (void)ag;
+    return 0;
+#endif
+}
+
 uint32_t tr_param_count(const tr_cfg_t *c)
 {
     if (!cfg_valid(c)) return 0;
@@ -192,6 +202,18 @@ int tr_act(tr_agent_t *ag, const q16_t *obs, q16_t eps)
     return tr_greedy(ag, obs);
 }
 
+/* The table's one-step write is checked from outside, so that tr_tabular.c holds only the
+ * algorithm: a value left on the int32 limit counts as clipped (D55). Reads only; no RNG. */
+static inline void count_table_saturation(tr_agent_t *ag, const q16_t *s, int a)
+{
+#ifndef TR_NO_DIAG
+    tr_tab_q(ag, s, ag->q, 0);
+    if (ag->q[a] == Q16_MAX || ag->q[a] == Q16_MIN) tr_mark_saturated(ag);
+#else
+    (void)ag; (void)s; (void)a;
+#endif
+}
+
 /* One Q-learning update on one transition. Identical for every learner. */
 static void learn_one(tr_agent_t *ag, const q16_t *s, int a, q16_t r, const q16_t *s2, int done)
 {
@@ -204,7 +226,7 @@ static void learn_one(tr_agent_t *ag, const q16_t *s, int a, q16_t r, const q16_
         y = q16_add(r, q16_mul(c->gamma, m));
     }
     switch (c->kind) {
-    case TR_TABULAR: tr_tab_update(ag, s, a, y); break;
+    case TR_TABULAR: tr_tab_update(ag, s, a, y); count_table_saturation(ag, s, a); break;
     case TR_LINEAR:  tr_lin_update(ag, s, a, y); break;
     case TR_MLP:     tr_mlp_update(ag, s, a, y); break;
     }
@@ -330,6 +352,10 @@ static void learn_stream(tr_agent_t *ag, const q16_t *s, int a, q16_t r, const q
     }
     q16_t delta = tr_clip_delta(c, q16_sub(y, qsa));
     q16_t step = q16_mul(c->alpha, delta);
+#ifndef TR_NO_DIAG
+    int64_t unclipped = ((int64_t)c->alpha * delta + (1LL << 15)) >> 16;
+    ag->step_saturated = (step != unclipped);       /* then every term made from it is clipped */
+#endif
     int sh = 16;                      /* step is Q16.16 ... */
     if (c->obgd_kappa > 0) {
         q16_t ad = delta < 0 ? -delta : delta;

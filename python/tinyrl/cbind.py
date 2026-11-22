@@ -65,6 +65,8 @@ def lib():
         L.tr_underflow_count.restype = C.c_uint32
         L.tr_update_terms.argtypes = [C.c_void_p]
         L.tr_update_terms.restype = C.c_uint32
+        L.tr_saturation_count.argtypes = [C.c_void_p]
+        L.tr_saturation_count.restype = C.c_uint32
         _lib = L
     return _lib
 
@@ -182,6 +184,10 @@ class Agent:
         """(updates that rounded to zero, update products computed) since init."""
         L = lib()
         return int(L.tr_underflow_count(self._agent)), int(L.tr_update_terms(self._agent))
+
+    def saturation(self) -> int:
+        """Update terms clipped to the int32 range since init."""
+        return int(lib().tr_saturation_count(self._agent))
 
     def observe(self, s, a: int, r: float, s2, done: bool) -> int:
         self._s[:] = q16(s)
