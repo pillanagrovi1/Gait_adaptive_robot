@@ -11,11 +11,12 @@ commit, or code with uncommitted changes (+dirty).
     python3 scripts/results_table.py replay_ratio --command "<the command that was really run>"
 """
 import argparse
+import json
 import sys
+from collections import Counter
 from pathlib import Path
 
 import pandas as pd
-from collections import Counter
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "python"))
@@ -42,7 +43,6 @@ def main():
     name = a.experiment
     p = ROOT / "results" / "figures" / f"{name}_summary.csv"
     d = pd.read_csv(p)
-    import json
     raw = ROOT / "results" / "raw" / name
     metas = sorted(raw.glob("*/seed*_meta.json"))
     if not metas:
@@ -78,7 +78,6 @@ def main():
     print(f"**{name}** · {commit} · config `configs/{name}.json` · "
           f"command `{command}` · "
           f"seeds per config: {int(d['n_seeds'].min())}–{int(d['n_seeds'].max())} · intervals: {d['ci_method'].iloc[0]} 95%\n")
-    cols = ["run_id", "final", "auc", "online", "peak_bytes", "peak_source", "insns_learn_step", "underflow_frac"]
     print("| config | final eval return | mean eval (AUC) | online return | peak SRAM (B) | instr./step (M4) | update underflow |")
     print("|---|---|---|---|---|---|---|")
     for _, r in d.iterrows():
@@ -89,7 +88,6 @@ def main():
         uf = f"{100 * r['underflow_frac']:.1f}%" if "underflow_frac" in r and not pd.isna(r.get("underflow_frac")) else "—"
         print(f"| {r['run_id']} | {fmt(r['final_mean'], r['final_ci95'])} | {fmt(r['auc_mean'], r['auc_ci95'])} | "
               f"{fmt(r.get('online_mean'), r.get('online_ci95'))} | {peak} | {ins} | {uf} |")
-    _ = cols
 
 
 if __name__ == "__main__":
