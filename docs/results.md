@@ -188,12 +188,12 @@ sooner). Final = mean of the last 3 evaluations. Steps-to-threshold = first eval
 | table_batch5 | -389 ± 81 | -593 ± 36 | -540 ± 19 | 27720 | 3306 | 0.0% | 15564 | 0% |
 | table_batch20 | -434 ± 63 | -650 ± 27 | -606 ± 16 | 27720 | 11210 | 0.2% | 15564 | 0% |
 
-| difference (paired, 10 seeds) | status | mean | 95% CI | verdict |
-|---|---|---|---|---|
-| AUC, n = 5 − n = 1 | pre-registered gate | +24.6 | [-22.4, +71.5] | inconclusive; gate not met |
-| AUC, n = 20 − n = 1 | exploratory | -32.6 | [-83.3, +18.0] | inconclusive |
-| final, n = 5 − n = 1 | exploratory, not pre-registered | -41.3 | [-137.5, +54.9] | inconclusive |
-| final, n = 20 − n = 1 | exploratory, not pre-registered | -86.6 | [-183.4, +10.3] | inconclusive |
+| A − B | metric | status | pairs | mean | 95% CI | verdict |
+|---|---|---|---|---|---|---|
+| table_batch5 − table_batch1 | auc | pre-registered | 10 | +24.6 | [-22.4, +71.5] | inconclusive |
+| table_batch20 − table_batch1 | auc | exploratory | 10 | -32.6 | [-83.3, +18.0] | inconclusive |
+| table_batch5 − table_batch1 | final | exploratory | 10 | -41.3 | [-137.5, +54.9] | inconclusive |
+| table_batch20 − table_batch1 | final | exploratory | 10 | -86.6 | [-183.4, +10.3] | inconclusive |
 
 | updates per step | instructions per step | seeds that reached −200 |
 |---|---|---|

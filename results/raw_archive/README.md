@@ -7,6 +7,7 @@ mkdir -p results/raw      # tar -C fails if the folder does not exist
 tar -xzf results/raw_archive/pendulum_main_tuned.tar.gz -C results/raw
 python3 scripts/make_plots.py pendulum_main_tuned        # figures + summary CSV
 python3 scripts/results_table.py pendulum_main_tuned     # the table in docs/results.md
+python3 scripts/check_docs.py                            # all of it at once: every table, against docs/results.md (also in CI)
 ```
 
 Each run folder holds `seed<k>.csv` (one row per training episode), `seed<k>_eval.csv` (greedy evaluations at
