@@ -19,7 +19,6 @@ void     tr_tab_update(tr_agent_t *ag, const q16_t *obs, int a, q16_t y);
 size_t   tr_lin_mem(const tr_cfg_t *c);
 int      tr_lin_init(tr_agent_t *ag, uint8_t **cursor);
 void     tr_lin_q(tr_agent_t *ag, const q16_t *obs, q16_t *out, int use_target);
-void     tr_lin_touch(tr_agent_t *ag, const q16_t *obs);
 void     tr_lin_update(tr_agent_t *ag, const q16_t *obs, int a, q16_t y);
 
 size_t   tr_mlp_mem(const tr_cfg_t *c);
