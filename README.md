@@ -99,6 +99,7 @@ python3 scripts/pil_check.py                     # learning on the emulated chip
 bash scripts/run_experiment.sh stage2_pendulum_table   # tune + sweep + M4 measurement + plots
 python3 scripts/results_table.py stage2_pendulum_table_tuned   # table for docs/results.md
 python3 scripts/compare.py cartpole_main_tuned   # pre-registered paired differences
+python3 scripts/check_docs.py                     # every table in docs/results.md, rebuilt from the archives (also in CI)
 python3 scripts/view_go1.py                      # watch the robot (needs a display)
 ```
 

@@ -62,4 +62,5 @@ The Nucleo build (`make -C m4/pil nucleo`) has **not been run on hardware yet**.
 | Documents | `docs/report.md`, `docs/study_guide.md` (replaces the rewrite exercise) |
 | Go1 | `go1_gait_v3` run: bar not met (no learner beat the stumble reflex), D65 |
 | Linear learner | feature cache hashes once per step (D62): same learned values, every M4 count re-measured |
+| Audit | evaluation limits documented (D66); online return and memory estimates corrected (D67); `scripts/check_docs.py` in CI |
 | Known, not changed | ObGD differs from the paper for α ≠ 1 (D61) |
