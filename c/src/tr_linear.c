@@ -23,7 +23,7 @@
  *   - 32-bit arithmetic for tile coordinates (needs tiles < 32768)
  *   - power-of-two M uses a mask instead of a modulo
  *   - a 2-slot cache of active features: one environment step queries
- *     act(s), target(s'), update(s) and next act(s'), but only hashes twice
+ *     act(s), target(s'), update(s) and next act(s'), but hashes once (see retire())
  */
 #include <string.h>
 #include "tr_internal.h"
@@ -91,7 +91,6 @@ static const uint32_t *active_features(tr_agent_t *ag, const q16_t *obs)
     for (int s = 0; s < 2; s++) {
         if (L->cache.valid[s] && memcmp(L->cache.obs[s], obs, (size_t)d * sizeof(q16_t)) == 0) {
             L->idx = L->cache.idx[s];
-            L->cache.next = (uint8_t)(1 - s);   /* least recently used goes next; see tr_lin_touch (D62) */
             return L->idx;
         }
     }
@@ -129,6 +128,14 @@ static const uint32_t *active_features(tr_agent_t *ag, const q16_t *obs)
 
 /* Weights changed: cached indices are still valid (they depend on obs only). */
 
+/* Learning on s is over, so its slot is the next to be overwritten and s' survives into the next step.
+ * Plain round robin lost that order whenever update(s) had to hash s after the target had hashed s'
+ * (a random first action), and then hashed twice per step (D62). Cache only; no value changes. */
+static void retire(tr_lin_t *L)
+{
+    L->cache.next = (uint8_t)(L->idx != L->cache.idx[0]);
+}
+
 void tr_lin_q(tr_agent_t *ag, const q16_t *obs, q16_t *out, int use_target)
 {
     (void)use_target;
@@ -141,10 +148,6 @@ void tr_lin_q(tr_agent_t *ag, const q16_t *obs, q16_t *out, int use_target)
         out[k] = q16_sat(acc);
     }
 }
-
-/* Called with s before the target looks up s', so that s' never evicts s: a random action did not
- * look at s, so least-recently-used eviction alone would (D62). Cache only; no value changes. */
-void tr_lin_touch(tr_agent_t *ag, const q16_t *obs) { (void)active_features(ag, obs); }
 
 void tr_lin_update(tr_agent_t *ag, const q16_t *obs, int a, q16_t y)
 {
@@ -159,6 +162,7 @@ void tr_lin_update(tr_agent_t *ag, const q16_t *obs, int a, q16_t y)
         q16_t *w = &ag->u.lin.w[idx[t] * A + a];
         *w = tr_add_upd(ag, *w, step);
     }
+    retire(&ag->u.lin);
 }
 
 /* ---- streaming path ---- */
@@ -169,6 +173,7 @@ q16_t tr_lin_trace(tr_agent_t *ag, const q16_t *obs, int a, q16_t decay, int64_t
     const int A = c->n_actions;
     tr_lin_q(ag, obs, ag->q, 0);
     const uint32_t *idx = ag->u.lin.idx;
+    retire(&ag->u.lin);
     tr_strace_t *t = &ag->u.lin.tr;
     if (decay == 0) tr_strace_clear(t); else tr_strace_decay(t, decay);
     for (int k = 0; k < c->tilings; k++) tr_strace_add(t, idx[k] * A + (uint32_t)a, Q16_ONE);

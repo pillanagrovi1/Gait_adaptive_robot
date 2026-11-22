@@ -246,8 +246,8 @@ static void test_saturation(void)
 }
 
 /* D62: learning on (s, s') must not push s out of the two-slot cache when it looks up s'.
- * Least-recently-used eviction alone fails exactly here, after a random action: act() did not
- * touch s. If s was recomputed it lands in the other slot, so a stable slot = no recomputation. */
+ * The hard case is a random action: act() did not touch s. If s was recomputed it lands in the
+ * other slot, so a stable slot = no recomputation. */
 static int cache_slot(const tr_agent_t *ag, q16_t x)
 {
     for (int i = 0; i < 2; i++)
@@ -260,21 +260,28 @@ static void test_linear_cache(void)
     static uint8_t arena[8192];
     static tr_agent_t ag;
     for (int stream = 0; stream <= 1; stream++) {
-        tr_cfg_t c; base_cfg(&c, TR_LINEAR, 1, 2);
-        if (stream) c.lambda = Q16(0.5);
-        CHECK(tr_init(&ag, &c, arena, sizeof(arena), 1) == TR_OK, "init");
-        q16_t s = Q16(-0.9), q[2];
-        tr_qvalues(&ag, &s, q);
-        for (int k = 0; k < 200; k++) {
-            q16_t s2 = (q16_t)(Q16(-0.8) + 400 * k);
-            int a = tr_act(&ag, &s, k % 3 ? Q16_ONE : 0);      /* two random actions, one greedy */
-            int before = cache_slot(&ag, s);
-            tr_observe(&ag, &s, a, Q16(0.1), &s2, 0);
-            int after = cache_slot(&ag, s), next = cache_slot(&ag, s2);
-            CHECK(before >= 0 && after == before && next >= 0,
-                  "stream %d step %d: s recomputed or lost (%d -> %d, s' %d)", stream, k, before, after, next);
-            if (before < 0 || after != before || next < 0) break;
-            s = s2;
+        for (int end = 0; end <= 2; end++) {                   /* none, terminal, time-out */
+            tr_cfg_t c; base_cfg(&c, TR_LINEAR, 1, 2);
+            if (stream) c.lambda = Q16(0.5);
+            CHECK(tr_init(&ag, &c, arena, sizeof(arena), 1) == TR_OK, "init");
+            q16_t s = Q16(-0.9);                               /* not cached: an episode start */
+            int fresh = 1;
+            for (int k = 0; k < 200; k++) {
+                q16_t s2 = (q16_t)(Q16(-0.8) + 400 * k);
+                int last = end && k % 20 == 19;
+                int a = tr_act(&ag, &s, k % 3 == 2 ? 0 : Q16_ONE);   /* two random actions, one greedy */
+                int before = cache_slot(&ag, s);
+                tr_observe(&ag, &s, a, Q16(0.1), &s2, last && end == 1);
+                int after = cache_slot(&ag, s), next = cache_slot(&ag, s2);
+                int ok = after >= 0 && (fresh || (before >= 0 && after == before))
+                         && (next >= 0 || (last && end == 1));       /* a terminal step never looks at s' */
+                CHECK(ok, "stream %d end %d step %d: s recomputed or lost (%d -> %d, s' %d)",
+                      stream, end, k, before, after, next);
+                if (!ok) break;
+                fresh = last;
+                if (last) { tr_episode_start(&ag); s = (q16_t)(Q16(0.5) + 7 * k); }
+                else s = s2;
+            }
         }
     }
 }
