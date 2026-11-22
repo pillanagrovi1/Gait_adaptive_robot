@@ -37,6 +37,7 @@ static int cfg_valid(const tr_cfg_t *c)
     if (c->replay_compact < 0 || c->replay_compact > 1 || c->tile_dense < 0 || c->tile_dense > 2) return 0;
     if (c->replay_compact && c->n_actions > 63) return 0;
     if (c->cbp_period < 0 || c->cbp_maturity < 0) return 0;
+    if (c->watkins < 0 || c->watkins > 1) return 0;
     if (c->cbp_period > 0 && c->kind != TR_MLP) return 0;
     if (c->tile_dense && c->kind != TR_LINEAR) return 0;
     switch (c->kind) {
@@ -324,7 +325,8 @@ void tr_episode_start(tr_agent_t *ag)
  * (Elsayed, Vasan & Mahmood 2024, "Streaming Deep RL Finally Works").
  *
  *   y      = r + gamma * max_a' Q_target(s', a')      (r if terminal): the SAME target
- *   e      <- gamma*lambda * e + grad Q(s, a)          (never cut after an exploratory action: D68)
+ *   e      <- gamma*lambda * e + grad Q(s, a)          watkins = 1: e <- grad Q(s, a) if Q(s, a) < max Q(s, .)
+ *                                                     watkins = 0 (every archived run): never cut (D68)
  *   delta  = y - Q(s, a)
  *   ObGD:  dbar = max(|delta|, 1);  alpha_eff = alpha * min(1, 1 / (kappa * dbar * ||e||_1))
  *   w      <- w + alpha_eff * delta * e
@@ -343,6 +345,14 @@ static void learn_stream(tr_agent_t *ag, const q16_t *s, int a, q16_t r, const q
         y = q16_add(r, q16_mul(c->gamma, m));
     }
     q16_t gl = q16_mul(c->gamma, c->lambda);
+    if (c->watkins && gl != 0) {
+        /* Watkins cut: a non-greedy a (strictly below the max; ties count as greedy, no RNG) starts a new trace.
+         * Same as the authors' reset after the update when the next action is non-greedy (D68). */
+        q_all(ag, s, ag->q, 0);
+        q16_t m = ag->q[0];
+        for (int k = 1; k < c->n_actions; k++) if (ag->q[k] > m) m = ag->q[k];
+        if (ag->q[a] < m) gl = 0;
+    }
     int64_t n1 = 0;
     q16_t qsa = 0;
     switch (c->kind) {

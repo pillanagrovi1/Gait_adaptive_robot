@@ -34,6 +34,7 @@ class Cfg(C.Structure):
         ("replay_cap", i32), ("batch", i32),
         ("lam", i32), ("obgd_kappa", i32), ("round_mode", i32), ("norm", i32), ("trace_cap", i32),
         ("replay_compact", i32), ("tile_dense", i32), ("cbp_period", i32), ("cbp_maturity", i32),
+        ("watkins", i32),
     ]
 
 
@@ -96,6 +97,8 @@ LEARNER_DEFAULTS = {
                          #         dense indices (needs features >= T*(tiles+1)^d), 2 = legacy plain FNV
     "cbp_period": 0,     # MLP continual backprop: replace one hidden unit every N updates
     "cbp_maturity": 0,   # MLP continual backprop: minimum unit age (updates)
+    # 23 Nov (D68, D70)
+    "watkins": 0,        # traces: 1 = cut after a non-greedy action (Watkins Q(lambda)); 0 = never (all archived runs)
 }
 
 
@@ -121,6 +124,7 @@ def make_cfg(learner: dict, obs_lo, obs_hi, n_actions: int) -> Cfg:
     c.round_mode, c.norm, c.trace_cap = int(p["round_mode"]), int(p["norm"]), int(p["trace_cap"])
     c.replay_compact, c.tile_dense = int(p["replay_compact"]), int(p["tile_dense"])
     c.cbp_period, c.cbp_maturity = int(p["cbp_period"]), int(p["cbp_maturity"])
+    c.watkins = int(p["watkins"])
     unknown = set(learner) - set(LEARNER_DEFAULTS) - {"kind"}
     if unknown:
         raise ValueError(f"unknown learner keys {sorted(unknown)}")
@@ -132,6 +136,8 @@ def cfg_dict(c: Cfg) -> dict:
     for name, _ in Cfg._fields_:
         v = getattr(c, name)
         out[name] = list(v) if not isinstance(v, int) else v
+    if out["watkins"] == 0:
+        del out["watkins"]      # added later: left out at its default so every earlier cfg_id is unchanged
     return out
 
 

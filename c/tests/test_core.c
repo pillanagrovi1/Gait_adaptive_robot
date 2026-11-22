@@ -171,6 +171,33 @@ static void test_qlambda_corridor(int kind)
     CHECK(worst < 0.02, "Q(lambda) corridor kind %d worst err %.4f", kind, worst);
 }
 
+/* Watkins cut (D68, D70): a non-greedy action must start a new trace. Two states, s0 -(a0)-> s1, then a
+ * non-greedy a0 in s1 ends the episode with reward 1. With the cut Q(s0,a0) keeps its value; without it the
+ * reward also flows back to (s0,a0): 0.225 -> 0.63 (alpha 0.5, gamma 0.9, lambda 0.9). */
+static void test_watkins_cut(int kind, int watkins)
+{
+    tr_cfg_t c; memset(&c, 0, sizeof(c));
+    c.kind = kind; c.obs_dim = 1; c.n_actions = 2;
+    c.obs_lo[0] = 0; c.obs_hi[0] = Q16_ONE;
+    c.bins = 2; c.tilings = 1; c.tiles = 2; c.features = 64; c.tile_dense = kind == TR_LINEAR;
+    c.alpha = Q16(0.5); c.gamma = Q16(0.9); c.lambda = Q16(0.9); c.watkins = watkins;
+    static uint8_t arena[1 << 14];
+    static tr_agent_t ag;
+    CHECK(tr_init(&ag, &c, arena, sizeof(arena), 1) == TR_OK, "watkins init");
+    q16_t s0 = Q16(0.25), s1 = Q16(0.75), q[2];
+    tr_episode_start(&ag);
+    tr_observe(&ag, &s1, 1, Q16_ONE, &s0, 1);       /* makes a1 greedy in s1 */
+    tr_observe(&ag, &s0, 0, 0, &s1, 0);             /* (s0, a0) -> s1 */
+    tr_qvalues(&ag, &s0, q);
+    double before = f(q[0]);
+    tr_observe(&ag, &s1, 0, Q16_ONE, &s0, 1);       /* a0 in s1 is not greedy */
+    tr_qvalues(&ag, &s0, q);
+    double after = f(q[0]), want = watkins ? before : 0.63;
+    printf("  watkins=%d kind %d: Q(s0,a0) %.4f -> %.4f\n", watkins, kind, before, after);
+    CHECK(fabs(before - 0.225) < 1e-3 && fabs(after - want) < 1e-3,
+          "watkins=%d kind %d: Q(s0,a0) %.4f -> %.4f, want %.4f", watkins, kind, before, after, want);
+}
+
 static void test_stream_cfg_rules(void)
 {
     tr_cfg_t c; base_cfg(&c, TR_LINEAR, 2, 2);
@@ -396,6 +423,7 @@ int main(void)
     test_stream_regression(TR_MLP, 1, 1, 0.08);
     test_qlambda_corridor(TR_TABULAR);
     test_qlambda_corridor(TR_LINEAR);
+    for (int w = 0; w <= 1; w++) { test_watkins_cut(TR_TABULAR, w); test_watkins_cut(TR_LINEAR, w); }
     test_stream_cfg_rules();
     test_stochastic_rounding();
     test_saturation();
