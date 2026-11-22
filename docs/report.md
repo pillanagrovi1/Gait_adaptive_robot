@@ -1,44 +1,23 @@
 # Learning on a microcontroller's memory budget: table, tile coding or tiny network?
 
 Every number below comes from a table or line in [`results.md`](results.md), which names its commit, config and
-archive. The rules that were fixed before the runs are in [`decisions.md`](decisions.md) (D49–D60); D61–D68 were added afterwards and say so.
+archive. The rules that were fixed before the runs are in [`decisions.md`](decisions.md) (D49–D60); D61–D69 were added afterwards and say so.
 
 ## Summary
 
-On two tasks, with an equal tuning budget, the streaming net showed no detectable difference in final return from
-linear tile coding at approximately 3-10x less SRAM in 7 of the 10 configuration pairs in that band, and was lower in
-the other 3 (all pendulum). It learned more slowly (lower AUC) in all 7 pendulum pairs; on cart-pole one of 3 was
-faster, one inconclusive, one slower. At about equal SRAM (within 1.5x) there are 9 pairs (8 pendulum, 1 cart-pole): final return favoured the streaming
-net in 6 (all pendulum) and showed no detectable difference in 3, and AUC favoured it in 8 and showed none in 1.
-All 6 are against linear configurations that scored −769 or worse, two of them near the random policy (−1157 against
-−1147). Against linear's better input encoding no difference was detected at about 4 KB (linear −224, 4 pairs); at
-1.7 KB, where linear's best is −961, the streaming net was higher (4 pairs).
-These memory comparisons are exploratory (D63): 19 pairs reported out of 41 examined, plus a check against linear's
-better encoding on final return. That is 86 uncorrected 95% intervals, so if no true difference existed about two
-"detectable" differences per metric, about four in total, would be expected by chance. Read the counts, not any one pair.
-"No detectable difference" does not mean equal.
+On cart-pole, linear tile coding beat the table on final return (+141.3 [+96.9, +185.7]) with less than a third of
+its SRAM (9.4 KB against 33.5 KB), at 4.3x the table's instructions per step.
+The streaming tiny network (about 3 KB) learned cart-pole faster than 9.4 KB of tile coding (AUC +63.6 [+26.0, +101.1],
+final return inconclusive) and returned more after the pendulum's rod got heavier (+86.8 [+66.9, +106.8]), at 12-20x
+linear's instructions per step, but it alone had traces and ObGD, so these gains cannot be credited to the network
+itself.
+Five replay updates per step did not measurably speed up the table, stochastic rounding made no detectable
+difference, and on the simulated Go1 no learner beat a fixed stumble-reflex gait or differed detectably from random
+nudges of its parameters.
 
-**Representation and update rule are confounded (D69).** In the pendulum, cart-pole, adaptation and Go1
-experiments only the streaming net had traces and ObGD; table and linear were one-step learners, tuned on α only.
-In the untuned ablation (exploratory), adding λ 0.8 on top of ObGD raised AUC for the table (+284.9 [+251.4, +318.5])
-and linear (+152.1 [+132.6, +171.5]) and lowered it for the network (−154.5 [−218.5, −90.6]); the one-step network
-beat the full streaming recipe on final return (+149.0 [+70.7, +227.4]). So no difference between the streaming net
-and the other learners below can be put down to representation alone.
-
-- On cart-pole, linear tile coding (9.4 KB) beat the table (33.5 KB) on final return (+141.3 [+96.9, +185.7]) and
-  AUC, at 4.3x the instructions per step.
-- On cart-pole, in the registered comparison (3,040 B against 9,400 B, so not at equal memory), the streaming net
-  learned faster than linear tile coding (AUC +63.6 [+26.0, +101.1]), at 12.2x the instructions, with
-  final return inconclusive.
-- After a change of dynamics on the pendulum, the streaming net returned more than linear tile coding (+86.8
-  [+66.9, +106.8]) at 20.0x the instructions. The two differ in SRAM (3,048 B against 13,220 B). No
-  equal-memory adaptation comparison was run, so this supports no claim about adaptation per byte.
-- 5 replay updates per step did not measurably speed up the table (AUC difference +25, 95% CI [-22, +72], 10 paired
-  seeds) at 2.7x the instructions per step. Stage 4 stopped there, as registered.
-- Stochastic rounding made no detectable difference: table +12.3 [−36.0, +60.5], linear −1.38 [−10.00, +7.25], network −32.6 [−115.1, +49.8] on final return; table
-  −15.1 [−45.1, +15.0], linear +2.23 [−8.71, +13.16], network +16.0 [−33.2, +65.2] on AUC.
-- On the simulated Go1 (extension) the registered bar was not met: no learner beat the stumble-reflex gait, and none
-  differed detectably from random nudges of the gait's parameters (exploratory).
+*Caveats:* simulation and QEMU only (memory and instruction counts, no timing, no hardware); 10 seeds, 20 for
+adaptation; update rule confounded with representation (D69); traces without the Watkins cut (D68); the equal-memory
+comparisons are exploratory (§4.1).
 
 ## 1. Question
 
@@ -116,11 +95,23 @@ Every comparison with the streaming network in §4.1, §4.2, §4.4 and §4.8 is 
 
 ![pendulum](../results/figures/pendulum_main_tuned_headline.png)
 
+**Equal-memory comparisons, both tasks (exploratory, D63).** On two tasks, with the same number of tuning draws per
+learner (but different search spaces, D69), the streaming net showed no detectable difference in final return from
+linear tile coding at approximately 3-10x less SRAM in 7 of the 10 configuration pairs in that band, and was lower in
+the other 3 (all pendulum). It learned more slowly (lower AUC) in all 7 pendulum pairs; on cart-pole one of 3 was
+faster, one inconclusive, one slower. At about equal SRAM (within 1.5x) there are 9 pairs (8 pendulum, 1 cart-pole): final return favoured the streaming
+net in 6 (all pendulum) and showed no detectable difference in 3, and AUC favoured it in 8 and showed none in 1.
+All 6 are against linear configurations that scored −769 or worse, two of them near the random policy (−1157 against
+−1147). Against linear's better input encoding no difference was detected at about 4 KB (linear −224, 4 pairs); at
+1.7 KB, where linear's best is −961, the streaming net was higher (4 pairs).
+These memory comparisons are exploratory (D63): 19 pairs reported out of 41 examined, plus a check against linear's
+better encoding on final return. That is 86 uncorrected 95% intervals, so if no true difference existed about two
+"detectable" differences per metric, about four in total, would be expected by chance. Read the counts, not any one pair.
+"No detectable difference" does not mean equal.
+These pairs also differ in update rule: only the streaming net had traces and ObGD (D69).
+
 - Replay network (27.2 KB) against linear tile coding (50.1 KB): final return inconclusive (−8.73 [−25.28, +7.82]). The
   network learned faster (AUC +40.9 [+20.6, +61.2]) at 74.7x the instructions per step. *Not pre-registered.*
-- Streaming network against linear tile coding by SRAM (exploratory, D63): 8 pendulum pairs at about equal SRAM
-  (final return: 6 higher, 2 inconclusive, 0 lower; AUC: 7, 1, 0) and 7 at 3-10x less SRAM (final return: 0 higher,
-  4 inconclusive, 3 lower; AUC: 0, 0, 7). All are tabulated in `results.md`, and no single pair is a finding.
 - Descriptively, the streaming networks hold the mean final-return frontier between 1.3 and 5.2 KB. Linear coding
   and the replay network hold it from 13.3 KB. The table is on it only at 1,008 B and 1,296 B.
 - The table's mean return rises with its size (−948 ± 47 at 1.0 KB to −245 ± 70 at 12.2 KB in the table-only
@@ -268,7 +259,7 @@ of the work above (for most of it, the abstract only).
 At approximately 3-10x less SRAM the streaming net showed no detectable difference from linear tile coding in final
 return in 7 of 10 pairs but learned more slowly on the pendulum, and at equal SRAM it was not shown to differ in final
 return from linear's better encoding once linear had the 4 KB it needs to learn (exploratory: counts and caveats in
-the [Summary](#summary)). These are comparisons of representation and update rule together: only the streaming
+[§4.1](#41-pendulum-return-against-sram)). These are comparisons of representation and update rule together: only the streaming
 net had traces and ObGD, and traces changed table and linear AUC by +285 and +152 in the ablation (D69). A comparison
 that gives every learner the same choice of λ and κ is proposed, not run.
 
