@@ -170,11 +170,12 @@ def headline(exp: dict, summ, path: Path, y="final", ylabel="final performance (
                 Line2D([], [], marker="o", color=INK2, markerfacecolor=SURFACE, linestyle="", markersize=7,
                        label="memory estimated (host)")]
     fig.legend(handles=handles, fontsize=7, frameon=False, labelcolor=INK2, loc="lower center",
-               ncol=len(handles), bbox_to_anchor=(0.5, 0.0))
+               ncol=3 if len(panels) == 1 else len(handles), bbox_to_anchor=(0.5, 0.0))
     n = int(summ["n_seeds"].min()) if len(summ) else 0
-    fig.suptitle(f"{exp['name']}: performance vs peak working memory  ·  error bars: 95% CI over n ≥ {n} seeds; "
+    sep = "\n" if len(panels) == 1 else "  ·  "          # one panel is too narrow for one line
+    fig.suptitle(f"{exp['name']}: performance vs peak working memory{sep}error bars: 95% CI over n ≥ {n} seeds; "
                  f"dots: individual seeds", color=INK, fontsize=10, x=0.01, ha="left")
-    fig.tight_layout(rect=(0, 0.06, 1, 1))
+    fig.tight_layout(rect=(0, 0.11 if len(panels) == 1 else 0.06, 1, 1))
     fig.savefig(path, dpi=150, facecolor=SURFACE)
     plt.close(fig)
 
