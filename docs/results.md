@@ -42,12 +42,22 @@ the transition just observed. The table (11 bins per dimension, cos/sin input) a
 arm. α was tuned without replay, on the angle input (D51). All three arms peak at 27,720 B of SRAM, buffer included.
 
 **Criterion.** Pre-registered in D53 (`0fd1c9f`, 22 Nov 16:17 CET, before the run): the paired 95% t interval of
-n = 5 − n = 1 on AUC must lie above 0. It does not, so Stage 4 stops and the linear and network arms were not run.
+n = 5 − n = 1 on AUC must lie above 0. It does not, so Stage 4 stops and the linear and network arms were not run, nor the references
+(random, zero-torque, table-stream, net-stream).
 D53 replaced the criterion of 17 Nov (steps-to-threshold), which is reported below as a secondary check.
+D53 was written after the no-replay pendulum results were seen, before any replay-ratio run.
 The original metric gives the same decision (inconclusive).
 
 **Metrics.** AUC = mean greedy evaluation return over training (30 evaluations in 300k steps; higher = learned
 sooner). Final = mean of the last 3 evaluations. Steps-to-threshold = first evaluation at or above −200.
+
+**replay_ratio** · commit `c32e1fc` · config `configs/replay_ratio.json` · command `python3 scripts/run_sweep.py replay_ratio --jobs 6 --only table` · seeds per config: 10–10 · intervals: t 95%
+
+| config | final eval return | mean eval (AUC) | online return | peak SRAM (B) | instr./step (M4) | update underflow | flash, whole bench firmware (B) | update saturation |
+|---|---|---|---|---|---|---|---|---|
+| table_batch1 | -348 ± 62 | -618 ± 34 | -504 ± 23 | 27720 | 1207 | 0.0% | 15528 | 0% |
+| table_batch5 | -389 ± 81 | -593 ± 36 | -540 ± 19 | 27720 | 3306 | 0.0% | 15528 | 0% |
+| table_batch20 | -434 ± 63 | -650 ± 27 | -606 ± 16 | 27720 | 11210 | 0.2% | 15528 | 0% |
 
 | difference (paired, 10 seeds) | status | mean | 95% CI | verdict |
 |---|---|---|---|---|
