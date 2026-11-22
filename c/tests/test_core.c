@@ -135,7 +135,7 @@ static void test_stream_regression(int kind, int norm, int round_mode, double to
     CHECK(ag.arena_used == need, "stream arena_used %u != mem %zu", ag.arena_used, need);
 }
 
-/* Watkins Q(lambda) on the corridor: traces must reach the optimum too. */
+/* Q(lambda) (no Watkins cut, D68) on the corridor: traces must reach the optimum too. */
 static void test_qlambda_corridor(int kind)
 {
     tr_cfg_t c; memset(&c, 0, sizeof(c));

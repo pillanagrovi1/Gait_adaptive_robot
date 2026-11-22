@@ -241,7 +241,7 @@ over the whole state space, which saves memory but makes Q-learning unstable. Re
 ```
  linear:    Q(s,a) = sum over T active tiles of w[tile, a]        each active w += (alpha / T) * delta
  network:   z = W1 x + b1,  h = max(0, z),  Q = W2 h + b2         each weight += alpha * delta * dQ/dweight
- trace:     e = gamma * lambda * e + dQ/dw                        (cleared after an exploratory action)
+ trace:     e = gamma * lambda * e + dQ/dw                        (NOT cleared after an exploratory action: D68)
  ObGD:      alpha_eff = alpha * min(1, 1 / (kappa * max(|delta|, 1) * sum|e|))
             w += alpha_eff * delta * e
 ```

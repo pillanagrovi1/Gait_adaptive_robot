@@ -1,7 +1,7 @@
 # Learning on a microcontroller's memory budget: table, tile coding or tiny network?
 
 Every number below comes from a table or line in [`results.md`](results.md), which names its commit, config and
-archive. The rules that were fixed before the runs are in [`decisions.md`](decisions.md) (D49–D60); D61–D65 were added afterwards and say so.
+archive. The rules that were fixed before the runs are in [`decisions.md`](decisions.md) (D49–D60); D61–D68 were added afterwards and say so.
 
 ## Summary
 
@@ -58,8 +58,8 @@ not found in a limited search. Learning a gait on a microcontroller is not claim
 - a table over a uniform grid;
 - linear function approximation on hashed tile coding (Sutton & Barto 2018, §9.5.4);
 - a network with one hidden ReLU layer, in two variants. The *replay* network uses SGD, a 2,000-transition
-  compressed buffer and a target network. The *streaming* network keeps no samples: it uses eligibility traces, a
-  step-size cap (ObGD) and LayerNorm, after the December 2024 version (v2) of Elsayed et al., as described in Appendix C of v3 (2026), plus stochastic
+  compressed buffer and a target network. The *streaming* network keeps no samples: it uses eligibility traces (Q(λ) without the Watkins cut,
+  so the trace is not reset after an exploratory action; D68), a step-size cap (ObGD) and LayerNorm, after the December 2024 version (v2) of Elsayed et al., as described in Appendix C of v3 (2026), plus stochastic
   rounding (Gupta et al. 2015). The September 2026 version of that paper replaced ObGD by another optimiser, which
   is not studied here. Observation normalisation, reward scaling by a running statistic and sparse initialisation
   from that recipe are not used (D23, D61).
@@ -209,6 +209,8 @@ the learners. Evaluation used the same 5 terrains for every seed, so this holds 
   schedule; across experiments with different schedules, a learner with the same settings can learn differently.
 - **Tuning saw the test states.** Tuning and reporting were evaluated on the same 10 start states, so each tuned
   setting was chosen on the states it is later scored on (D66).
+- **No Watkins cut.** Every learner with traces ran Q(λ) without the Watkins cut: the trace is not reset after an
+  exploratory action, unlike the authors' code (D68). Its effect on the results was not measured.
 - **QEMU is not timing.** Instructions are not cycles, and the workload behind the counts is synthetic.
 - **One machine type.** x86-64 Linux for learning, one emulated Cortex-M4 for measurement.
 - **Tuning budget.** 20 draws, one tuning point per sweep. The pendulum was tuned on a third of the budget and on
@@ -278,6 +280,8 @@ Only sources that were opened for this report are listed. For those marked (abst
 - Dohare, S. et al. (2024). *Loss of plasticity in deep continual learning.* Nature, doi:10.1038/s41586-024-07711-7. (abstract)
 - Elsayed, M., Lupu, E. S., Vasan, G. & Mahmood, A. R. (2026). *Streaming Deep Reinforcement Learning Finally Works.* arXiv:2410.14606v3, 21 Sep 2026 (read in part: abstract, method, Appendix C on the earlier version, Appendix E.5 on the ESP32-S3).
 - Eschmann, J., Albani, D. & Loianno, G. (2023). *RLtools: A Fast, Portable Deep Reinforcement Learning Library for Continuous Control.* arXiv:2306.03530. (abstract)
+- Elsayed, M. et al. *streaming-drl* (code). https://github.com/mohmdelsayed/streaming-drl, branch 2026, commit 9326fc3
+  (`stream_q.py` and `optimizer.py` read for the trace reset only).
 - Gallici, M. et al. (2024). *Simplifying Deep Temporal Difference Learning.* arXiv:2407.04811. (abstract)
 - Gupta, S. et al. (2015). *Deep Learning with Limited Numerical Precision.* ICML, PMLR 37. (abstract)
 - Henderson, P. et al. (2017). *Deep Reinforcement Learning that Matters.* arXiv:1709.06560. (abstract)
