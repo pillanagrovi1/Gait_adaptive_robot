@@ -91,6 +91,7 @@ static const uint32_t *active_features(tr_agent_t *ag, const q16_t *obs)
     for (int s = 0; s < 2; s++) {
         if (L->cache.valid[s] && memcmp(L->cache.obs[s], obs, (size_t)d * sizeof(q16_t)) == 0) {
             L->idx = L->cache.idx[s];
+            L->cache.next = (uint8_t)(1 - s);   /* least recently used goes next (D62) */
             return L->idx;
         }
     }

@@ -245,6 +245,24 @@ static void test_saturation(void)
     }
 }
 
+/* D62: the feature cache evicts the least recently used state, so act(s) / target(s') / update(s)
+ * never evicts the state that is needed next. */
+static void test_linear_cache_lru(void)
+{
+    static uint8_t arena[8192];
+    static tr_agent_t ag;
+    tr_cfg_t c; base_cfg(&c, TR_LINEAR, 1, 2);
+    CHECK(tr_init(&ag, &c, arena, sizeof(arena), 1) == TR_OK, "init");
+    q16_t s0 = Q16(-0.5), s1 = Q16(0.0), s2 = Q16(0.5), q[2];
+    tr_qvalues(&ag, &s0, q);
+    tr_qvalues(&ag, &s1, q);
+    tr_qvalues(&ag, &s0, q);        /* a hit: s0 is now the most recent */
+    tr_qvalues(&ag, &s2, q);        /* a miss: must replace s1 */
+    const tr_lin_cache_t *k = &ag.u.lin.cache;
+    CHECK(k->obs[0][0] == s0 || k->obs[1][0] == s0, "recently used state was evicted");
+    CHECK(k->obs[0][0] == s2 || k->obs[1][0] == s2, "new state was not cached");
+}
+
 /* Corridor with any config tweak; returns worst |Q(c,right) - Q*|. Observations at cell centres. */
 static double corridor_worst(tr_cfg_t *c, int episodes)
 {
@@ -358,6 +376,7 @@ int main(void)
     test_stream_cfg_rules();
     test_stochastic_rounding();
     test_saturation();
+    test_linear_cache_lru();
     test_compact_replay();
     test_dense_tiles();
     test_cbp();
