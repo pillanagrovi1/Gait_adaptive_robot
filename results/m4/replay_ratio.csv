@@ -1,0 +1,4 @@
+experiment,run_id,cfg_id,kind,fits,peak_bytes,agent_bytes,arena_bytes,stack_learner,stack_total,insns_learn_step,insns_greedy_step,flash_text,ram_data,ram_bss,host_match,peak_bytes_estimate,error
+replay_ratio,table_batch1,7140fcea27,tabular,1,27720,368,27032,320,352,1206.6,245.0,15528,0,27408,1,,
+replay_ratio,table_batch5,fef8212805,tabular,1,27720,368,27032,320,352,3306.3,245.0,15528,0,27408,1,,
+replay_ratio,table_batch20,63973ef353,tabular,1,27720,368,27032,320,352,11210.3,245.0,15528,0,27408,1,,
