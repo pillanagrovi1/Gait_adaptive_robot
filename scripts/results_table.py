@@ -83,6 +83,8 @@ def main():
     print("|---|---|---|---|---|---|---|")
     for _, r in d.iterrows():
         peak = f"{int(r['peak_bytes'])}" + ("" if r.get("peak_source") == "m4-qemu" else " (est.)")
+        if str(r["kind"]).startswith("baseline"):      # no learner, so no working memory to report
+            peak = "—"
         ins = f"{r['insns_learn_step']:.0f}" if "insns_learn_step" in r and not pd.isna(r.get("insns_learn_step")) else "—"
         uf = f"{100 * r['underflow_frac']:.1f}%" if "underflow_frac" in r and not pd.isna(r.get("underflow_frac")) else "—"
         print(f"| {r['run_id']} | {fmt(r['final_mean'], r['final_ci95'])} | {fmt(r['auc_mean'], r['auc_ci95'])} | "

@@ -86,3 +86,14 @@ def test_partial_experiment_needs_the_real_command(tmp_path, monkeypatch, capsys
     real = "python3 scripts/run_sweep.py e --only table"
     code, out, _ = table(tmp_path, monkeypatch, capsys, "--command", real)
     assert code == 0 and f"command `{real}`" in out and "run_experiment.sh" not in out
+
+
+def test_baselines_have_no_memory_size(tmp_path, monkeypatch, capsys):
+    build(tmp_path)
+    p = tmp_path / "results/figures/e_summary.csv"
+    d = pd.read_csv(p)
+    d.loc[0, ["kind", "peak_source"]] = ["baseline_random", "host-estimate"]
+    d.loc[0, "peak_bytes"] = 220
+    d.to_csv(p, index=False)
+    code, out, _ = table(tmp_path, monkeypatch, capsys)
+    assert code == 0 and "220" not in out and "| 1008 |" in out
