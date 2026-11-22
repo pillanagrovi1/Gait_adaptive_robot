@@ -1,7 +1,7 @@
 # Learning on a microcontroller's memory budget: table, tile coding or tiny network?
 
 Every number below comes from a table or line in [`results.md`](results.md), which names its commit, config and
-archive. The rules that were fixed before the runs are in [`decisions.md`](decisions.md) (D49–D60).
+archive. The rules that were fixed before the runs are in [`decisions.md`](decisions.md) (D49–D60); D61–D65 were added afterwards and say so.
 
 ## Summary
 
@@ -30,6 +30,8 @@ better encoding on final return. That is 86 uncorrected 95% intervals, so if no 
   seeds) at 2.7x the instructions per step. Stage 4 stopped there, as registered.
 - Stochastic rounding made no detectable difference: table +12.3 [−36.0, +60.5], linear −1.38 [−10.00, +7.25], network −32.6 [−115.1, +49.8] on final return; table
   −15.1 [−45.1, +15.0], linear +2.23 [−8.71, +13.16], network +16.0 [−33.2, +65.2] on AUC.
+- On the simulated Go1 (extension) the registered bar was not met: no learner beat the stumble-reflex gait, and none
+  differed detectably from random nudges of the gait's parameters (exploratory).
 
 ## 1. Question
 
@@ -182,6 +184,22 @@ and linear learners end 820 and 1,006 below their Q-learning twins.
 the host and M4 checksums are equal. This shows determinism, not correctness, and says nothing about ARM or macOS
 hosts.
 
+### 4.8 Extension: tuning the Go1's gait (simulation)
+
+The learner nudges three parameters of a trot that already has a stumble reflex. The bar, fixed before the run, was
+to beat both that reflex gait (B3) and the all-reflex gait (B4).
+
+| learner | peak SRAM | final | − B3 | − B4 | − random nudges (exploratory) |
+|---|---|---|---|---|---|
+| table | 29,420 B | 16.4 ± 2.1 | −2.84 [−4.96, −0.71], lower | +4.49 [+2.36, +6.62], higher | −0.77 [−4.27, +2.74] |
+| linear 1,024 | 30,348 B | 17.1 ± 4.4 | −2.08 [−6.53, +2.36] | +5.24 [+0.80, +9.69], higher | −0.01 [−4.29, +4.27] |
+| linear 4,096 | 116,364 B | 15.2 ± 4.5 | −4.05 [−8.59, +0.49] | +3.28 [−1.26, +7.82] | −1.98 [−7.33, +3.38] |
+| streaming net 16 | 3,436 B | 17.3 ± 4.0 | −1.87 [−5.90, +2.16] | +5.45 [+1.42, +9.48], higher | +0.20 [−5.08, +5.48] |
+| streaming net 32 | 5,932 B | 18.5 ± 4.1 | −0.69 [−4.78, +3.40] | +6.64 [+2.55, +10.72], higher | +1.38 [−3.52, +6.28] |
+
+**The bar is not met.** No learner beat B3. Beating B4 is no evidence of learning, because random nudges score like
+the learners. Evaluation used the same 5 terrains for every seed, so this holds for those terrains only.
+
 ## 5. Limitations
 
 - **No hardware.** No timing, cycles, energy or power. The Nucleo build never ran.
@@ -193,6 +211,7 @@ hosts.
 - **Small scope.** Two control tasks for the core question, one shift size, one replay table and buffer size.
 - **Statistical power.** With 10 seeds many intervals are tens of return units wide. Inconclusive does not mean
   equal. No correction for multiple comparisons was made.
+- **Go1.** Untuned, one roughness, 5 evaluation terrains, simulation only.
 - **Ceiling.** Cart-pole's 500-step limit compresses the differences between good learners.
 - **Measurement detail.** The instruction counts come from a 200-step window of a synthetic workload. The flash figures are for
   a firmware that contains all three learners.
@@ -234,6 +253,9 @@ the [Summary](#summary)).
 - More replay updates were not shown to speed up the one table tested (+25 [-22, +72]).
 - Stochastic rounding made no detectable difference: table +12.3 [−36.0, +60.5], linear −1.38 [−10.00, +7.25], network −32.6 [−115.1, +49.8] on final return; table
   −15.1 [−45.1, +15.0], linear +2.23 [−8.71, +13.16], network +16.0 [−33.2, +65.2] on AUC.
+
+- As a gait tuner on the simulated Go1 no learner beat a fixed stumble reflex, so learning was not shown to be worth
+  its memory there.
 
 Whether the instruction counts fit a real control period is a question for the board, which this project has not
 answered.

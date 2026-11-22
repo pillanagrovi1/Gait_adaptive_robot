@@ -74,7 +74,10 @@ COMPARISONS = {
                      ("linear-sgd", "linear-bandit"))
         for m in ("final", "auc")
     ],
-    "go1_gait_v3": [C(a, b, "final") for a in GO1 for b in ("B3-stumble", "B4-all-reflexes")],
+    "go1_gait_v3": [
+        *[C(a, b, "final") for a in GO1 for b in ("B3-stumble", "B4-all-reflexes")],
+        *[C(a, "random", "final", "exploratory, added after the results (D65)") for a in GO1],
+    ],
 }
 
 
