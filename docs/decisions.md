@@ -40,9 +40,9 @@ Re-open anything by adding a new entry; do not edit history.
 | D41–D44 | Go1 contacts, actions, reflex baselines, v3 | **accepted** | — |
 | D45 | (1+1)-ES over reflex gains | **accepted as a baseline only** | the brief retired ARS-type methods as core learners |
 | D46 | Dyna-Q | **decided: not in the learners** | the brief lists world models as out of scope; Dyna stays a measured point on the trade-off map |
-| D29 | tune once at the middle of each sweep, 100k-step tuning budget | **open** | Stage 2 showed the table is still learning at 100k steps, so tuning rewards fast starters. Rahul: keep (cheap, equal) or tune at the full budget (3× cost)? |
+| D29 | tune once at the middle of each sweep, 100k-step tuning budget | **decided 22 Nov → D49** | Stage 2 showed the table is still learning at 100k steps, so tuning rewards fast starters. Rahul: keep (cheap, equal) or tune at the full budget (3× cost)? |
 | D47 | processor-in-the-loop | **accepted** | see below |
-| — | float32 learner library | **open** | worth it only if Nucleo cycle counts show float is not slower (QEMU cannot tell) |
+| — | float32 learner library | **deferred 22 Nov → D60** | worth it only if Nucleo cycle counts show float is not slower (QEMU cannot tell) |
 
 
 Format: **ID — decision.** Why. Alternatives. Status.
@@ -280,3 +280,85 @@ The Nucleo build (USART2, DWT cycle counter, HSI 16 MHz or PLL 180 MHz) is writt
 **D48 — First experiments run by Claude in the cloud workspace (2 cores), recorded in `docs/results.md` with commit
 and command.** Stage 2 with 10 seeds; pendulum_main as a first pass with 5 seeds (the protocol asks for 10: rerun with
 `bash scripts/run_experiment.sh pendulum_main` before citing). **Status: accepted.**
+
+
+## Pre-registration, 22 Nov 2026 (delegated by Rahul, written by Claude)
+
+Written before any run of `replay_ratio`, `cartpole_main`, `adaptation_pendulum` (+ `_scratch`), `stream_ablation` or
+`go1_gait_v3` (no results of these are in the repo or its local results folders). Written **after** the 10-seed
+`pendulum_main` results (c3f4a55) were seen, so nothing below is a pre-registration for that experiment.
+A later change to this section is a new entry that says whether the affected results had been seen.
+
+| experiment | seeds | hyperparameters | primary comparisons (A − B, paired) |
+|---|---|---|---|
+| `replay_ratio` | 0–9 | from `pendulum_main_tuned` (D51) | gate: table n = 5 − n = 1, AUC. Then the same for linear and net |
+| `cartpole_main` | 0–9 | tuned at the full budget (D49) | linear 1024 − table 8 bins; net 32 − linear 1024; net-stream 32 − linear 1024; final and AUC |
+| `adaptation_pendulum` + `_scratch` | 0–19 | from `pendulum_main_tuned` (D51) | post-shift AUC: net-stream − linear, net-stream-cbp − net-stream; per learner: forward transfer, forgetting (D57) |
+| `stream_ablation` | 0–9 | untuned, as committed (D51) | final and AUC: with − without stochastic rounding, per learner; sgd − bandit for table and linear (D54) |
+| `go1_gait_v3` (only if the others are written up) | 0–9 | untuned, as committed | pre-shift final: each learner − B3 and − B4; a learner beats the reflex gait only if both intervals are above 0 |
+
+Any other comparison is exploratory and labelled so. Each experiment is run once; seeds are never added.
+
+**D49 — Tuning budget (resolves D29): tune at the full environment-step budget for every tuning run from now on.**
+Tuning on a shorter budget favours fast starters, and the table is still learning at 100k steps. The cost is small:
+the 380 runs of 300k steps in `pendulum_main` took 1,257 s at 6 jobs (`results/logs/pendulum_main.log`). So
+`cartpole_main` tunes at 200k steps instead of 80k. K = 20 draws, tuning seeds 1000–1002 and one tuning point
+(middle of the sweep) stay, equal for all learners. `pendulum_main` is not retuned, because its results have been
+seen. Its limitations are reported: 100k-step tuning; tuned on the angle encoding only; the streaming network's 20
+draws covered only 9 distinct settings, and its winner (κ = 3.0, λ = 0.6) is on the edge of that grid
+(`results/tuning/pendulum_main.csv`). **Status: accepted.**
+
+**D50 — The pendulum frontier comparisons stay at 10 seeds; what is inconclusive stays "inconclusive".**
+Streaming net vs small linear and replay net vs big linear were singled out after seeing that some of their
+intervals include 0. Adding seeds 10–19 for that reason would be optional stopping. No pendulum rerun.
+**Status: accepted.**
+
+**D51 — Where hyperparameters come from in experiments without a tuning step.** `replay_ratio` and both adaptation
+experiments compare learners, so table, linear, net and net-stream take their values from
+`configs/pendulum_main_tuned.json` (equal tuning budget), replacing the hand-set ones; net-stream-cbp takes
+net-stream's. They are not retuned per replay ratio or encoding. `table-stream` has no tuned values: it is a
+reference and is not ranked. `stream_ablation` stays untuned and supports only within-learner statements, no ranking
+of learners. **Status: accepted.**
+
+**D52 — Intervals on differences are Student-t 95% at every n.** `analysis.paired_diff` currently switches to a
+percentile bootstrap at n ≥ 20 (through `ci95`), which would apply to the adaptation experiments. It will use t.
+Per-configuration intervals keep D27. A difference counts only if its interval excludes 0; otherwise it is
+"inconclusive". Forward transfer pairs the same seed across the two adaptation experiments. **Status: accepted.**
+
+**D53 — Stage 4 kill criterion is measured on AUC (set by Rahul, 22 Nov).** The table with n = 5 replay updates per
+step must beat n = 1 (both with the 1000-transition buffer) on AUC, with the paired interval above 0. The table arm
+runs first; if it fails, Stage 4 stops and the null result is reported. This replaces "steps-to-threshold" in
+`replay_ratio.json` and `stages.md`, which is undefined for runs that never reach the threshold.
+Steps-to-threshold, where reported, always comes with the number of seeds that reached it. **Status: accepted.**
+
+**D54 — γ = 0 bandit baseline.** Same representation and α, no bootstrapping: `table-bandit` and `linear-bandit` in
+`stream_ablation` (against `table-sgd`, `linear-sgd`), `linear-bandit` in `go1_gait_v3`. Not on cart-pole, where the
+reward is +1 on every step and γ = 0 has nothing to learn. **Status: accepted, to implement.**
+
+**D55 — Saturation counter next to the underflow counter.** Counts learning-update results clipped to the int32
+range, reported as `saturation_frac`. Diagnostic only: compiled out with `TR_NO_DIAG`, no change to any learned
+value, and M4 instruction counts must not change. **Status: accepted, to implement.**
+
+**D56 — Flash size.** `measure_m4.py` already records `flash_text`. Report flash = text + data and carry it into the
+summary and table, labelled as the size of the benchmark firmware (learner, harness and startup), not of the
+learner alone. **Status: accepted, to implement.**
+
+**D57 — A→B→A shift for forgetting.** `adaptation_pendulum`: A for 0–300k steps, B (+50% mass) for 300k–450k, A
+again for 450k–600k. The B window and the scratch reference are unchanged. With P = final performance before the
+first shift: forgetting = return on A immediately after the switch back, before any further learning, − P
+(negative = forgot). Secondary: mean return over the second A window − P. `post_auc` and recovery use the B window
+only. **Status: accepted, to implement.**
+
+**D58 — Bug: the evaluation at the shift step runs on the shifted task.** In step mode `harness.run` applies the
+shift and then evaluates, while `analysis.py` counts that point as pre-shift, so one of the three evaluations that
+define P would come from the wrong task. Reproduced on 22 Nov with the random baseline (shift at step 2000: the
+evaluation at step 2000 already differs from an unshifted run). Fix: evaluate, then shift, with a test. No reported
+result is affected, because none has a shift. Must be merged before any adaptation or Go1 run.
+**Status: accepted, to implement.**
+
+**D59 — Bug: an interrupted run can be skipped on resume.** `run_sweep.py` treats an existing `seed<k>.csv` as a
+finished run, but that file is written before the evaluation and meta files. Resume will key on `seed<k>_meta.json`,
+which is written last. **Status: accepted, to implement before the runs.**
+
+**D60 — Deferred: float32 learner build and Q15 weight storage**, unless the write-up leaves time. QEMU cannot show
+whether float is slower (D46), and Q15 needs its own scaling and underflow study. **Status: deferred.**
