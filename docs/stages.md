@@ -126,7 +126,8 @@ fails → fixed point.
 Stage 4 question is how much a few extra replay updates per real step (from a compressed buffer) buy:
 
 ```bash
-python3 scripts/run_sweep.py replay_ratio --jobs 6 && python3 scripts/measure_m4.py replay_ratio && python3 scripts/make_plots.py replay_ratio
+# stopped at the gate, 22 Nov: only the table arm was run
+python3 scripts/run_sweep.py replay_ratio --jobs 6 --only table && python3 scripts/measure_m4.py replay_ratio --only table && python3 scripts/make_plots.py replay_ratio
 ```
 
 Kill criterion (D53): run the table arm first (`python3 scripts/run_sweep.py replay_ratio --jobs 6 --only table`).
