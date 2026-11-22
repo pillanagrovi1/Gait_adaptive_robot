@@ -39,10 +39,10 @@ A difference counts only if its paired 95% interval excludes 0. "Learned faster"
 | What | Finding | Strength |
 |---|---|---|
 | Stage 1 gate | C learner reproduces the Python Q16.16 reference bit for bit | deterministic test |
-| Pendulum | replay network (27.2 KB) learned faster than linear tile coding (50.1 KB) at approximately 68.5x the instructions; final return inconclusive | 10 seeds, not pre-registered |
-| Cart-pole | linear tile coding beat the table, at approximately 4.3x the instructions | 10 seeds, pre-registered |
-| Cart-pole | streaming network (3.0 KB) learned faster than linear tile coding (9.4 KB) at approximately 12x the instructions; final return inconclusive | 10 seeds, pre-registered |
-| Adaptation | after a 50% heavier rod the streaming network returned more than linear tile coding, at approximately 20x the instructions (different SRAM: 3.0 vs 13.2 KB, so no per-byte claim) | 20 seeds, pre-registered |
+| Pendulum | replay network (27.2 KB) learned faster than linear tile coding (50.1 KB) at 74.7x the instructions; final return inconclusive | 10 seeds, not pre-registered |
+| Cart-pole | linear tile coding beat the table, at 4.3x the instructions | 10 seeds, pre-registered |
+| Cart-pole | streaming network (3.0 KB) learned faster than linear tile coding (9.4 KB) at 12.2x the instructions; final return inconclusive | 10 seeds, pre-registered |
+| Adaptation | after a 50% heavier rod the streaming network returned more than linear tile coding, at 20.0x the instructions (different SRAM: 3.0 vs 13.2 KB, so no per-byte claim) | 20 seeds, pre-registered |
 | Replay ratio | 5 replay updates per step did not measurably speed up the table, at 2.7x the instructions | 10 seeds, pre-registered gate |
 | Stochastic rounding | no detectable difference. Final: table +12.3 [−36.0, +60.5], linear −1.38 [−10.00, +7.25], network −32.6 [−115.1, +49.8]. AUC: table −15.1 [−45.1, +15.0], linear +2.23 [−8.71, +13.16], network +16.0 [−33.2, +65.2] | 10 seeds, pre-registered |
 | On-chip learning | learning on the emulated M4 reproduces host learning bit for bit (4 learner types) | deterministic test, QEMU only |

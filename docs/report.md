@@ -19,12 +19,12 @@ better encoding on final return. That is 86 uncorrected 95% intervals, so if no 
 "No detectable difference" does not mean equal.
 
 - On cart-pole, linear tile coding (9.4 KB) beat the table (33.5 KB) on final return (+141.3 [+96.9, +185.7]) and
-  AUC, at approximately 4.3x the instructions per step.
+  AUC, at 4.3x the instructions per step.
 - On cart-pole, in the registered comparison (3,040 B against 9,400 B, so not at equal memory), the streaming net
-  learned faster than linear tile coding (AUC +63.6 [+26.0, +101.1]), at approximately 12x the instructions, with
+  learned faster than linear tile coding (AUC +63.6 [+26.0, +101.1]), at 12.2x the instructions, with
   final return inconclusive.
 - After a change of dynamics on the pendulum, the streaming net returned more than linear tile coding (+86.8
-  [+66.9, +106.8]) at approximately 20x the instructions. The two differ in SRAM (3,048 B against 13,220 B). No
+  [+66.9, +106.8]) at 20.0x the instructions. The two differ in SRAM (3,048 B against 13,220 B). No
   equal-memory adaptation comparison was run, so this supports no claim about adaptation per byte.
 - 5 replay updates per step did not measurably speed up the table (AUC difference +25, 95% CI [-22, +72], 10 paired
   seeds) at 2.7x the instructions per step. Stage 4 stopped there, as registered.
@@ -100,7 +100,7 @@ extension, gait tuning on a simulated Unitree Go1.
 ![pendulum](../results/figures/pendulum_main_tuned_headline.png)
 
 - Replay network (27.2 KB) against linear tile coding (50.1 KB): final return inconclusive (−8.73 [−25.28, +7.82]). The
-  network learned faster (AUC +40.9 [+20.6, +61.2]) at approximately 68.5x the instructions per step. *Not pre-registered.*
+  network learned faster (AUC +40.9 [+20.6, +61.2]) at 74.7x the instructions per step. *Not pre-registered.*
 - Streaming network against linear tile coding by SRAM (exploratory, D63): 8 pendulum pairs at about equal SRAM
   (final return: 6 higher, 2 inconclusive, 0 lower; AUC: 7, 1, 0) and 7 at 3-10x less SRAM (final return: 0 higher,
   4 inconclusive, 3 lower; AUC: 0, 0, 7). All are tabulated in `results.md`, and no single pair is a finding.
@@ -114,11 +114,11 @@ extension, gait tuning on a simulated Unitree Go1.
 
 ![cart-pole](../results/figures/cartpole_main_tuned_headline.png)
 
-| A − B | final return | AUC | approximate instructions, A / B |
+| A − B | final return | AUC | instructions, A / B |
 |---|---|---|---|
-| linear 1,024 (9.4 KB) − table 8 bins (33.5 KB) | +141.3 [+96.9, +185.7], higher | +80.4 [+53.0, +107.8], higher | ≈ 4.3x |
-| replay net 32 (29.1 KB) − linear 1,024 | −21.3 [−128.6, +86.0], inconclusive | −114.4 [−160.9, −67.9], lower | ≈ 28x |
-| streaming net 32 (3.0 KB) − linear 1,024 | +13.5 [−37.2, +64.3], inconclusive | +63.6 [+26.0, +101.1], higher | ≈ 12x |
+| linear 1,024 (9.4 KB) − table 8 bins (33.5 KB) | +141.3 [+96.9, +185.7], higher | +80.4 [+53.0, +107.8], higher | 4.3x |
+| replay net 32 (29.1 KB) − linear 1,024 | −21.3 [−128.6, +86.0], inconclusive | −114.4 [−160.9, −67.9], lower | 27.8x |
+| streaming net 32 (3.0 KB) − linear 1,024 | +13.5 [−37.2, +64.3], inconclusive | +63.6 [+26.0, +101.1], higher | 12.2x |
 
 The table gains nothing visible from more memory here. At 12 bins it no longer fits in 128 KB.
 
@@ -127,12 +127,12 @@ The table gains nothing visible from more memory here. At 12 bins it no longer f
 | learner | pendulum, instructions per step | cart-pole, instructions per step |
 |---|---|---|
 | table | 525–644 | 708–715 |
-| linear tile coding | 1,814–2,280 | 3,046–4,155 |
-| streaming network, 8/16–64 hidden | 10,530–68,885 | 20,500–71,974 |
+| linear tile coding | 1,815–2,003 | 3,049–3,053 |
+| streaming network, 8/16–64 hidden | 10,530–68,884 | 20,500–71,974 |
 | replay network, 8/16–64 hidden | 24,426–149,541 | 47,571–159,046 |
 
-These are QEMU instruction counts on a synthetic workload, not times. The linear learner's count depends on the path
-the benchmark takes (one or two hashes per step, D62), so ratios against it are uncertain by that spread.
+These are QEMU instruction counts on a synthetic workload, not times, re-measured on 22 Nov after the linear
+learner's feature cache was fixed (D62): it hashes once per step, whatever path the benchmark takes.
 
 ### 4.4 Adaptation: A → B → A
 
@@ -148,7 +148,7 @@ the benchmark takes (one or two hashes per step, D62), so ratios against it are 
 | streaming net | 3,048 B | −397 ± 16 | +341.6 [+310.7, +372.6] | −152.0 [−257.6, −46.5], forgot |
 | streaming net + continual backprop | 3,304 B | −704 ± 62 | +233.0 [+161.4, +304.5] | +61.0 [−126.3, +248.2], inconclusive |
 
-- Streaming network − linear, post-shift AUC: +86.8 [+66.9, +106.8], at approximately 20x the instructions, with different SRAM (3,048 B and 13,220 B).
+- Streaming network − linear, post-shift AUC: +86.8 [+66.9, +106.8], at 20.0x the instructions, with different SRAM (3,048 B and 13,220 B).
 - Continual backprop (Dohare et al. 2024; comparison pre-registered, its own two parameters untuned) at one setting made the streaming network worse after the shift
   (−306.8 [−369.7, −244.0]). It was already degrading before the shift, so this is not a verdict on the method.
 - Over the whole second A window no learner differed measurably from its pre-shift level.
@@ -194,7 +194,7 @@ hosts.
 - **Statistical power.** With 10 seeds many intervals are tens of return units wide. Inconclusive does not mean
   equal. No correction for multiple comparisons was made.
 - **Ceiling.** Cart-pole's 500-step limit compresses the differences between good learners.
-- **Measurement detail.** The linear learner's instruction count is path dependent (D62). The flash figures are for
+- **Measurement detail.** The instruction counts come from a 200-step window of a synthetic workload. The flash figures are for
   a firmware that contains all three learners.
 
 ## 6. Related work
@@ -227,9 +227,9 @@ return in 7 of 10 pairs but learned more slowly on the pendulum, and at equal SR
 return from linear's better encoding once linear had the 4 KB it needs to learn (exploratory: counts and caveats in
 the [Summary](#summary)).
 
-- The streaming net pays approximately 12x to 20x linear's instructions per step in the registered comparisons, and
+- The streaming net pays 12.2x to 20.0x linear's instructions per step in the registered comparisons, and
   its returns vary more between seeds.
-- Linear tile coding beat the table on cart-pole with less memory, at approximately 4.3x the table's instructions.
+- Linear tile coding beat the table on cart-pole with less memory, at 4.3x the table's instructions.
   The table is the cheapest per step.
 - More replay updates were not shown to speed up the one table tested (+25 [-22, +72]).
 - Stochastic rounding made no detectable difference: table +12.3 [−36.0, +60.5], linear −1.38 [−10.00, +7.25], network −32.6 [−115.1, +49.8] on final return; table
