@@ -1,0 +1,15 @@
+experiment,run_id,cfg_id,kind,fits,peak_bytes,agent_bytes,arena_bytes,stack_learner,stack_total,insns_learn_step,insns_greedy_step,flash_text,ram_data,ram_bss,host_match,peak_bytes_estimate,error
+cartpole_main_tuned,table_bins4,60267db48f,tabular,1,2760,368,2072,320,352,707.7,271.0,15532,0,2448,1,,
+cartpole_main_tuned,table_bins6,1ef4380c17,tabular,1,11080,368,10392,320,352,714.9,271.0,15532,0,10768,1,,
+cartpole_main_tuned,table_bins8,0dee02bd62,tabular,1,33480,368,32792,320,352,708.7,271.0,15532,0,33168,1,,
+cartpole_main_tuned,table_bins10,37d7a4f0f6,tabular,1,80712,368,80024,320,352,711.3,271.0,15536,0,80400,1,,
+cartpole_main_tuned,table_bins12,861f43ddd4,tabular,0,,,165912,,,,,,,,,166212,does not fit in SRAM (link failed)
+cartpole_main_tuned,linear_features256,199ff63eec,linear,1,3256,368,2488,400,432,4154.6,2050.0,15532,0,2864,1,,
+cartpole_main_tuned,linear_features1024,67cf27df37,linear,1,9400,368,8632,400,432,3046.1,2050.0,15532,0,9008,1,,
+cartpole_main_tuned,linear_features4096,f5086f0b4d,linear,1,33976,368,33208,400,432,3047.2,2050.0,15532,0,33584,1,,
+cartpole_main_tuned,net_hidden16,ae225fe02c,mlp,1,27984,368,27176,440,472,47570.7,1568.9,15532,0,27552,1,,
+cartpole_main_tuned,net_hidden32,dd55847977,mlp,1,29072,368,28264,440,472,84723.6,2660.7,15532,0,28640,1,,
+cartpole_main_tuned,net_hidden64,8cd05eaeb9,mlp,1,31248,368,30440,440,472,159046.5,4836.6,15532,0,30816,1,,
+cartpole_main_tuned,net-stream_hidden16,692592aad0,mlp,1,1952,368,1128,456,488,20499.9,2966.6,15532,0,1504,1,,
+cartpole_main_tuned,net-stream_hidden32,099f75452e,mlp,1,3040,368,2216,456,488,37331.4,4876.4,15532,0,2592,1,,
+cartpole_main_tuned,net-stream_hidden64,94f394f026,mlp,1,5216,368,4392,456,488,71974.2,8682.5,15532,0,4768,1,,
