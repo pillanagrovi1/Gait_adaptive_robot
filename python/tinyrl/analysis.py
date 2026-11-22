@@ -13,10 +13,10 @@ Patterson et al. 2024, Colas et al. 2019, Agarwal et al. 2021).
                       also the first x at which the eval return >= threshold.
   online return       per seed: mean TRAINING (exploratory) return over the last 20% of
                       pre-shift episodes. This is what a robot experiences while it learns.
-  intervals           n < 20 seeds: Student-t 95% interval (check the seed dots for
+  intervals           per configuration, n < 20 seeds: Student-t 95% interval (check the seed dots for
                       bimodality before trusting it); n >= 20: percentile bootstrap.
-                      `ci_method` says which. Compare two learners with paired_diff(),
-                      not by checking whether their intervals overlap.
+                      `ci_method` says which. Compare two learners with paired_diff()
+                      (Student-t at every n, D52), not by checking whether their intervals overlap.
   adaptation          only if a shift is configured. Per seed:
                         P         = final pre-shift performance
                         target    = P - 0.1 * |P|          (fixed, anchored to P, not to the noisy minimum)
@@ -61,6 +61,15 @@ def ci95(x):
         means = rng.choice(x, size=(10_000, len(x)), replace=True).mean(1)
         lo, hi = np.percentile(means, [2.5, 97.5])
         return float((hi - lo) / 2)
+    return t95(x)
+
+
+def t95(x):
+    """Half-width of a Student-t 95% interval, at any n."""
+    x = np.asarray(x, float)
+    x = x[~np.isnan(x)]
+    if len(x) < 2:
+        return float("nan")
     return float(stats.t.ppf(0.975, len(x) - 1) * x.std(ddof=1) / np.sqrt(len(x)))
 
 
@@ -227,5 +236,5 @@ def paired_diff(exp_name_or_path, run_a: str, run_b: str, metric: str = "final")
     d = (a.loc[common] - b.loc[common]).to_numpy(float)
     return {"metric": metric, "a": run_a, "b": run_b, "n": int(len(d)),
             "mean_diff": float(np.nanmean(d)) if len(d) else float("nan"),
-            "ci95": ci95(d), "ci_method": ci_method(len(d)),
+            "ci95": t95(d), "ci_method": "t",
             "a_better_frac": float(np.mean(d > 0)) if len(d) else float("nan")}
