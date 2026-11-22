@@ -64,3 +64,10 @@ The Nucleo build (`make -C m4/pil nucleo`) has **not been run on hardware yet**.
 | Linear learner | feature cache hashes once per step (D62): same learned values, every M4 count re-measured |
 | Audit | evaluation limits documented (D66); online return and memory estimates corrected (D67); `scripts/check_docs.py` in CI |
 | Known, not changed | ObGD differs from the paper for α ≠ 1 (D61) |
+
+## 23 Nov 2026 — review from claude.ai
+
+| Area | Change |
+|---|---|
+| Known, not changed | the streaming path has no Watkins cut (D68); only the streaming net had traces and ObGD in the main comparisons (D69). Code unchanged so the archives replay |
+| Documents | report Summary rewritten as three sentences and a caveat line; equal-memory counts moved to report §4.1; the kernel trade-off map (D46, single measurements, never reported) is no longer listed as a README feature |

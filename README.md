@@ -22,22 +22,19 @@ adaptation speed and compute cost against peak working memory when learning onli
 
 ## Results so far
 
-On two tasks, with an equal tuning budget, the streaming net showed no detectable difference in final return from
-linear tile coding at approximately 3-10x less SRAM in 7 of the 10 configuration pairs in that band, and was lower in
-the other 3 (all pendulum). It learned more slowly (lower AUC) in all 7 pendulum pairs; on cart-pole one of 3 was
-faster, one inconclusive, one slower. At about equal SRAM (within 1.5x) there are 9 pairs (8 pendulum, 1 cart-pole): final return favoured the streaming
-net in 6 (all pendulum) and showed no detectable difference in 3, and AUC favoured it in 8 and showed none in 1.
-All 6 are against linear configurations that scored −769 or worse, two of them near the random policy (−1157 against
-−1147). Against linear's better input encoding no difference was detected at about 4 KB (linear −224, 4 pairs); at
-1.7 KB, where linear's best is −961, the streaming net was higher (4 pairs).
-These memory comparisons are exploratory (D63): 19 pairs reported out of 41 examined, plus a check against linear's
-better encoding on final return. That is 86 uncorrected 95% intervals, so if no true difference existed about two
-"detectable" differences per metric, about four in total, would be expected by chance. Read the counts, not any one pair.
-"No detectable difference" does not mean equal.
+On cart-pole, linear tile coding beat the table on final return (+141.3 [+96.9, +185.7]) with less than a third of
+its SRAM (9.4 KB against 33.5 KB), at 4.3x the table's instructions per step.
+The streaming tiny network (about 3 KB) learned cart-pole faster than 9.4 KB of tile coding (AUC +63.6 [+26.0, +101.1],
+final return inconclusive) and returned more after the pendulum's rod got heavier (+86.8 [+66.9, +106.8]), at 12-20x
+linear's instructions per step, but it alone had traces and ObGD, so these gains cannot be credited to the network
+itself.
+Five replay updates per step did not measurably speed up the table, stochastic rounding made no detectable
+difference, and on the simulated Go1 no learner beat a fixed stumble-reflex gait or differed detectably from random
+nudges of its parameters.
 
-**Confounded (D69):** only the streaming net had traces and ObGD; table and linear were one-step learners tuned on
-α only. Traces alone changed AUC by +285 (table), +152 (linear) and −155 (network) in the untuned ablation, so these
-comparisons are of representation and update rule together.
+*Caveats:* simulation and QEMU only (memory and instruction counts, no timing, no hardware); 10 seeds, 20 for
+adaptation; update rule confounded with representation (D69); traces without the Watkins cut (D68); the equal-memory
+comparisons are exploratory ([report §4.1](docs/report.md#41-pendulum-return-against-sram)).
 
 A difference counts only if its paired 95% interval excludes 0. "Learned faster" = higher AUC.
 
@@ -63,7 +60,7 @@ Single-seed observations from the build are in [`docs/build_notes.md`](docs/buil
 | Learners (`c/`) | table, hashed tile coding (FNV + finaliser, or dense), tiny ReLU network; one shared Q-learning target; optional replay (plain or compressed), target network, TD clipping, Q(λ) without the Watkins cut + ObGD step cap for all three (streaming; D68), LayerNorm, continual backprop, stochastic rounding; underflow counter |
 | Tasks (`python/tinyrl/envs/`) | corridor (Stage 1), pendulum, cart-pole, Unitree Go1 trot on rough ground with a CPG, phase lock, foot contacts, reflexes (Tegotae, posture, stumble) and three action modes |
 | Protocol | step budgets, 10 paired seeds, equal-budget tuning on separate seeds, baselines in every experiment, paired differences, adaptation metric with a from-scratch reference |
-| Measurement | every configuration built for the Cortex-M4 and run in QEMU: peak SRAM (agent + arena + stack), instructions per step, host == M4 checksum; kernel trade-off map (Q16.16 / float32 / q15, LSTD-Q, Dyna-Q) |
+| Measurement | every configuration built for the Cortex-M4 and run in QEMU: peak SRAM (agent + arena + stack), instructions per step, host == M4 checksum |
 | On-chip learning | processor-in-the-loop over UART: QEMU (verified) and Nucleo-F446RE (written, not yet run on hardware) |
 | Docs | stages guide, architecture, decisions log with a decision review, two literature reviews + raw notes, results log, build notes, changelog |
 
@@ -130,7 +127,7 @@ c/src/              tr_agent.c (shared target, ε-greedy, replay, streaming Q(λ
                     tr_linear.c, tr_mlp.c, tr_trace.c
 c/envs/, c/tests/   corridor in C; unit tests, corridor trace, host build of the M4 benchmark
 m4/                 Cortex-M4 benchmark firmware: startup, linker script (F446 memory map), semihosting
-m4/kernels/         candidate update kernels for the trade-off map
+m4/kernels/         candidate update kernels (D46; single measurements, not results)
 m4/pil/             processor-in-the-loop firmware (QEMU and Nucleo-F446RE builds)
 tools/qemu_plugin/  QEMU plugin that counts executed instructions
 python/tinyrl/      cbind.py (ctypes → C), pil.py, envs/, harness.py, sweep.py, analysis.py, plots.py
