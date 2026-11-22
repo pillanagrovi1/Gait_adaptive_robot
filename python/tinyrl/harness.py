@@ -174,11 +174,11 @@ def run(task: dict, learner: dict, seed: int, run_cfg: dict | None = None,
             o = o2
             done = term or trunc
             if step_mode:
-                if shift_at is not None and not shifted and t_global >= shift_at:
-                    do_shift()
-                    shifted = True
                 if t_global % every == 0:
                     do_eval(t_global)
+                if shift_at is not None and not shifted and t_global >= shift_at:
+                    do_shift()                   # after the eval: the checkpoint at shift_at is pre-shift (D58)
+                    shifted = True
                 if t_global >= budget:
                     break
         ev = ""
