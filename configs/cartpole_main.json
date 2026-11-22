@@ -1,6 +1,6 @@
 {
   "name": "cartpole_main",
-  "_note": "Stage 5: 4-D state. The table pays bins^4; bins=12 (~166 KB) deliberately does not fit in the F446's SRAM. Step budget: an equal-episode budget would give good balancers ~10x more data.",
+  "_note": "Stage 5: 4-D state. The table pays bins^4; bins=12 (~166 KB) deliberately does not fit in the F446's SRAM. Step budget: an equal-episode budget would give good balancers ~10x more data. Tuned at the full budget (D49).",
   "task": {
     "name": "cartpole"
   },
@@ -115,7 +115,7 @@
     ],
     "score": "auc",
     "run": {
-      "steps": 80000
+      "steps": 200000
     },
     "space": {
       "table": {

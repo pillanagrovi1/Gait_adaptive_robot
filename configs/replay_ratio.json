@@ -1,6 +1,6 @@
 {
   "name": "replay_ratio",
-  "_note": "Stage 4 (redefined after docs/research_review_2.md): spend idle compute to save samples. Replay ratio n = updates per real step ('batch'), from a compressed 1000-transition FIFO buffer, for all three learners; streaming learners (n = 1, no buffer) as references. KILL CRITERION: if n = 5 does not improve the table's steps-to-threshold, stop the sweep and report the null result.",
+  "_note": "Stage 4 (redefined after docs/research_review_2.md): spend idle compute to save samples. Replay ratio n = updates per real step ('batch'), from a compressed 1000-transition FIFO buffer, for all three learners; streaming learners (n = 1, no buffer) as references. KILL CRITERION (D53): run the table arm first; unless n = 5 beats n = 1 on AUC (paired t interval above 0), stop the sweep and report the null result. Hyperparameters from pendulum_main_tuned (D51).",
   "task": {
     "name": "pendulum",
     "obs_mode": "trig"
@@ -31,7 +31,7 @@
       "label": "table",
       "base": {
         "kind": "tabular",
-        "alpha": 0.3,
+        "alpha": 0.30018406847847273,
         "gamma": 0.95,
         "bins": 11,
         "replay_cap": 1000,
@@ -49,7 +49,7 @@
       "label": "linear",
       "base": {
         "kind": "linear",
-        "alpha": 0.2,
+        "alpha": 0.300417304136544,
         "gamma": 0.95,
         "tilings": 8,
         "tiles": 8,
@@ -69,7 +69,7 @@
       "label": "net",
       "base": {
         "kind": "mlp",
-        "alpha": 0.02,
+        "alpha": 0.015127997271038265,
         "gamma": 0.95,
         "hidden": 32,
         "td_clip": 1.0,
@@ -103,8 +103,8 @@
         "kind": "mlp",
         "alpha": 1.0,
         "gamma": 0.95,
-        "lam": 0.8,
-        "obgd_kappa": 2.0,
+        "lam": 0.6,
+        "obgd_kappa": 3.0,
         "norm": 1,
         "round_mode": 1,
         "hidden": 32
