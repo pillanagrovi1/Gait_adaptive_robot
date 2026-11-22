@@ -108,7 +108,7 @@ python3 scripts/view_go1.py                      # watch the robot (needs a disp
 |---|-------|---------|------|
 | 1 | Corridor, Q-learning by hand → Python → C | `python3 -m tinyrl.ref.corridor_ref` (in `python/`), `make test` | C matches Python bit for bit ✅ |
 | 2 | Pendulum, table learner | `run_experiment.sh stage2_pendulum_table` | if the emulator costs > 6 h, measure RAM from the binary |
-| 3 | Linear + network learners | `run_experiment.sh pendulum_main`, `… stream_ablation`, `… tile_collisions` | if the network will not learn stably, report it and continue with two |
+| 3 | Linear + network learners | `run_experiment.sh pendulum_main`, `… stream_ablation` (`tile_collisions`: not run) | if the network will not learn stably, report it and continue with two |
 | 4 | Replay ratio (compressed buffer) | `run_sweep.py replay_ratio --only table` | stopped at the gate, 22 Nov (D53): not met |
 | 5 | Cart-pole + adaptation | `… cartpole_main`, `… adaptation_pendulum` (+ `_scratch`) | no plot → cut the sweep until one exists |
 | 6 | Write-up | `docs/report.md`, `docs/results.md`, `docs/study_guide.md` | — |

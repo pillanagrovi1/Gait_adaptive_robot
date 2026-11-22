@@ -409,3 +409,12 @@ Cortex-M4; `Src/ann.c`: the network is trained on the chip).
 compares with B3 and B4 only; the random baseline turned out to score like the learners, so "beat B4" cannot be read
 as learning without this comparison. The bar is unchanged and not met; no further Go1 run follows from it.
 **Status: accepted.**
+
+**D66 — Two properties of the evaluation, found in the whole-project audit (22 Nov, after all results).**
+(1) Greedy evaluation breaks ties with the learner's own random-number generator, so evaluating changes the training
+that follows: the same table learner and seed trained differently from episode 5 on with evaluation every 1,000 or
+every 2,000 steps. Comparisons inside one experiment are unaffected (one schedule for all learners); comparisons
+across experiments with different schedules are not like for like. (2) Evaluation always starts from the same 10
+states (`base_seed` 10000), in tuning and in reporting, so tuning seeds separate training, not test states.
+Neither is changed in the code: changing either would make the archived runs unreproducible. A future protocol should
+save and restore the generator around evaluation and give tuning its own evaluation states. **Status: documented.**

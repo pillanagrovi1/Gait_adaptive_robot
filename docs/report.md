@@ -82,7 +82,8 @@ extension, gait tuning on a simulated Unitree Go1.
 ## 3. Method
 
 - **Budgets.** Equal environment steps and equal tuning effort: 20 sampled configurations per learner, 3 tuning
-  seeds separate from the reporting seeds, one tuning point in the middle of each memory sweep (Patterson et al.
+  seeds whose training is separate from the reporting seeds (evaluation used the same 10 start states in tuning and
+  in reporting, D66), one tuning point in the middle of each memory sweep (Patterson et al.
   2023). The pendulum was tuned at a third of its step budget, cart-pole at the full budget (D49).
 - **Seeds.** 10 paired seeds, 20 for adaptation, fixed before the runs. None were added after seeing a result (D50),
   because few-run comparisons are easy to over-read (Henderson et al. 2017; Colas et al. 2018; Agarwal et al. 2021).
@@ -203,6 +204,11 @@ the learners. Evaluation used the same 5 terrains for every seed, so this holds 
 ## 5. Limitations
 
 - **No hardware.** No timing, cycles, energy or power. The Nucleo build never ran.
+- **Evaluation is not passive.** Greedy test episodes break ties with the learner's own random numbers, so the
+  training that follows depends on the evaluation schedule (D66). Within one experiment every learner has the same
+  schedule; across experiments with different schedules, a learner with the same settings can learn differently.
+- **Tuning saw the test states.** Tuning and reporting were evaluated on the same 10 start states, so each tuned
+  setting was chosen on the states it is later scored on (D66).
 - **QEMU is not timing.** Instructions are not cycles, and the workload behind the counts is synthetic.
 - **One machine type.** x86-64 Linux for learning, one emulated Cortex-M4 for measurement.
 - **Tuning budget.** 20 draws, one tuning point per sweep. The pendulum was tuned on a third of the budget and on
