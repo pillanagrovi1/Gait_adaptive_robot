@@ -52,8 +52,8 @@ cd python && python3 -m tinyrl.ref.corridor_ref    # prints every update of 3 gr
 5. `c/src/tr_agent.c`: `tr_act`, `tr_greedy`, `learn_one`.
 6. `c/src/tr_tabular.c`.
 
-**Rewrite:** empty the bodies of `cell_of`, `tr_tab_q` and `tr_tab_update` in
-`tr_tabular.c` and write them again.
+**Study (replaces the rewrite, 22 Nov):** `docs/study_guide.md`. Do the corridor exercise at the top on paper
+first, then the Stage 1 section.
 
 **Gate:** `make test` → `test_c_matches_python_bit_exact` passes (15 seed × ε cases).
 If not, one more week.
