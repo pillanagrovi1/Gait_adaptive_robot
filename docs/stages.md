@@ -1,11 +1,10 @@
-# Stages: what to run, what to read, what to rewrite
+# Stages: what to run and what to read
 
 Every stage is already built. The work in each stage is now:
 
 1. **Understand.** Read the files listed, in order. Do the paper exercise.
-2. **Rewrite.** Delete the learner's body and rewrite it yourself. The tests
-   tell you when it is right.
-3. **Run.** Full experiment, 5 seeds.
+2. **Study.** The stage's section in `study_guide.md` (it replaces the rewrite, 22 Nov).
+3. **Run.** Full experiment, with the seeds registered in `decisions.md`.
 4. **Decide.** Go through the stage's entries in `decisions.md`.
 5. **Log.** Add the numbers to `results.md` with commit and command.
 
@@ -94,7 +93,7 @@ plus scratch. Check against `results/m4/stage2_pendulum_table.csv`.
 `c/src/tr_mlp.c` (derive the backward pass on paper and compare),
 `python/tinyrl/ref/float_agents.py`.
 
-**Rewrite:** `active_features` and `tr_lin_update`, then `forward` and
+**Study:** `study_guide.md`, Stage 3: `active_features` and `tr_lin_update`, then `forward` and
 `tr_mlp_update`. Tests: `c/tests/test_core.c` (`test_regression`) checks each
 learner can fit a known function.
 
@@ -169,8 +168,8 @@ failure, and the plot draws those points hollow.
 
 ## Stage 6 — Write-up (20–26 Jan)
 
-Use the `_summary.csv` tables, `results.md` and `decisions.md`. Related work: the list
-in the project brief (verify every citation before using it).
+The write-up is `report.md`. Every number in it comes from `results.md`; tables come from
+`scripts/results_table.py` and `scripts/compare.py`. Related work: cite only sources that were opened.
 
 ---
 
