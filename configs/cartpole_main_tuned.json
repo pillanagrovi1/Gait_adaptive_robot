@@ -1,0 +1,109 @@
+{
+  "name": "cartpole_main_tuned",
+  "_note": "Stage 5: 4-D state. The table pays bins^4; bins=12 (~166 KB) deliberately does not fit in the F446's SRAM. Step budget: an equal-episode budget would give good balancers ~10x more data. Tuned at the full budget (D49). Hyperparameters tuned by scripts/tune.py: K=20 per learner, tuning seeds [1000, 1001, 1002], score auc.",
+  "task": {
+    "name": "cartpole"
+  },
+  "run": {
+    "steps": 200000,
+    "decay_steps": 120000,
+    "eval_every_steps": 10000,
+    "eval_episodes": 10
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "metrics": {
+    "threshold": 475
+  },
+  "learners": [
+    {
+      "label": "table",
+      "base": {
+        "kind": "tabular",
+        "alpha": 0.06664016981200063,
+        "gamma": 0.99
+      },
+      "sweep": {
+        "bins": [
+          4,
+          6,
+          8,
+          10,
+          12
+        ]
+      }
+    },
+    {
+      "label": "linear",
+      "base": {
+        "kind": "linear",
+        "alpha": 0.11354215343191554,
+        "gamma": 0.99,
+        "tilings": 16,
+        "tiles": 6
+      },
+      "sweep": {
+        "features": [
+          256,
+          1024,
+          4096
+        ]
+      }
+    },
+    {
+      "label": "net",
+      "base": {
+        "kind": "mlp",
+        "alpha": 0.0035714268090119,
+        "gamma": 0.99,
+        "td_clip": 1.0,
+        "target_period": 500,
+        "replay_cap": 2000,
+        "batch": 8,
+        "replay_compact": 1
+      },
+      "sweep": {
+        "hidden": [
+          16,
+          32,
+          64
+        ]
+      }
+    },
+    {
+      "label": "net-stream",
+      "base": {
+        "kind": "mlp",
+        "alpha": 1.0,
+        "gamma": 0.99,
+        "lam": 0.6,
+        "obgd_kappa": 1.5,
+        "norm": 1,
+        "round_mode": 1
+      },
+      "sweep": {
+        "hidden": [
+          16,
+          32,
+          64
+        ]
+      }
+    },
+    {
+      "label": "random",
+      "base": {
+        "kind": "baseline_random"
+      }
+    }
+  ]
+}

@@ -80,3 +80,74 @@ and the full configuration.
 
 **Limits.** One task, one table size, one buffer size, untuned per replay ratio. The interval reaches +72, so a
 useful speed-up from 5 updates is not ruled out.
+
+## Stage 5: cart-pole, all learners (22 Nov 2026)
+
+![cart-pole: final return vs peak SRAM](../results/figures/cartpole_main_tuned_headline.png)
+
+**Provenance.** Run at `d78ae38` · seeds 0–9, 200,000 environment steps · tuning: K = 20 draws per learner, seeds
+1000–1002, at the full budget (D49), `results/tuning/cartpole_main.csv` · runs
+`results/raw_archive/cartpole_main_tuned.tar.gz` · log `results/logs/cartpole_main.log` · versions
+`results/logs/cartpole_main.versions` · instructions and memory `results/m4/cartpole_main_tuned.csv` (QEMU, synthetic
+workload; instruction counts, not timing) · tables by `scripts/results_table.py` and `scripts/compare.py`.
+
+**cartpole_main_tuned** · commit `d78ae38` · config `configs/cartpole_main_tuned.json` · command `bash scripts/run_experiment.sh cartpole_main` · seeds per config: 10–10 · intervals: t 95%
+
+| config | final eval return | mean eval (AUC) | online return | peak SRAM (B) | instr./step (M4) | update underflow | flash, bench firmware with all three learners (B) | update saturation |
+|---|---|---|---|---|---|---|---|---|
+| table_bins4 | 388 ± 42 | 282 ± 19 | 228 ± 8 | 2760 | 708 | 0.0% | 15532 | 0% |
+| table_bins6 | 352 ± 61 | 285 ± 21 | 230 ± 15 | 11080 | 715 | 0.0% | 15532 | 0% |
+| table_bins8 | 313 ± 48 | 266 ± 21 | 208 ± 13 | 33480 | 709 | 0.0% | 15532 | 0% |
+| table_bins10 | 327 ± 40 | 260 ± 15 | 212 ± 8 | 80712 | 711 | 0.0% | 15536 | 0% |
+| table_bins12 | 284 ± 44 | 233 ± 15 | 193 ± 7 | 166132 (est.), does not fit | — | 0.0% | — | 0% |
+| linear_features256 | 431 ± 39 | 275 ± 16 | 228 ± 9 | 3256 | 4155 | 0.4% | 15532 | 0% |
+| linear_features1024 | 455 ± 23 | 346 ± 17 | 248 ± 6 | 9400 | 3046 | 0.2% | 15532 | 0% |
+| linear_features4096 | 498 ± 4 | 440 ± 10 | 262 ± 3 | 33976 | 3047 | 0.2% | 15532 | 0% |
+| net_hidden16 | 124 ± 85 | 120 ± 47 | 73.6 ± 41.8 | 27984 | 47571 | 13.4% | 15532 | 0% |
+| net_hidden32 | 433 ± 100 | 232 ± 34 | 143 ± 23 | 29072 | 84724 | 28.0% | 15532 | 0% |
+| net_hidden64 | 476 ± 36 | 265 ± 24 | 157 ± 18 | 31248 | 159046 | 31.2% | 15532 | 0% |
+| net-stream_hidden16 | 355 ± 110 | 359 ± 46 | 274 ± 57 | 1952 | 20500 | 31.1% | 15532 | 0% |
+| net-stream_hidden32 | 468 ± 41 | 410 ± 29 | 327 ± 20 | 3040 | 37331 | 44.9% | 15532 | 0% |
+| net-stream_hidden64 | 432 ± 70 | 387 ± 45 | 303 ± 40 | 5216 | 71974 | 47.2% | 15532 | 0% |
+| random | 21.9 ± 1.6 | 21.4 ± 0.6 | 21.4 ± 0.1 | — | — | — | — | — |
+
+**Metrics.** Return = steps balanced, at most 500. Final = mean of the last 3 evaluations (10 episodes each). AUC = mean
+evaluation return over training (20 evaluations; higher = learned sooner). Online = mean training return over the
+last 20% of episodes.
+
+**Reproducibility.** Every run's metadata records the commit and the full configuration, and all 150 runs match the
+committed tuned config. The runs are deterministic on x86-64 Linux; this experiment was run once.
+
+**Pre-registered differences** (D49 table; paired by seed, Student-t 95%).
+
+| A − B | metric | status | pairs | mean | 95% CI | verdict |
+|---|---|---|---|---|---|---|
+| linear_features1024 − table_bins8 | final | pre-registered | 10 | +141.3 | [+96.9, +185.7] | A higher |
+| linear_features1024 − table_bins8 | auc | pre-registered | 10 | +80.4 | [+53.0, +107.8] | A higher |
+| net_hidden32 − linear_features1024 | final | pre-registered | 10 | -21.3 | [-128.6, +86.0] | inconclusive |
+| net_hidden32 − linear_features1024 | auc | pre-registered | 10 | -114.4 | [-160.9, -67.9] | A lower |
+| net-stream_hidden32 − linear_features1024 | final | pre-registered | 10 | +13.5 | [-37.2, +64.3] | inconclusive |
+| net-stream_hidden32 − linear_features1024 | auc | pre-registered | 10 | +63.6 | [+26.0, +101.1] | A higher |
+
+**Findings.**
+
+1. Linear tile coding (1,024 features, 9.4 KB) beats the table (8 bins, 33.5 KB) on final return and on AUC, at 4.3x
+   the table's instructions per step.
+2. The streaming network (32 hidden, 3.0 KB) learns faster than linear tile coding (1,024 features, 9.4 KB) in a third
+   of the memory, at 12x the instructions per step. The difference in final return is inconclusive.
+3. The replay network (32 hidden, 29.1 KB) learns more slowly than linear tile coding (1,024 features), at 28x the
+   instructions per step. The difference in final return is inconclusive.
+4. Descriptive, not tested: more memory did not raise the table's mean final return (388 at 2.8 KB, 284 at 12 bins).
+   The 12-bin table does not fit in the 128 KB of SRAM; its return comes from the host run only.
+
+**Limits.**
+
+- One task, equal tuning budget, one tuning point per learner. The table's selected α (0.067) is the smallest of its
+  20 draws, the replay network's target period (500) and the streaming network's κ and λ (1.5, 0.6) are on the edge of
+  their search grids. The streaming network's 20 draws covered only 9 distinct settings.
+- The 500-step cap compresses differences between learners that solve the task.
+- The linear learner's instructions per step depend on the path the benchmark takes: its two-slot feature cache makes
+  it hash once or twice per step. In the measured window the 256-feature learner hashed 1.72 times per step (4,155
+  instructions) and the two larger ones once (3,046–3,047). The table size is not the cause, and ratios against the
+  linear learner are uncertain by about that much.
+- Update underflow is high for both networks (13–47% of update products round to zero).
