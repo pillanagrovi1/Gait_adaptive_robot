@@ -110,7 +110,7 @@ python3 scripts/run_sweep.py stream_ablation --jobs 6     # one stream ingredien
 `pendulum_main` now runs every learner on both encodings (θ and cos/sin), which resolves D01, and
 has two networks: `net` (SGD + target net + 2000-transition replay) and `net-stream` (Stream Q(λ): ObGD,
 traces, LayerNorm, stochastic rounding, no replay, no target). The question for Stage 3: does
-`net-stream` learn stably at 8–64 hidden units? No published result covers this size.
+`net-stream` learn stably at 8–64 hidden units? A controlled comparison was not found in a limited search.
 
 **Debugging tool:** if the C network misbehaves, run the same config with
 `"kind": "mlp_float"`. Float fails too → algorithm or hyperparameters. Only C

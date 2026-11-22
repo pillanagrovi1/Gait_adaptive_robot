@@ -1,6 +1,6 @@
 {
   "name": "tile_collisions",
-  "_note": "Hashed (default: FNV + murmur3 finaliser) vs legacy plain FNV vs collision-free tile coding at equal feature count M; learning vs hash load factor (python3 scripts/tile_collisions.py --dims 2 --tiles 8 --tilings 8 gives each M's load factor). A small result the literature lacks.",
+  "_note": "Hashed (default: FNV + murmur3 finaliser) vs legacy plain FNV vs collision-free tile coding at equal feature count M; learning vs hash load factor (python3 scripts/tile_collisions.py --dims 2 --tiles 8 --tilings 8 gives each M's load factor). A controlled comparison was not found in a limited search.",
   "task": {
     "name": "pendulum",
     "obs_mode": "angle"
