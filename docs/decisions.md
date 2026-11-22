@@ -404,3 +404,8 @@ claimed. The claim is the controlled memory-vs-representation comparison only. *
 *Sources opened 22 Nov:* https://hackaday.com/2016/12/11/train-your-robot-to-walk-with-a-neural-network/ and the
 project's own repository at commit 707c9cd, https://github.com/Counterfeiter/Q-LearningRobot/blob/707c9cd7d04364997a36479439ca966edae6762a/Src/ann.c (README: Q-learning, four servos, STM32F4
 Cortex-M4; `Src/ann.c`: the network is trained on the chip).
+
+**D65 — Go1: learner against random nudges (22 Nov, added after the results).** Exploratory. The registered bar
+compares with B3 and B4 only; the random baseline turned out to score like the learners, so "beat B4" cannot be read
+as learning without this comparison. The bar is unchanged and not met; no further Go1 run follows from it.
+**Status: accepted.**

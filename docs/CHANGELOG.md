@@ -60,5 +60,6 @@ The Nucleo build (`make -C m4/pil nucleo`) has **not been run on hardware yet**.
 | Tools | `scripts/results_table.py` refuses tables without valid provenance; `scripts/compare.py` prints the registered differences |
 | Experiments | replay ratio (gate not met, stopped), cart-pole, adaptation, stream ablation: see `docs/results.md` |
 | Documents | `docs/report.md`, `docs/study_guide.md` (replaces the rewrite exercise) |
+| Go1 | `go1_gait_v3` run: bar not met (no learner beat the stumble reflex), D65 |
 | Linear learner | feature cache hashes once per step (D62): same learned values, every M4 count re-measured |
 | Known, not changed | ObGD differs from the paper for α ≠ 1 (D61) |

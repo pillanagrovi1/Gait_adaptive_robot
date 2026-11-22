@@ -10,7 +10,8 @@ adaptation speed and compute cost against peak working memory when learning onli
 
 > **Status (22 Nov 2026):** the core experiments (Stages 2-5) are run and written up: read
 > [`docs/report.md`](docs/report.md), with every number in [`docs/results.md`](docs/results.md). Stage 4 stopped at
-> its pre-registered gate with a null result. Stage 7 (Go1) is running. No real-hardware timing: the Nucleo build
+> its pre-registered gate with a null result. Stage 7 (Go1, simulation) missed its
+> pre-registered bar: no learner beat the stumble-reflex gait. No real-hardware timing: the Nucleo build
 > has never run on hardware, and QEMU counts instructions, not time.
 
 ![pendulum: return vs peak SRAM](results/figures/pendulum_main_tuned_headline.png)
@@ -45,6 +46,7 @@ A difference counts only if its paired 95% interval excludes 0. "Learned faster"
 | Adaptation | after a 50% heavier rod the streaming network returned more than linear tile coding, at 20.0x the instructions (different SRAM: 3.0 vs 13.2 KB, so no per-byte claim) | 20 seeds, pre-registered |
 | Replay ratio | 5 replay updates per step did not measurably speed up the table, at 2.7x the instructions | 10 seeds, pre-registered gate |
 | Stochastic rounding | no detectable difference. Final: table +12.3 [−36.0, +60.5], linear −1.38 [−10.00, +7.25], network −32.6 [−115.1, +49.8]. AUC: table −15.1 [−45.1, +15.0], linear +2.23 [−8.71, +13.16], network +16.0 [−33.2, +65.2] | 10 seeds, pre-registered |
+| Go1 (simulation) | the bar was not met: no learner beat the stumble-reflex gait, and none differed detectably from random nudges | 10 seeds, pre-registered bar; random comparison exploratory |
 | On-chip learning | learning on the emulated M4 reproduces host learning bit for bit (4 learner types) | deterministic test, QEMU only |
 
 Single-seed observations from the build are in [`docs/build_notes.md`](docs/build_notes.md) and are not results.

@@ -443,3 +443,70 @@ The runs are deterministic on x86-64 Linux.
    below their Q-learning twins.
 3. Descriptive, not tested: the one-step network without replay, target or trace (`net-sgd`) also learned here
    (final −168 ± 38). The other ingredients' effects were not pre-registered and are not claimed.
+
+## Stage 7: tuning a self-adapting gait, Go1 in simulation (22 Nov 2026)
+
+![Go1: final return vs peak SRAM](../results/figures/go1_gait_v3_headline.png)
+
+**Provenance.** Run at `da40212` · seeds 0–9 · 20,000 decisions of 0.25 s, roughness 0.10, then 0.12 from decision
+12,000 · untuned · runs `results/raw_archive/go1_gait_v3.tar.gz` · log and versions `results/logs/go1_gait_v3.*` ·
+M4 `results/m4/go1_gait_v3.csv`, measured at `296e101` after D62 (QEMU, synthetic workload; instruction counts, not
+timing) · tables by `scripts/results_table.py` and `scripts/compare.py`. The learners ran on the laptop, not on a
+microcontroller.
+
+**go1_gait_v3** · commit `da40212` · config `configs/go1_gait_v3.json` · command `bash scripts/run_experiment.sh go1_gait_v3` · seeds per config: 10–10 · intervals: t 95%
+
+| config | final eval return | mean eval (AUC) | online return | peak SRAM (B) | instr./step (M4) | update underflow | flash, bench firmware with all three learners (B) | update saturation | post-shift AUC (B window) | recovered |
+|---|---|---|---|---|---|---|---|---|---|---|
+| table | 16.4 ± 2.1 | 17.0 ± 1.0 | 14.5 ± 2.0 | 29420 | 1404 | 0.1% | 15576 | 0% | 1.6 ± 0.7 | 0% |
+| linear_features1024 | 17.1 ± 4.4 | 16.8 ± 4.0 | 13.1 ± 3.0 | 30348 | 5838 | 2.4% | 15576 | 0% | 2.1 ± 1.4 | 0% |
+| linear_features4096 | 15.2 ± 4.5 | 16.1 ± 3.0 | 12.9 ± 2.3 | 116364 | 5834 | 2.9% | 15580 | 0% | 2.8 ± 0.9 | 10% |
+| linear-bandit_features1024 | 18.8 ± 3.5 | 17.5 ± 2.0 | 13.5 ± 1.6 | 30348 | 5838 | 4.1% | 15576 | 0% | 2.4 ± 0.9 | 0% |
+| linear-bandit_features4096 | 15.1 ± 3.1 | 16.3 ± 2.4 | 13.6 ± 1.5 | 116364 | 5836 | 5.3% | 15580 | 0% | 3.3 ± 0.7 | 0% |
+| net-stream_hidden16 | 17.3 ± 4.0 | 16.9 ± 2.1 | 12.1 ± 2.0 | 3436 | 39000 | 26.3% | 15576 | 0% | 2.1 ± 0.9 | 0% |
+| net-stream_hidden32 | 18.5 ± 4.1 | 16.2 ± 1.7 | 12.2 ± 2.6 | 5932 | 72961 | 35.6% | 15576 | 0% | 3.0 ± 0.7 | 0% |
+| B0-open-loop | 3.3 ± 0.0 | 3.3 ± 0.0 | -0.6 ± 0.7 | — | — | — | — | — | 0.4 ± 0.0 | 0% |
+| B3-stumble | 19.2 ± 0.0 | 19.2 ± 0.0 | 16.2 ± 1.0 | — | — | — | — | — | -0.4 ± 0.0 | 0% |
+| B4-all-reflexes | 11.9 ± 0.0 | 11.9 ± 0.0 | 8.5 ± 0.7 | — | — | — | — | — | 1.6 ± 0.0 | 0% |
+| random | 17.1 ± 2.3 | 17.1 ± 0.7 | 12.8 ± 1.0 | — | — | — | — | — | 1.7 ± 0.6 | 0% |
+
+**Metrics.** Return per 10 s episode ≈ 10 × metres walked, minus tilt and fall penalties. Final = mean of the last 3
+evaluations before the terrain change (5 episodes each). Post-shift AUC = mean evaluation after it. B0 = open-loop
+trot, B3 = trot + stumble reflex, B4 = trot + all reflexes (gains untuned), random = random nudges on top of B3.
+
+**Reproducibility.** The experiment was run once, and every run's metadata records the commit and full configuration.
+Seeds 0–2 of the four linear configs replay byte for byte on x86-64 Linux (D62).
+
+**Differences** (paired by seed, Student-t 95%). The bar, registered before the run: beat B3 **and** B4, both
+intervals above 0.
+
+| A − B | metric | status | pairs | mean | 95% CI | verdict |
+|---|---|---|---|---|---|---|
+| table − B3-stumble | final | pre-registered | 10 | -2.84 | [-4.96, -0.71] | A lower |
+| table − B4-all-reflexes | final | pre-registered | 10 | +4.49 | [+2.36, +6.62] | A higher |
+| linear_features1024 − B3-stumble | final | pre-registered | 10 | -2.08 | [-6.53, +2.36] | inconclusive |
+| linear_features1024 − B4-all-reflexes | final | pre-registered | 10 | +5.24 | [+0.80, +9.69] | A higher |
+| linear_features4096 − B3-stumble | final | pre-registered | 10 | -4.05 | [-8.59, +0.49] | inconclusive |
+| linear_features4096 − B4-all-reflexes | final | pre-registered | 10 | +3.28 | [-1.26, +7.82] | inconclusive |
+| net-stream_hidden16 − B3-stumble | final | pre-registered | 10 | -1.87 | [-5.90, +2.16] | inconclusive |
+| net-stream_hidden16 − B4-all-reflexes | final | pre-registered | 10 | +5.45 | [+1.42, +9.48] | A higher |
+| net-stream_hidden32 − B3-stumble | final | pre-registered | 10 | -0.69 | [-4.78, +3.40] | inconclusive |
+| net-stream_hidden32 − B4-all-reflexes | final | pre-registered | 10 | +6.64 | [+2.55, +10.72] | A higher |
+| table − random | final | exploratory, added after the results (D65) | 10 | -0.77 | [-4.27, +2.74] | inconclusive |
+| linear_features1024 − random | final | exploratory, added after the results (D65) | 10 | -0.01 | [-4.29, +4.27] | inconclusive |
+| linear_features4096 − random | final | exploratory, added after the results (D65) | 10 | -1.98 | [-7.33, +3.38] | inconclusive |
+| net-stream_hidden16 − random | final | exploratory, added after the results (D65) | 10 | +0.20 | [-5.08, +5.48] | inconclusive |
+| net-stream_hidden32 − random | final | exploratory, added after the results (D65) | 10 | +1.38 | [-3.52, +6.28] | inconclusive |
+
+**Findings** (one terrain roughness, untuned).
+
+1. **The bar is not met: no learner beat the stumble-reflex gait (B3).** The table was lower, the other four
+   inconclusive.
+2. Four of the five beat B4, but that is no evidence of learning: no learner differed detectably from random nudges
+   (exploratory, D65), and random nudges also average above B4 (17.1 against 11.9).
+3. Descriptive: after the terrain got 20% rougher every policy, learned or not, fell to a post-shift AUC of 3.3 or
+   less.
+
+**Limits.** Every seed is evaluated on the same 5 terrains, so B0, B3 and B4 have no variance across seeds and the
+intervals against them carry only the learner's variance: the results hold for those 5 terrains. Simulation only, no
+tuning, 20,000 decisions (about 83 minutes of simulated walking).
