@@ -334,6 +334,7 @@ Steps-to-threshold, where reported, always comes with the number of seeds that r
 (Phase 3: 'paired AUC difference excludes 0'), which replaced steps-to-threshold without flagging it; Rahul confirmed
 on 22 Nov after the run. Committed 57 min before any replay-ratio result. The original metric
 gives the same decision (inconclusive).
+Steps-to-threshold, n = 1 vs n = 5: 9/10 vs 10/10 seeds reached -200; the direction depends on how the missing seed is counted, so inconclusive.
 
 **D54 — γ = 0 bandit baseline.** Same representation and α, no bootstrapping: `table-bandit` and `linear-bandit` in
 `stream_ablation` (against `table-sgd`, `linear-sgd`), `linear-bandit` in `go1_gait_v3`. Not on cart-pole, where the

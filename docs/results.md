@@ -62,8 +62,8 @@ sooner). Final = mean of the last 3 evaluations. Steps-to-threshold = first eval
 | 5 | 3306.3 | 10/10 |
 | 20 | 11210.3 | 7/10 |
 
-**Original criterion (secondary).** On the 9 seeds where both arms reached −200, n = 5 got there 15,556 steps later
-on average (steps saved: -15,556, 95% CI [-54,393, +23,281]): inconclusive, so it shows no improvement either.
+**Original criterion (secondary).** Steps-to-threshold, n = 1 vs n = 5:
+9/10 vs 10/10 seeds reached -200; the direction depends on how the missing seed is counted, so inconclusive.
 
 **Reproducibility.** The table arm was run once and has not been repeated. Every run's metadata records the commit
 and the full configuration.
