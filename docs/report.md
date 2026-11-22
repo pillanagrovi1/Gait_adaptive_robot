@@ -8,17 +8,17 @@ archive. The rules that were fixed before the runs are in [`decisions.md`](decis
 On two tasks, with an equal tuning budget, the streaming net showed no detectable difference in final return from
 linear tile coding at approximately 3-10x less SRAM in 7 of the 10 configuration pairs in that band, and was lower in
 the other 3 (all pendulum). It learned more slowly (lower AUC) in all 7 pendulum pairs; on cart-pole one of 3 was
-faster, one inconclusive, one slower. At about equal SRAM (within 1.5x) the pendulum comparison of final return is
-inconclusive in the 2 pairs against 256-feature linear coding with the angle input, and favours the streaming net in
-the other 6. On cart-pole the one equal-SRAM pair is inconclusive on final return, and the streaming net learned
-faster. These memory comparisons are exploratory (D63). "No detectable difference" does not mean equal.
+faster, one inconclusive, one slower. At about equal SRAM (within 1.5x) there are 9 pairs (8 pendulum, 1 cart-pole): final return favoured the streaming
+net in 6 (all pendulum) and showed no detectable difference in 3, and AUC favoured it in 8 and showed none in 1.
+These memory comparisons are exploratory (D63). These are 19 pairs, so about 19 uncorrected comparisons at 95% per metric, and roughly one "detectable" difference
+per metric (about two over final return and AUC) is expected by chance; read the counts, not any one pair.
+"No detectable difference" does not mean equal.
 
 - On cart-pole, linear tile coding (9.4 KB) beat the table (33.5 KB) on final return (+141.3 [+96.9, +185.7]) and
   AUC, at approximately 4.3x the instructions per step.
-- On cart-pole at about equal SRAM (3,040 B against 3,256 B) the streaming net learned faster than linear tile coding
-  (AUC +134.4 [+95.0, +173.8], exploratory). The registered comparison, 3,040 B against 9,400 B, also has the
-  streaming net faster (AUC +63.6 [+26.0, +101.1]), at approximately 12x the instructions, with final return
-  inconclusive.
+- On cart-pole, in the registered comparison (3,040 B against 9,400 B, so not at equal memory), the streaming net
+  learned faster than linear tile coding (AUC +63.6 [+26.0, +101.1]), at approximately 12x the instructions, with
+  final return inconclusive.
 - After a change of dynamics on the pendulum, the streaming net returned more than linear tile coding (+86.8
   [+66.9, +106.8]) at approximately 20x the instructions. The two differ in SRAM (3,048 B against 13,220 B). No
   equal-memory adaptation comparison was run, so this supports no claim about adaptation per byte.
@@ -97,10 +97,9 @@ extension, gait tuning on a simulated Unitree Go1.
 
 - Replay network (27.2 KB) against linear tile coding (50.1 KB): final return inconclusive (−8.73 [−25.28, +7.82]). The
   network learned faster (AUC +40.9 [+20.6, +61.2]) at approximately 68.5x the instructions per step. *Not pre-registered.*
-- Streaming network (2.8 KB) against linear tile coding (4.0 KB): inconclusive on final return (+51.4 [−2.9, +105.8])
-  and on AUC (+45.4 [−7.9, +98.8]), at approximately 17.7x the instructions per step. *Not pre-registered.*
-- At about equal SRAM and in the 3-10x band every same-encoding pair is tabulated in `results.md` (exploratory,
-  D63). None is picked by hand.
+- Streaming network against linear tile coding by SRAM (exploratory, D63): 8 pendulum pairs at about equal SRAM
+  (final return: 6 higher, 2 inconclusive, 0 lower; AUC: 7, 1, 0) and 7 at 3-10x less SRAM (final return: 0 higher,
+  4 inconclusive, 3 lower; AUC: 0, 0, 7). All are tabulated in `results.md`, and no single pair is a finding.
 - Descriptively, the streaming networks hold the mean final-return frontier between 1.3 and 5.2 KB. Linear coding
   and the replay network hold it from 13.3 KB. The table is on it only at 1,008 B and 1,296 B.
 - The table's mean return rises with its size (−948 ± 47 at 1.0 KB to −245 ± 70 at 12.2 KB in the table-only
@@ -208,8 +207,8 @@ difference (§4.6 has the intervals). Dohare et al. (2024) introduced continual 
 et al. 2023) reports training deep RL directly on a microcontroller. For legged robots, CPG-RL (Bellegarda & Ijspeert
 2022) lets a policy modulate oscillators and not joints, which is the structure of the Go1 extension here.
 
-On-microcontroller gait learning is not new either. A 2016 hobby project, described by Williams (2016), taught a
-four-servo robot to walk with a small neural network running on a Cortex-M4. In this project the Go1 learner runs on
+On-microcontroller gait learning is not new either. A 2016 hobby project (Counterfeiter 2016; described by Williams
+2016) taught a four-servo robot to walk with Q-learning and a small neural network trained on a Cortex-M4. In this project the Go1 learner runs on
 the laptop in simulation; the same C code is only measured on an emulated M4. So no on-microcontroller gait-learning
 claim is made.
 
@@ -222,10 +221,11 @@ search and does not make this comparison.
 On two tasks, with an equal tuning budget, the streaming net showed no detectable difference in final return from
 linear tile coding at approximately 3-10x less SRAM in 7 of the 10 configuration pairs in that band, and was lower in
 the other 3 (all pendulum). It learned more slowly (lower AUC) in all 7 pendulum pairs; on cart-pole one of 3 was
-faster, one inconclusive, one slower. At about equal SRAM (within 1.5x) the pendulum comparison of final return is
-inconclusive in the 2 pairs against 256-feature linear coding with the angle input, and favours the streaming net in
-the other 6. On cart-pole the one equal-SRAM pair is inconclusive on final return, and the streaming net learned
-faster. These memory comparisons are exploratory (D63). "No detectable difference" does not mean equal.
+faster, one inconclusive, one slower. At about equal SRAM (within 1.5x) there are 9 pairs (8 pendulum, 1 cart-pole): final return favoured the streaming
+net in 6 (all pendulum) and showed no detectable difference in 3, and AUC favoured it in 8 and showed none in 1.
+These memory comparisons are exploratory (D63). These are 19 pairs, so about 19 uncorrected comparisons at 95% per metric, and roughly one "detectable" difference
+per metric (about two over final return and AUC) is expected by chance; read the counts, not any one pair.
+"No detectable difference" does not mean equal.
 
 - The streaming net pays approximately 12x to 20x linear's instructions per step in the registered comparisons, and
   its returns vary more between seeds.
@@ -245,6 +245,8 @@ Only sources that were opened for this report are listed. For those marked (abst
 - Agarwal, R. et al. (2021). *Deep Reinforcement Learning at the Edge of the Statistical Precipice.* arXiv:2108.13264. (abstract)
 - Bellegarda, G. & Ijspeert, A. (2022). *CPG-RL: Learning Central Pattern Generators for Quadruped Locomotion.* arXiv:2211.00458. (abstract)
 - Colas, C., Sigaud, O. & Oudeyer, P.-Y. (2018). *How Many Random Seeds? Statistical Power Analysis in Deep Reinforcement Learning Experiments.* arXiv:1806.08295. (abstract)
+- Counterfeiter (2016). *Q-LearningRobot.* Source code, https://github.com/Counterfeiter/Q-LearningRobot (README and
+  `Src/ann.c` read).
 - Dohare, S. et al. (2024). *Loss of plasticity in deep continual learning.* Nature, doi:10.1038/s41586-024-07711-7. (abstract)
 - Elsayed, M., Lupu, E. S., Vasan, G. & Mahmood, A. R. (2026). *Streaming Deep Reinforcement Learning Finally Works.* arXiv:2410.14606v3, 21 Sep 2026 (read in part: abstract, method, Appendix C on the earlier version, Appendix E.5 on the ESP32-S3).
 - Eschmann, J., Albani, D. & Loianno, G. (2023). *RLtools: A Fast, Portable Deep Reinforcement Learning Library for Continuous Control.* arXiv:2306.03530. (abstract)
@@ -252,6 +254,6 @@ Only sources that were opened for this report are listed. For those marked (abst
 - Gupta, S. et al. (2015). *Deep Learning with Limited Numerical Precision.* ICML, PMLR 37. (abstract)
 - Henderson, P. et al. (2017). *Deep Reinforcement Learning that Matters.* arXiv:1709.06560. (abstract)
 - Patterson, A. et al. (2023). *Empirical Design in Reinforcement Learning.* arXiv:2304.01315. (abstract)
-- Williams, E. (2016). *Train Your Robot To Walk With A Neural Network.* Hackaday, 11 Dec 2016,
-  https://hackaday.com/2016/12/11/train-your-robot-to-walk-with-a-neural-network/ (secondary source; the author's Arm blog post could not be opened).
 - Sutton, R. S. & Barto, A. G. (2018). *Reinforcement Learning: An Introduction*, 2nd ed., §9.5.4.
+- Williams, E. (2016). *Train Your Robot To Walk With A Neural Network.* Hackaday, 11 Dec 2016,
+  https://hackaday.com/2016/12/11/train-your-robot-to-walk-with-a-neural-network/ (page fetched 22 Nov 2026; secondary source).

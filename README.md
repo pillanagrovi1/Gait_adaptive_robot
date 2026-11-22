@@ -24,10 +24,11 @@ adaptation speed and compute cost against peak working memory when learning onli
 On two tasks, with an equal tuning budget, the streaming net showed no detectable difference in final return from
 linear tile coding at approximately 3-10x less SRAM in 7 of the 10 configuration pairs in that band, and was lower in
 the other 3 (all pendulum). It learned more slowly (lower AUC) in all 7 pendulum pairs; on cart-pole one of 3 was
-faster, one inconclusive, one slower. At about equal SRAM (within 1.5x) the pendulum comparison of final return is
-inconclusive in the 2 pairs against 256-feature linear coding with the angle input, and favours the streaming net in
-the other 6. On cart-pole the one equal-SRAM pair is inconclusive on final return, and the streaming net learned
-faster. These memory comparisons are exploratory (D63). "No detectable difference" does not mean equal.
+faster, one inconclusive, one slower. At about equal SRAM (within 1.5x) there are 9 pairs (8 pendulum, 1 cart-pole): final return favoured the streaming
+net in 6 (all pendulum) and showed no detectable difference in 3, and AUC favoured it in 8 and showed none in 1.
+These memory comparisons are exploratory (D63). These are 19 pairs, so about 19 uncorrected comparisons at 95% per metric, and roughly one "detectable" difference
+per metric (about two over final return and AUC) is expected by chance; read the counts, not any one pair.
+"No detectable difference" does not mean equal.
 
 A difference counts only if its paired 95% interval excludes 0. "Learned faster" = higher AUC.
 

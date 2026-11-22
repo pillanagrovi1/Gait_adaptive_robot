@@ -384,9 +384,14 @@ need every M4 count re-measured. **Status: documented, not changed.**
 **D63 — Memory claims need equal-memory comparisons (Rahul, 22 Nov, after the results).** Exploratory, not
 pre-registered: every streaming-net / linear pair on the same task variant whose SRAM is about equal (within 1.5x) or
 where the streaming net uses 3-10x less, by `scripts/compare.py <exp> --by-sram`. The bands were chosen after the
-results were seen; every pair inside them is reported. **Status: accepted.**
+results were seen; every pair inside them is reported, as counts. These are 19 pairs, so about 19 uncorrected comparisons at 95% per metric, and roughly one "detectable" difference
+per metric (about two over final return and AUC) is expected by chance; read the counts, not any one pair.
+**Status: accepted.**
 
 **D64 — Novelty claim narrowed (22 Nov).** Elsayed, Lupu, Vasan and Mahmood (arXiv:2410.14606v3, 21 Sep 2026) learn
 Pong on an ESP32-S3, and is citable from now on. Learning a gait on a microcontroller has also been done (Hackaday,
 11 Dec 2016, a four-servo walker on a Cortex-M4), and this project's Go1 learner runs on the host, so that is not
 claimed. The claim is the controlled memory-vs-representation comparison only. **Status: accepted.**
+*Sources opened 22 Nov:* https://hackaday.com/2016/12/11/train-your-robot-to-walk-with-a-neural-network/ and the
+project's own repository, https://github.com/Counterfeiter/Q-LearningRobot (README: Q-learning, four servos, STM32F4
+Cortex-M4; `Src/ann.c`: the network is trained on the chip).
