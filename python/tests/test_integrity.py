@@ -80,3 +80,38 @@ def test_no_empty_panels(tmp_path, monkeypatch):                                
     monkeypatch.setattr(plots.plt, "close", lambda fig: seen.extend(a.get_title(loc="left") for a in fig.axes))
     plots.learning_curves(exp, sweep.expand(exp), tmp_path / "c.png")
     assert seen == ["ran"]
+
+
+def test_online_skips_the_episode_cut_by_the_budget(tmp_path, monkeypatch):                # audit 7
+    monkeypatch.setattr(analysis, "RAW", tmp_path)
+    task, learner = {"name": "cartpole"}, {"kind": "baseline_const", "action": 0}
+    run = {"steps": 1003, "eval_every_steps": 1003, "eval_episodes": 1}
+    exp = {"name": "e", "task": task, "run": run, "seeds": [0], "learners": [{"label": "c", "base": learner}]}
+    (tmp_path / "e.json").write_text(json.dumps(exp))
+    rows = harness.run(task, learner, 0, run, out_dir=tmp_path / "e" / "c")["rows"]
+    assert rows[-1]["steps"] < max(r["steps"] for r in rows[:-1])          # the budget cut the last one short
+    tail = rows[:-1][-max(1, (len(rows) - 1) // 5):]
+    assert analysis.per_seed(tmp_path / "e.json", "c", "online").loc[0] == pytest.approx(
+        sum(r["train_return"] for r in tail) / len(tail))
+
+
+def test_memory_estimate_uses_measured_overhead(tmp_path, monkeypatch):                     # audit 3
+    monkeypatch.setattr(analysis, "RAW", tmp_path)
+    task = {"name": "pendulum"}
+    run = {"steps": 400, "eval_every_steps": 400, "eval_episodes": 1}
+    exp = {"name": "e", "task": task, "run": run, "seeds": [0], "learners": [
+        {"label": "t", "base": {"kind": "tabular"}, "sweep": {"bins": [5, 7]}}]}
+    (tmp_path / "e.json").write_text(json.dumps(exp))
+    metas = {b: harness.run(task, {"kind": "tabular", "bins": b}, 0, run, out_dir=tmp_path / "e" / f"t_bins{b}")["meta"]
+             for b in (5, 7)}
+    m4 = {"t_bins5": {"cfg_id": metas[5]["cfg_id"], "peak_bytes": "1008", "fits": "1", "agent_bytes": "368",
+                      "stack_learner": "320", "host_match": "1"},
+          "t_bins7": {"cfg_id": metas[7]["cfg_id"], "peak_bytes": "", "fits": "0", "error": "does not fit"}}
+    monkeypatch.setattr(analysis, "load_m4", lambda name: m4)
+    d = analysis.summarize(tmp_path / "e.json").set_index("run_id")
+    assert d.loc["t_bins7", "peak_source"] == "host-estimate"
+    assert d.loc["t_bins7", "peak_bytes"] == metas[7]["arena_bytes"] + 368 + 320
+    exp["learners"].append({"label": "rnd", "base": {"kind": "baseline_random"}})
+    (tmp_path / "e.json").write_text(json.dumps(exp))
+    harness.run(task, {"kind": "baseline_random"}, 0, run, out_dir=tmp_path / "e" / "rnd")
+    assert analysis.summarize(tmp_path / "e.json").set_index("run_id").loc["rnd", "peak_bytes"] == 0

@@ -418,3 +418,10 @@ across experiments with different schedules are not like for like. (2) Evaluatio
 states (`base_seed` 10000), in tuning and in reporting, so tuning seeds separate training, not test states.
 Neither is changed in the code: changing either would make the archived runs unreproducible. A future protocol should
 save and restore the generator around evaluation and give tuning its own evaluation states. **Status: documented.**
+
+**D67 — Two analysis corrections from the audit (22 Nov, after all results).** (1) Online return left in the last
+episode even when the step budget had cut it short (cart-pole seed 0: a 21-step episode). It is now left out; this
+moves cart-pole online means by at most 0.35 and pendulum, adaptation, ablation and Go1 not at all. (2) Configurations
+that could not be measured on the M4 were estimated as arena + 220 B; the measured agent struct and stack are 688 B,
+so the estimate now uses the measured overhead (cart-pole 12 bins: 166,600 B, still far above 128 KB). Baselines now
+get 0 B, as they have no learner. No registered comparison changes. **Status: fixed.**

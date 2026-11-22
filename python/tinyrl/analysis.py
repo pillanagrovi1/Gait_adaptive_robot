@@ -12,7 +12,7 @@ Patterson et al. 2024, Colas et al. 2019, Agarwal et al. 2021).
                       = learned sooner. If the experiment sets metrics.threshold,
                       also the first x at which the eval return >= threshold.
   online return       per seed: mean TRAINING (exploratory) return over the last 20% of
-                      pre-shift episodes. This is what a robot experiences while it learns.
+                      pre-shift episodes, leaving out a last episode that the step budget cut short. This is what a robot experiences while it learns.
   intervals           per configuration, n < 20 seeds: Student-t 95% interval (check the seed dots for
                       bimodality before trusting it); n >= 20: percentile bootstrap.
                       `ci_method` says which. Compare two learners with paired_diff()
@@ -38,7 +38,9 @@ Patterson et al. 2024, Colas et al. 2019, Agarwal et al. 2021).
   peak SRAM           from results/m4/<experiment>.csv (QEMU, Cortex-M4):
                       sizeof(agent) + arena + learner stack. If a configuration
                       was not measured, `peak_source` says "host-estimate" and the
-                      value is arena + 220 B, which plots draw hollow.
+                      value is arena + the largest agent + stack measured for the same
+                      kind of learner in that experiment (else 368 + 320 B, the table's), drawn hollow.
+                      Baselines have no learner: 0.
   flash_bytes         text + data of that benchmark firmware (all three learners, which the
                       dispatch always links, plus harness and startup), not of one learner alone (D56).
   finished runs       only seeds whose seed<k>_meta.json exists are analysed: it is written last (D59).
@@ -163,6 +165,8 @@ def _per_seed_metrics(xs, M, shift, threshold, df, back=None, metas=None):
             tr = df[df["seed"] == seed]
             if shift is not None:
                 tr = tr[tr[xcol] <= shift]
+            if shift is None and len(tr) > 1 and tr["steps"].iloc[-1] < tr["steps"].iloc[:-1].max():
+                tr = tr.iloc[:-1]       # cut short by the step budget, not a real episode (audit 7)
             tail = tr["train_return"].to_numpy()
             if len(tail):
                 m["online"] = float(np.mean(tail[-max(1, len(tail) // 5):]))
@@ -182,6 +186,13 @@ def _per_seed_metrics(xs, M, shift, threshold, df, back=None, metas=None):
             m["recovery"] = float(post_x[hit[0] + 2] - shift) if len(hit) else np.nan
         out.append(m)
     return pd.DataFrame(out)
+
+
+def _overhead(m4: dict, kind: str) -> int:
+    """Agent struct + learner stack, from the M4 rows of the same kind (audit 3)."""
+    got = [int(r["agent_bytes"]) + int(r["stack_learner"]) for r in m4.values()
+           if r.get("kind", kind) == kind and r.get("agent_bytes") and r.get("stack_learner")]
+    return max(got) if got else 368 + 320
 
 
 def summarize(exp_name_or_path) -> pd.DataFrame:
@@ -230,7 +241,8 @@ def summarize(exp_name_or_path) -> pd.DataFrame:
             row["flash_bytes"] = int(text) + int(data) if text and data else np.nan
             row["host_match"] = int(mm["host_match"]) if mm.get("host_match") else np.nan
         else:
-            row["peak_bytes"] = meta["arena_bytes"] + 220
+            kind = s["learner"]["kind"]
+            row["peak_bytes"] = 0 if kind.startswith("baseline") else meta["arena_bytes"] + _overhead(m4, kind)
             row["peak_source"] = "host-estimate"
             row["fits_f446"] = 0 if (mm and mm.get("fits") == "0") else np.nan
         rows.append(row)
