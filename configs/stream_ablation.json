@@ -1,6 +1,6 @@
 {
   "name": "stream_ablation",
-  "_note": "Stage 3/5: which part of the Stream Q(lambda) recipe matters at tiny sizes? One change at a time, for all three learners (lambda is a shared factor, so the comparison stays about representation). Pendulum, cos/sin encoding.",
+  "_note": "Stage 3/5: which part of the Stream Q(lambda) recipe matters at tiny sizes? One change at a time, for all three learners (lambda is a shared factor, so the comparison stays about representation). Pendulum, cos/sin encoding. '*-bandit' = the same learner with gamma = 0 (baseline, D54).",
   "task": {
     "name": "pendulum",
     "obs_mode": "trig"
@@ -30,6 +30,15 @@
         "kind": "tabular",
         "alpha": 0.3,
         "gamma": 0.95,
+        "bins": 11
+      }
+    },
+    {
+      "label": "table-bandit",
+      "base": {
+        "kind": "tabular",
+        "alpha": 0.3,
+        "gamma": 0.0,
         "bins": 11
       }
     },
@@ -72,6 +81,17 @@
         "kind": "linear",
         "alpha": 0.2,
         "gamma": 0.95,
+        "tilings": 8,
+        "tiles": 8,
+        "features": 1024
+      }
+    },
+    {
+      "label": "linear-bandit",
+      "base": {
+        "kind": "linear",
+        "alpha": 0.2,
+        "gamma": 0.0,
         "tilings": 8,
         "tiles": 8,
         "features": 1024
