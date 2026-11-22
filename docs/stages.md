@@ -129,7 +129,8 @@ Stage 4 question is how much a few extra replay updates per real step (from a co
 python3 scripts/run_sweep.py replay_ratio --jobs 6 && python3 scripts/measure_m4.py replay_ratio && python3 scripts/make_plots.py replay_ratio
 ```
 
-Kill criterion: if n = 5 does not improve the table's steps-to-threshold, stop and report the null result.
+Kill criterion (D53): run the table arm first (`python3 scripts/run_sweep.py replay_ratio --jobs 6 --only table`).
+Unless n = 5 beats n = 1 on AUC (paired difference, interval above 0), stop and report the null result.
 The original buffer-size sweep is still available:
 
 **Read:** `tr_observe` in `tr_agent.c`; D12 in the decisions log.

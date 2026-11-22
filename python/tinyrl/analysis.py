@@ -207,6 +207,8 @@ def summarize(exp_name_or_path) -> pd.DataFrame:
         for col in ps.columns:
             row[f"{col}_mean"] = float(ps[col].mean())
             row[f"{col}_ci95"] = ci95(ps[col]) if col != "recovered" else float("nan")
+        if "x_to_threshold" in ps:
+            row["x_to_threshold_reached"] = int(ps["x_to_threshold"].notna().sum())     # of n_seeds (D53)
         if metas:
             uf = [m.get("underflow_frac") for m in metas.values() if m.get("underflow_frac") is not None]
             row["underflow_frac"] = float(np.mean(uf)) if uf else np.nan

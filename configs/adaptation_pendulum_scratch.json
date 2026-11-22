@@ -1,6 +1,6 @@
 {
   "name": "adaptation_pendulum_scratch",
-  "_note": "From-scratch reference for adaptation_pendulum: the heavy rod from step 0, for the same 150k steps as the post-shift window. Forward transfer = post-shift AUC (adaptation_pendulum) - AUC here. Exploration decays over the window, as it would for a fresh learner.",
+  "_note": "From-scratch reference for adaptation_pendulum: the heavy rod from step 0, for the same 150k steps as the post-shift window. Forward transfer = post-shift AUC (adaptation_pendulum) - AUC here. Exploration decays over the window, as it would for a fresh learner. Hyperparameters from pendulum_main_tuned (D51).",
   "task": {
     "name": "pendulum",
     "obs_mode": "trig"
@@ -40,7 +40,7 @@
       "label": "table",
       "base": {
         "kind": "tabular",
-        "alpha": 0.3,
+        "alpha": 0.30018406847847273,
         "gamma": 0.95,
         "bins": 11
       },
@@ -52,7 +52,7 @@
       "label": "linear",
       "base": {
         "kind": "linear",
-        "alpha": 0.2,
+        "alpha": 0.300417304136544,
         "gamma": 0.95,
         "tilings": 8,
         "tiles": 8,
@@ -66,7 +66,7 @@
       "label": "net",
       "base": {
         "kind": "mlp",
-        "alpha": 0.02,
+        "alpha": 0.015127997271038265,
         "gamma": 0.95,
         "hidden": 32,
         "td_clip": 1.0,
@@ -82,8 +82,8 @@
         "kind": "mlp",
         "alpha": 1.0,
         "gamma": 0.95,
-        "lam": 0.8,
-        "obgd_kappa": 2.0,
+        "lam": 0.6,
+        "obgd_kappa": 3.0,
         "norm": 1,
         "round_mode": 1,
         "hidden": 32
@@ -95,8 +95,8 @@
         "kind": "mlp",
         "alpha": 1.0,
         "gamma": 0.95,
-        "lam": 0.8,
-        "obgd_kappa": 2.0,
+        "lam": 0.6,
+        "obgd_kappa": 3.0,
         "norm": 1,
         "round_mode": 1,
         "hidden": 32,
