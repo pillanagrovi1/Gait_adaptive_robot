@@ -219,6 +219,7 @@ static void learn_one(tr_agent_t *ag, const q16_t *s, int a, q16_t r, const q16_
 {
     const tr_cfg_t *c = &ag->cfg;
     q16_t y = r;
+    if (c->kind == TR_LINEAR) tr_lin_touch(ag, s);
     if (!done) {
         q_all(ag, s2, ag->q, 1);
         q16_t m = ag->q[0];
@@ -336,6 +337,7 @@ static void learn_stream(tr_agent_t *ag, const q16_t *s, int a, q16_t r, const q
 {
     const tr_cfg_t *c = &ag->cfg;
     q16_t y = r;
+    if (c->kind == TR_LINEAR) tr_lin_touch(ag, s);
     if (!done) {
         q_all(ag, s2, ag->q, 1);
         q16_t m = ag->q[0];

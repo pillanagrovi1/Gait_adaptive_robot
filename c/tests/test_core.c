@@ -245,22 +245,38 @@ static void test_saturation(void)
     }
 }
 
-/* D62: the feature cache evicts the least recently used state, so act(s) / target(s') / update(s)
- * never evicts the state that is needed next. */
-static void test_linear_cache_lru(void)
+/* D62: learning on (s, s') must not push s out of the two-slot cache when it looks up s'.
+ * Least-recently-used eviction alone fails exactly here, after a random action: act() did not
+ * touch s. If s was recomputed it lands in the other slot, so a stable slot = no recomputation. */
+static int cache_slot(const tr_agent_t *ag, q16_t x)
+{
+    for (int i = 0; i < 2; i++)
+        if (ag->u.lin.cache.valid[i] && ag->u.lin.cache.obs[i][0] == x) return i;
+    return -1;
+}
+
+static void test_linear_cache(void)
 {
     static uint8_t arena[8192];
     static tr_agent_t ag;
-    tr_cfg_t c; base_cfg(&c, TR_LINEAR, 1, 2);
-    CHECK(tr_init(&ag, &c, arena, sizeof(arena), 1) == TR_OK, "init");
-    q16_t s0 = Q16(-0.5), s1 = Q16(0.0), s2 = Q16(0.5), q[2];
-    tr_qvalues(&ag, &s0, q);
-    tr_qvalues(&ag, &s1, q);
-    tr_qvalues(&ag, &s0, q);        /* a hit: s0 is now the most recent */
-    tr_qvalues(&ag, &s2, q);        /* a miss: must replace s1 */
-    const tr_lin_cache_t *k = &ag.u.lin.cache;
-    CHECK(k->obs[0][0] == s0 || k->obs[1][0] == s0, "recently used state was evicted");
-    CHECK(k->obs[0][0] == s2 || k->obs[1][0] == s2, "new state was not cached");
+    for (int stream = 0; stream <= 1; stream++) {
+        tr_cfg_t c; base_cfg(&c, TR_LINEAR, 1, 2);
+        if (stream) c.lambda = Q16(0.5);
+        CHECK(tr_init(&ag, &c, arena, sizeof(arena), 1) == TR_OK, "init");
+        q16_t s = Q16(-0.9), q[2];
+        tr_qvalues(&ag, &s, q);
+        for (int k = 0; k < 200; k++) {
+            q16_t s2 = (q16_t)(Q16(-0.8) + 400 * k);
+            int a = tr_act(&ag, &s, k % 3 ? Q16_ONE : 0);      /* two random actions, one greedy */
+            int before = cache_slot(&ag, s);
+            tr_observe(&ag, &s, a, Q16(0.1), &s2, 0);
+            int after = cache_slot(&ag, s), next = cache_slot(&ag, s2);
+            CHECK(before >= 0 && after == before && next >= 0,
+                  "stream %d step %d: s recomputed or lost (%d -> %d, s' %d)", stream, k, before, after, next);
+            if (before < 0 || after != before || next < 0) break;
+            s = s2;
+        }
+    }
 }
 
 /* Corridor with any config tweak; returns worst |Q(c,right) - Q*|. Observations at cell centres. */
@@ -376,7 +392,7 @@ int main(void)
     test_stream_cfg_rules();
     test_stochastic_rounding();
     test_saturation();
-    test_linear_cache_lru();
+    test_linear_cache();
     test_compact_replay();
     test_dense_tiles();
     test_cbp();
