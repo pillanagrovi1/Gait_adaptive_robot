@@ -41,7 +41,7 @@ file only answers two questions: *what is Q(s, ·)?* and *how does δ move it?*
  ┌──────────────────────┐  ┌──────────────────────────────────────────────────────────┐
  │ tr_agent_t           │  │ arena  (tr_mem_bytes(cfg) bytes, carved by tr_init)       │
  │ cfg, rng, pointers…  │  │ xn[d] │ q[A] │ replay s,s',r,a,done (opt.) │ learner part │
- │ 220–300 B on the M4  │  └──────────────────────────────────────────────────────────┘
+ │ 368 B on the M4      │  └──────────────────────────────────────────────────────────┘
  └──────────────────────┘     learner part: table | weights + idx[T] | W,b (+target) + z,h
  + stack while act()/observe() run  (measured by stack painting)
 
@@ -106,14 +106,16 @@ sequenceDiagram
 | corridor | cell (1) | 2 | — | ≤ 100 steps | +1 at goal | — |
 | pendulum swing-up | θ, θ̇ (2) or cos θ, sin θ, θ̇ (3) | 3 torques | 0.05 s | 200 steps | −(θ² + .1θ̇² + .001u²) | rod mass ×(1+level) |
 | cart-pole | x, ẋ, θ, θ̇ (4) | 2 | 0.02 s | ≤ 500 steps | +1 / step | pole mass ×(1+level) |
-| Go1 rough-ground trot | roll, pitch, ω_x, ω_y (4), opt. +v_x, z (6) | 6 gait adjustments | 0.25 s | 40 decisions | 10·Δx − 2(roll²+pitch²), −5 on fall | roughness ×(1+level) |
+| Go1 v1 (`go1_gait`, not run) | roll, pitch, ω_x, ω_y (4), opt. +v_x, z (6) | 6 gait adjustments | 0.25 s | 40 decisions | 10·Δx − 2(roll²+pitch²), −5 on fall | roughness ×(1+level) |
+| Go1 v3 (`go1_gait_v3`, reported) | half-cycle IMU (4) + which pair swings next + contact mismatch (2) + the 3 gait parameters (10) | 7: keep, or nudge clearance / posture gain / body height up or down | half stride, 0.25 s, phase-locked | 40 decisions | as v1 | roughness ×(1+level) |
 
-The Go1 learner does not output joint angles. It sits on top of a fixed CPG:
+The Go1 learner does not output joint angles. In v3 it tunes three parameters of a CPG trot that already has a
+stumble reflex:
 
 ```
- learner (4 Hz)  ──action──▶  CPG + leg mapping (50 Hz)  ──targets──▶  PD joints (MuJoCo, 500 Hz)
-      ▲                                                                         │
-      └───────────────────── IMU: roll, pitch, roll rate, pitch rate ◀──────────┘
+ learner (every half stride, 0.25 s) ──nudge──▶ gait parameters ──▶ CPG + stumble reflex (100 Hz) ──targets──▶ PD joints (MuJoCo, 500 Hz)
+      ▲                                                                                                          │
+      └──────────── half-cycle IMU + pair bit + foot-contact mismatch + the 3 parameters ◀───────────────────────┘
 ```
 
 

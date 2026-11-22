@@ -136,6 +136,7 @@ The original buffer-size sweep is still available:
 **Read:** `tr_observe` in `tr_agent.c`; D12 in the decisions log.
 
 ```bash
+# not run (Stage 4 stopped at its gate, D53); kept as an option
 python3 scripts/run_sweep.py stage4_buffer --jobs 6
 python3 scripts/measure_m4.py stage4_buffer
 python3 scripts/make_plots.py stage4_buffer
@@ -180,6 +181,7 @@ The write-up is `report.md`. Every number in it comes from `results.md`; tables 
 ```bash
 python3 scripts/view_go1.py                   # nominal trot
 python3 scripts/go1_difficulty.py --phase-lock --episodes 30   # where does the open-loop trot fail?
+# v2 was not run: go1_gait_v3 replaced it (results in results.md)
 python3 scripts/run_sweep.py go1_gait_v2 --jobs 6               # slow: about 0.8 s per episode
 python3 scripts/measure_m4.py go1_gait_v2 && python3 scripts/make_plots.py go1_gait_v2
 ```
@@ -202,7 +204,7 @@ In a 10-episode probe the stumble reflex alone took success at roughness 0.10 fr
 
 **Algorithm trade-off map (any stage):** `python3 scripts/bench_kernels.py` measures candidate update kernels
 (Q16.16 / float32 / q15, LSTD-Q, Dyna-Q) on the M4 and draws `results/figures/tradeoff_map.png`.
-`python3 scripts/tile_collisions.py` shows how full the hashed tile table is.
+`python3 scripts/tile_collisions.py` shows how full the hashed tile table is (the `tile_collisions` learning experiment was not run).
 
 **Hardware (optional, Nucleo-F446RE): processor-in-the-loop.**
 
