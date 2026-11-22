@@ -56,7 +56,8 @@ def _ramp(n):
 
 def learning_curves(exp: dict, specs, path: Path):
     is_base = lambda s: s["learner"]["kind"].startswith("baseline")  # noqa: E731
-    labels = list(dict.fromkeys(s["label"] for s in specs if not is_base(s)))
+    labels = list(dict.fromkeys(s["label"] for s in specs
+                                if not is_base(s) and analysis.load_run(exp["name"], s["run_id"])[0] is not None))
     base_curves = []
     xlabel = "training episode"
     for s in specs:

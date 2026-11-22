@@ -39,8 +39,9 @@ Patterson et al. 2024, Colas et al. 2019, Agarwal et al. 2021).
                       sizeof(agent) + arena + learner stack. If a configuration
                       was not measured, `peak_source` says "host-estimate" and the
                       value is arena + 220 B, which plots draw hollow.
-  flash_bytes         text + data of that benchmark firmware (learner, harness and startup),
-                      not of the learner alone (D56).
+  flash_bytes         text + data of that benchmark firmware (all three learners, which the
+                      dispatch always links, plus harness and startup), not of one learner alone (D56).
+  finished runs       only seeds whose seed<k>_meta.json exists are analysed: it is written last (D59).
 """
 from __future__ import annotations
 
@@ -56,6 +57,7 @@ from . import sweep
 
 ROOT = Path(__file__).resolve().parents[2]
 RAW = ROOT / "results" / "raw"
+LOWER_IS_BETTER = {"x_to_threshold", "recovery"}
 K_LAST = 3
 BOOT_MIN_N = 20
 
@@ -98,6 +100,9 @@ def load_run(exp_name: str, run_id: str):
         if f.stem.endswith("_eval"):
             continue
         seed = int(f.stem[4:])
+        mf = d / f"seed{seed}_meta.json"
+        if not mf.exists():
+            continue                    # unfinished
         df = pd.read_csv(f)
         df["seed"] = seed
         frames.append(df)
@@ -106,9 +111,7 @@ def load_run(exp_name: str, run_id: str):
             e = pd.read_csv(ef)
             e["seed"] = seed
             evframes.append(e)
-        mf = d / f"seed{seed}_meta.json"
-        if mf.exists():
-            metas[seed] = json.loads(mf.read_text())
+        metas[seed] = json.loads(mf.read_text())
     if not frames:
         return None, None, meta, metas
     df = pd.concat(frames, ignore_index=True)
@@ -225,6 +228,7 @@ def summarize(exp_name_or_path) -> pd.DataFrame:
                 row[k] = float(mm[k]) if mm.get(k) else np.nan
             text, data = mm.get("flash_text"), mm.get("ram_data")
             row["flash_bytes"] = int(text) + int(data) if text and data else np.nan
+            row["host_match"] = int(mm["host_match"]) if mm.get("host_match") else np.nan
         else:
             row["peak_bytes"] = meta["arena_bytes"] + 220
             row["peak_source"] = "host-estimate"
@@ -259,7 +263,11 @@ def paired_diff(exp_name_or_path, run_a: str, run_b: str, metric: str = "final",
     b = per_seed(exp_b or exp_name_or_path, run_b, metric_b or metric)
     common = a.index.intersection(b.index)
     d = (a.loc[common] - b.loc[common]).to_numpy(float)
+    missing = np.isnan(d)
+    d = d[~missing]                     # n counts the pairs used; the dropped ones are reported too
+    better = d < 0 if metric in LOWER_IS_BETTER else d > 0
     return {"metric": metric, "metric_b": metric_b or metric, "a": run_a, "b": run_b, "n": int(len(d)),
-            "mean_diff": float(np.nanmean(d)) if len(d) else float("nan"),
+            "n_missing": int(missing.sum()),
+            "mean_diff": float(np.mean(d)) if len(d) else float("nan"),
             "ci95": t95(d), "ci_method": "t",
-            "a_better_frac": float(np.mean(d > 0)) if len(d) else float("nan")}
+            "a_better_frac": float(np.mean(better)) if len(d) else float("nan")}

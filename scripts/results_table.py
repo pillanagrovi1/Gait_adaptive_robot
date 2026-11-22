@@ -4,8 +4,8 @@
 Reads results/figures/<experiment>_summary.csv (written by make_plots.py) and adds the
 provenance the results log requires: git commit, config file, command, number of seeds.
 It exits 1, printing no table, if that provenance does not hold: no raw files, seed counts that
-differ between raw files, summary and config, a raw run missing from the summary, more than one
-commit, or code with uncommitted changes (+dirty).
+differ between raw files, summary and config, a raw run missing from the summary, runs made with
+another config, host != M4, more than one commit, or code with uncommitted changes (+dirty).
 
     python3 scripts/results_table.py stage2_pendulum_table_tuned
     python3 scripts/results_table.py replay_ratio --command "<the command that was really run>"
@@ -29,9 +29,10 @@ def refuse(*problems):
     raise SystemExit(1)
 
 
-def fmt(m, ci, digits=0):
+def fmt(m, ci):
     if pd.isna(m):
         return "—"
+    digits = 1 if abs(m) < 100 else 0       # Go1 returns are ~20: whole numbers would hide the interval
     return f"{m:.{digits}f} ± {ci:.{digits}f}" if not pd.isna(ci) else f"{m:.{digits}f}"
 
 
@@ -49,7 +50,8 @@ def main():
         refuse(f"no raw files in results/raw/{name}/. From the repo root, extract them with:",
                f"mkdir -p results/raw && tar -xzf results/raw_archive/{name}.tar.gz -C results/raw")
     counts = Counter(mf.parent.name for mf in metas)
-    commits = {json.loads(mf.read_text()).get("git_commit") for mf in metas} - {None, "", "?", "unknown"}
+    loaded = [(mf.parent.name, json.loads(mf.read_text())) for mf in metas]
+    commits = {m.get("git_commit") for _, m in loaded} - {None, "", "?", "unknown"}
     exp = sweep.load(ROOT / "configs" / f"{name}.json")
     n_config = len(exp["seeds"])
 
@@ -66,7 +68,14 @@ def main():
         problems.append(f"more than one commit: {', '.join(sorted(commits))}")
     if any(c.endswith("+dirty") for c in commits):
         problems.append(f"runs from uncommitted code (+dirty): {', '.join(sorted(commits))}")
-    not_run = {s["run_id"] for s in sweep.expand(exp)} - set(d["run_id"])
+    specs = {s["run_id"]: s for s in sweep.expand(exp)}
+    other = sorted({run for run, m in loaded if run in specs and not sweep.ran_as(specs[run], m)})
+    if other:
+        problems.append(f"runs differ from configs/{name}.json: {', '.join(other)}")
+    if "host_match" in d:
+        for run in d.loc[d["host_match"] == 0, "run_id"]:
+            problems.append(f"{run}: host != M4, so its measurement cannot be used")
+    not_run = set(specs) - set(d["run_id"])
     if not_run and not a.command:
         problems.append(f"{len(not_run)} of the config's runs are not in the summary: "
                         'give the command that was really run with --command "..."')
@@ -79,21 +88,27 @@ def main():
           f"command `{command}` · "
           f"seeds per config: {int(d['n_seeds'].min())}–{int(d['n_seeds'].max())} · intervals: {d['ci_method'].iloc[0]} 95%\n")
     extra = [(col, head, show) for col, head, show in (
-        ("flash_bytes", "flash, whole bench firmware (B)", lambda v: f"{v:.0f}"),      # D56
-        ("saturation_frac", "update saturation", lambda v: f"{100 * v:.2g}%"),         # D55
+        ("flash_bytes", "flash, bench firmware with all three learners (B)", lambda r, v: f"{v:.0f}"),  # D56
+        ("saturation_frac", "update saturation", lambda r, v: f"{100 * v:.2g}%"),                      # D55
+        ("post_auc_mean", "post-shift AUC (B window)", lambda r, v: fmt(v, r.get("post_auc_ci95"))),
+        ("back_mean", "return on A right after switch back", lambda r, v: fmt(v, r.get("back_ci95"))),
+        ("a2_auc_mean", "AUC, second A window", lambda r, v: fmt(v, r.get("a2_auc_ci95"))),
+        ("recovered_mean", "recovered", lambda r, v: f"{100 * v:.0f}%"),
     ) if col in d]
     print("| config | final eval return | mean eval (AUC) | online return | peak SRAM (B) | instr./step (M4) | update underflow |"
           + "".join(f" {head} |" for _, head, _ in extra))
     print("|---|---|---|---|---|---|---|" + "---|" * len(extra))
     for _, r in d.iterrows():
         peak = f"{int(r['peak_bytes'])}" + ("" if r.get("peak_source") == "m4-qemu" else " (est.)")
+        if r.get("fits_f446") == 0:
+            peak += ", does not fit"
         if str(r["kind"]).startswith("baseline"):      # no learner, so no working memory to report
             peak = "—"
         ins = f"{r['insns_learn_step']:.0f}" if "insns_learn_step" in r and not pd.isna(r.get("insns_learn_step")) else "—"
         uf = f"{100 * r['underflow_frac']:.1f}%" if "underflow_frac" in r and not pd.isna(r.get("underflow_frac")) else "—"
         print(f"| {r['run_id']} | {fmt(r['final_mean'], r['final_ci95'])} | {fmt(r['auc_mean'], r['auc_ci95'])} | "
               f"{fmt(r.get('online_mean'), r.get('online_ci95'))} | {peak} | {ins} | {uf} |"
-              + "".join(f" {'—' if pd.isna(r[col]) else show(r[col])} |" for col, _, show in extra))
+              + "".join(f" {'—' if pd.isna(r[col]) else show(r, r[col])} |" for col, _, show in extra))
 
 
 if __name__ == "__main__":
