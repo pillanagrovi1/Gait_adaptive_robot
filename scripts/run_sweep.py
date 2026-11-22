@@ -6,7 +6,7 @@
     python3 scripts/run_sweep.py pendulum_main --only table   # one learner label
     python3 scripts/run_sweep.py pendulum_main --dry-run
 
-A (run, seed) whose CSV already exists is skipped, so you can stop and restart.
+A (run, seed) whose meta file exists (written last) is skipped, so you can stop and restart.
 Delete results/raw/<experiment>/ to start over.
 """
 import argparse
@@ -48,7 +48,7 @@ def main():
     todo = []
     for s in specs:
         for seed in seeds:
-            if not (harness.RESULTS / exp["name"] / s["run_id"] / f"seed{seed}.csv").exists():
+            if not (harness.RESULTS / exp["name"] / s["run_id"] / f"seed{seed}_meta.json").exists():
                 todo.append((exp["name"], s, seed))
     print(f"{exp['name']}: {len(specs)} configs x {len(seeds)} seeds, {len(todo)} to run, {a.jobs} jobs")
     if a.dry_run:
