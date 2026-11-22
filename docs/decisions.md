@@ -378,14 +378,18 @@ version replaced ObGD by a per-coordinate optimiser, which is not studied here. 
 **D62 — The linear learner's instructions per step are path dependent.** The two-slot feature cache replaces
 round-robin, so after some action sequences it evicts the state it needs next and hashes twice per step instead of
 once. Measured in the benchmark window on cart-pole: 1.72 hashes per step at 256 features (4,155 instructions) and
-1.00 at 1,024 (3,046). Learned values are unaffected. A least-recently-used replacement would remove it, and would
-need every M4 count re-measured. **Status: documented, not changed.**
+1.00 at 1,024 (3,046). Learned values are unaffected. Removing it needs two parts, and every M4 count re-measured.
+*Corrected 22 Nov:* this entry first said a least-recently-used replacement would remove it. Alone it does not: after
+a random action it evicts the state needed next (1.05 hashes per step at ε = 0.05, 2.00 at ε = 1). The second part is
+to look up s before the target. **Status: fix allowed by Rahul on condition that linear replays are byte-identical.**
 
-**D63 — Memory claims need equal-memory comparisons (Rahul, 22 Nov, after the results).** Exploratory, not
-pre-registered: every streaming-net / linear pair on the same task variant whose SRAM is about equal (within 1.5x) or
-where the streaming net uses 3-10x less, by `scripts/compare.py <exp> --by-sram`. The bands were chosen after the
-results were seen; every pair inside them is reported, as counts. These are 19 pairs, so about 19 uncorrected comparisons at 95% per metric, and roughly one "detectable" difference
-per metric (about two over final return and AUC) is expected by chance; read the counts, not any one pair.
+**D63 — Memory claims need equal-memory comparisons (22 Nov, after the results).** Rahul set the rule and the 3-10x
+band. Claude chose "about equal = within 1.5x" afterwards, having seen all 41 pairs. The cutoff matters: for final
+return on the pendulum, 1.5x gives 6 higher of 8 pairs, 1.25x gives 3 of 4, 1.1x gives 1 of 1. Exploratory, not
+pre-registered: every streaming-net / linear pair on the same task variant in either band, as counts, by
+`scripts/compare.py <exp> --by-sram`. That is 19 pairs reported out of 41 examined, plus a check against linear's
+better encoding on final return (added after a review): 86 uncorrected 95% intervals, so if no true difference existed
+about two "detectable" differences per metric, about four in total, would be expected by chance.
 **Status: accepted.**
 
 **D64 — Novelty claim narrowed (22 Nov).** Elsayed, Lupu, Vasan and Mahmood (arXiv:2410.14606v3, 21 Sep 2026) learn
@@ -393,5 +397,5 @@ Pong on an ESP32-S3, and is citable from now on. Learning a gait on a microcontr
 11 Dec 2016, a four-servo walker on a Cortex-M4), and this project's Go1 learner runs on the host, so that is not
 claimed. The claim is the controlled memory-vs-representation comparison only. **Status: accepted.**
 *Sources opened 22 Nov:* https://hackaday.com/2016/12/11/train-your-robot-to-walk-with-a-neural-network/ and the
-project's own repository, https://github.com/Counterfeiter/Q-LearningRobot (README: Q-learning, four servos, STM32F4
+project's own repository at commit 707c9cd, https://github.com/Counterfeiter/Q-LearningRobot/blob/707c9cd7d04364997a36479439ca966edae6762a/Src/ann.c (README: Q-learning, four servos, STM32F4
 Cortex-M4; `Src/ann.c`: the network is trained on the chip).

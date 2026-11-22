@@ -98,6 +98,10 @@ def memory_band(ratio: float) -> str | None:
 def by_sram(exp: str) -> None:
     """Every streaming-net / linear pair on the same task variant that falls in a band: none hand-picked."""
     d = analysis.summarize(exp)
+    nothing = (f"compare: no streaming-net / linear pairs for {exp}. If its raw files are missing, extract them: "
+               f"mkdir -p results/raw && tar -xzf results/raw_archive/{exp}.tar.gz -C results/raw")
+    if d.empty:
+        raise SystemExit(nothing)
     variant = [c for c in d if c == "sweep_obs_mode"]
     rows = []
     for _, s in d[d["label"] == "net-stream"].iterrows():
@@ -106,6 +110,8 @@ def by_sram(exp: str) -> None:
             band = memory_band(ratio)
             if band and all(s[v] == lin[v] for v in variant):
                 rows.append((band, ratio, s, lin))
+    if not rows:
+        raise SystemExit(nothing)
     print("| SRAM band | A = streaming net (B) | B = linear (B) | SRAM B / A | final, A − B | AUC, A − B |")
     print("|---|---|---|---|---|---|")
     count = {}
@@ -125,6 +131,20 @@ def by_sram(exp: str) -> None:
     print("|---|---|---|---|---|---|")
     for (band, metric), n in count.items():
         print(f"| {band} | {metric} | {sum(n.values())} | {n['A higher']} | {n['inconclusive']} | {n['A lower']} |")
+    if variant:
+        linear = d[d["label"] == "linear"]
+        best = linear.loc[linear.groupby("sweep_features")["final_mean"].idxmax()]
+        print()
+        print("| about equal SRAM, against linear's better encoding: A = streaming net (B) | B = linear (B) | "
+              "B's final | final, A − B |")
+        print("|---|---|---|---|")
+        for _, lin in best.iterrows():
+            for _, s in d[d["label"] == "net-stream"].iterrows():
+                if (memory_band(lin["peak_bytes"] / s["peak_bytes"]) or "").startswith("about equal"):
+                    r = analysis.paired_diff(exp, s["run_id"], lin["run_id"], "final")
+                    m, h = r["mean_diff"], r["ci95"]
+                    print(f"| {s['run_id']} ({int(s['peak_bytes'])}) | {lin['run_id']} ({int(lin['peak_bytes'])}) | "
+                          f"{lin['final_mean']:.0f} | {m:+.1f} [{m - h:+.1f}, {m + h:+.1f}] {verdict(m, h)} |")
 
 
 def main():

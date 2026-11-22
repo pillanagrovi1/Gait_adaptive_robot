@@ -10,8 +10,12 @@ linear tile coding at approximately 3-10x less SRAM in 7 of the 10 configuration
 the other 3 (all pendulum). It learned more slowly (lower AUC) in all 7 pendulum pairs; on cart-pole one of 3 was
 faster, one inconclusive, one slower. At about equal SRAM (within 1.5x) there are 9 pairs (8 pendulum, 1 cart-pole): final return favoured the streaming
 net in 6 (all pendulum) and showed no detectable difference in 3, and AUC favoured it in 8 and showed none in 1.
-These memory comparisons are exploratory (D63). These are 19 pairs, so about 19 uncorrected comparisons at 95% per metric, and roughly one "detectable" difference
-per metric (about two over final return and AUC) is expected by chance; read the counts, not any one pair.
+All 6 are against linear configurations that scored −769 or worse, two of them near the random policy (−1157 against
+−1147). Against linear's better input encoding no difference was detected at about 4 KB (linear −224, 4 pairs); at
+1.7 KB, where linear's best is −961, the streaming net was higher (4 pairs).
+These memory comparisons are exploratory (D63): 19 pairs reported out of 41 examined, plus a check against linear's
+better encoding on final return. That is 86 uncorrected 95% intervals, so if no true difference existed about two
+"detectable" differences per metric, about four in total, would be expected by chance. Read the counts, not any one pair.
 "No detectable difference" does not mean equal.
 
 - On cart-pole, linear tile coding (9.4 KB) beat the table (33.5 KB) on final return (+141.3 [+96.9, +185.7]) and
@@ -53,7 +57,7 @@ not found in a limited search. Learning a gait on a microcontroller is not claim
 - linear function approximation on hashed tile coding (Sutton & Barto 2018, §9.5.4);
 - a network with one hidden ReLU layer, in two variants. The *replay* network uses SGD, a 2,000-transition
   compressed buffer and a target network. The *streaming* network keeps no samples: it uses eligibility traces, a
-  step-size cap (ObGD) and LayerNorm, after the December 2024 version of Elsayed et al. (2024), plus stochastic
+  step-size cap (ObGD) and LayerNorm, after the December 2024 version (v2) of Elsayed et al., as described in Appendix C of v3 (2026), plus stochastic
   rounding (Gupta et al. 2015). The September 2026 version of that paper replaced ObGD by another optimiser, which
   is not studied here. Observation normalisation, reward scaling by a running statistic and sparse initialisation
   from that recipe are not used (D23, D61).
@@ -213,19 +217,15 @@ the laptop in simulation; the same C code is only measured on an emulated M4. So
 claim is made.
 
 The claim is limited to a controlled comparison of table, linear tile coding and tiny network on learning
-performance against peak working memory. It was not found in a limited search. The work above was found in that
-search and does not make this comparison.
+performance against peak working memory. It was not found in a limited search: we saw no such comparison in the parts we read
+of the work above (for most of it, the abstract only).
 
 ## 7. Conclusion
 
-On two tasks, with an equal tuning budget, the streaming net showed no detectable difference in final return from
-linear tile coding at approximately 3-10x less SRAM in 7 of the 10 configuration pairs in that band, and was lower in
-the other 3 (all pendulum). It learned more slowly (lower AUC) in all 7 pendulum pairs; on cart-pole one of 3 was
-faster, one inconclusive, one slower. At about equal SRAM (within 1.5x) there are 9 pairs (8 pendulum, 1 cart-pole): final return favoured the streaming
-net in 6 (all pendulum) and showed no detectable difference in 3, and AUC favoured it in 8 and showed none in 1.
-These memory comparisons are exploratory (D63). These are 19 pairs, so about 19 uncorrected comparisons at 95% per metric, and roughly one "detectable" difference
-per metric (about two over final return and AUC) is expected by chance; read the counts, not any one pair.
-"No detectable difference" does not mean equal.
+At approximately 3-10x less SRAM the streaming net showed no detectable difference from linear tile coding in final
+return in 7 of 10 pairs but learned more slowly on the pendulum, and at equal SRAM it was not shown to differ in final
+return from linear's better encoding once linear had the 4 KB it needs to learn (exploratory: counts and caveats in
+the [Summary](#summary)).
 
 - The streaming net pays approximately 12x to 20x linear's instructions per step in the registered comparisons, and
   its returns vary more between seeds.
@@ -245,8 +245,8 @@ Only sources that were opened for this report are listed. For those marked (abst
 - Agarwal, R. et al. (2021). *Deep Reinforcement Learning at the Edge of the Statistical Precipice.* arXiv:2108.13264. (abstract)
 - Bellegarda, G. & Ijspeert, A. (2022). *CPG-RL: Learning Central Pattern Generators for Quadruped Locomotion.* arXiv:2211.00458. (abstract)
 - Colas, C., Sigaud, O. & Oudeyer, P.-Y. (2018). *How Many Random Seeds? Statistical Power Analysis in Deep Reinforcement Learning Experiments.* arXiv:1806.08295. (abstract)
-- Counterfeiter (2016). *Q-LearningRobot.* Source code, https://github.com/Counterfeiter/Q-LearningRobot (README and
-  `Src/ann.c` read).
+- Counterfeiter (2016). *Q-LearningRobot.* Source code at commit 707c9cd, https://github.com/Counterfeiter/Q-LearningRobot/blob/707c9cd7d04364997a36479439ca966edae6762a/Src/ann.c
+  (README and `Src/ann.c` read).
 - Dohare, S. et al. (2024). *Loss of plasticity in deep continual learning.* Nature, doi:10.1038/s41586-024-07711-7. (abstract)
 - Elsayed, M., Lupu, E. S., Vasan, G. & Mahmood, A. R. (2026). *Streaming Deep Reinforcement Learning Finally Works.* arXiv:2410.14606v3, 21 Sep 2026 (read in part: abstract, method, Appendix C on the earlier version, Appendix E.5 on the ESP32-S3).
 - Eschmann, J., Albani, D. & Loianno, G. (2023). *RLtools: A Fast, Portable Deep Reinforcement Learning Library for Continuous Control.* arXiv:2306.03530. (abstract)

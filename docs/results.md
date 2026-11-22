@@ -114,8 +114,8 @@ results, and stay at 10 seeds (D50).
 
 **Exploratory, not pre-registered: the streaming net against linear tile coding by SRAM (D63).** Every pair on the
 same task variant in either band, by `scripts/compare.py pendulum_main_tuned --by-sram`. No correction for multiple comparisons.
-These are 19 pairs, so about 19 uncorrected comparisons at 95% per metric, and roughly one "detectable" difference
-per metric (about two over final return and AUC) is expected by chance; read the counts, not any one pair.
+These are 15 of the 19 reported pairs, out of 41 examined. D63 has the number of differences to expect by
+chance if no true difference existed. Read the counts, not any one pair.
 
 | SRAM band | A = streaming net (B) | B = linear (B) | SRAM B / A | final, A − B | AUC, A − B |
 |---|---|---|---|---|---|
@@ -141,6 +141,17 @@ per metric (about two over final return and AUC) is expected by chance; read the
 | about equal (within 1.5x) | auc | 8 | 7 | 1 | 0 |
 | 3-10x less for the streaming net | final | 7 | 0 | 4 | 3 |
 | 3-10x less for the streaming net | auc | 7 | 0 | 0 | 7 |
+
+| about equal SRAM, against linear's better encoding: A = streaming net (B) | B = linear (B) | B's final | final, A − B |
+|---|---|---|---|
+| net-stream_obs_modeangle_hidden8 (1348) | linear_obs_modeangle_features64 (1700) | -961 | +510.6 [+264.5, +756.6] A higher |
+| net-stream_obs_modeangle_hidden16 (1828) | linear_obs_modeangle_features64 (1700) | -961 | +699.0 [+570.7, +827.3] A higher |
+| net-stream_obs_modetrig_hidden8 (1416) | linear_obs_modeangle_features64 (1700) | -961 | +527.3 [+312.0, +742.6] A higher |
+| net-stream_obs_modetrig_hidden16 (1960) | linear_obs_modeangle_features64 (1700) | -961 | +758.4 [+617.9, +899.0] A higher |
+| net-stream_obs_modeangle_hidden32 (2788) | linear_obs_modeangle_features256 (4004) | -224 | +51.4 [-2.9, +105.8] inconclusive |
+| net-stream_obs_modeangle_hidden64 (4708) | linear_obs_modeangle_features256 (4004) | -224 | +52.6 [-9.2, +114.5] inconclusive |
+| net-stream_obs_modetrig_hidden32 (3048) | linear_obs_modeangle_features256 (4004) | -224 | -17.7 [-132.2, +96.8] inconclusive |
+| net-stream_obs_modetrig_hidden64 (5224) | linear_obs_modeangle_features256 (4004) | -224 | +65.9 [-1.1, +133.0] inconclusive |
 
 ## Stage 4: replay ratio on the pendulum, table arm (22 Nov 2026)
 
@@ -271,8 +282,8 @@ committed tuned config. The runs are deterministic on x86-64 Linux; this experim
 
 **Exploratory, not pre-registered: the streaming net against linear tile coding by SRAM (D63).** Every pair on the
 same task variant in either band, by `scripts/compare.py cartpole_main_tuned --by-sram`. No correction for multiple comparisons.
-These are 19 pairs, so about 19 uncorrected comparisons at 95% per metric, and roughly one "detectable" difference
-per metric (about two over final return and AUC) is expected by chance; read the counts, not any one pair.
+These are 4 of the 19 reported pairs, out of 41 examined. D63 has the number of differences to expect by
+chance if no true difference existed. Read the counts, not any one pair.
 
 | SRAM band | A = streaming net (B) | B = linear (B) | SRAM B / A | final, A − B | AUC, A − B |
 |---|---|---|---|---|---|
