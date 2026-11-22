@@ -94,7 +94,7 @@ def main():
         ("back_mean", "return on A right after switch back", lambda r, v: fmt(v, r.get("back_ci95"))),
         ("a2_auc_mean", "AUC, second A window", lambda r, v: fmt(v, r.get("a2_auc_ci95"))),
         ("recovered_mean", "recovered", lambda r, v: f"{100 * v:.0f}%"),
-    ) if col in d]
+    ) if col in d and d[col].notna().any()]
     print("| config | final eval return | mean eval (AUC) | online return | peak SRAM (B) | instr./step (M4) | update underflow |"
           + "".join(f" {head} |" for _, head, _ in extra))
     print("|---|---|---|---|---|---|---|" + "---|" * len(extra))

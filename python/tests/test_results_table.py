@@ -160,3 +160,10 @@ def test_small_returns_keep_a_decimal(tmp_path, monkeypatch, capsys):       # 19
     edit_summary(tmp_path, final_mean=18.46, final_ci95=0.31)
     _, out, _ = table(tmp_path, monkeypatch, capsys)
     assert "| 18.5 ± 0.3 |" in out
+
+
+def test_no_column_that_is_empty_throughout(tmp_path, monkeypatch, capsys):
+    build(tmp_path)
+    edit_summary(tmp_path, saturation_frac=float("nan"))          # runs from before the counter existed
+    _, out, _ = table(tmp_path, monkeypatch, capsys)
+    assert "saturation" not in out
