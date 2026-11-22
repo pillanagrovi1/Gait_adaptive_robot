@@ -8,26 +8,33 @@ compared on learning performance, adaptation speed and compute cost against peak
 **Research question.** How do different reinforcement-learning representations trade learning performance,
 adaptation speed and compute cost against peak working memory when learning online on a Cortex-M4-class platform?
 
-> **Status (17 Nov 2026):** every stage built and tested (CI: C tests, Python tests, host == M4 bit-exact,
-> learning on the emulated chip). First measured results in [`docs/results.md`](docs/results.md). Not yet:
-> the 10-seed rerun of the main comparison, cart-pole / adaptation / Go1 experiments, any real-hardware timing.
+> **Status (22 Nov 2026):** the core experiments (Stages 2-5) are run and written up: read
+> [`docs/report.md`](docs/report.md), with every number in [`docs/results.md`](docs/results.md). Stage 4 stopped at
+> its pre-registered gate with a null result. Stage 7 (Go1) is running. No real-hardware timing: the Nucleo build
+> has never run on hardware, and QEMU counts instructions, not time.
 
-![pendulum first pass](results/figures/pendulum_main_tuned_headline.png)
+![pendulum: return vs peak SRAM](results/figures/pendulum_main_tuned_headline.png)
 
-*First pass (5 seeds) of the main comparison on the pendulum: final performance against peak SRAM measured on
-the M4, one panel per input encoding. Rerun with 10 seeds before citing.*
+![cart-pole: return vs peak SRAM](results/figures/cartpole_main_tuned_headline.png)
+
+*Final performance against peak SRAM measured on the emulated M4, 10 seeds per point.*
 
 ## Results so far
+
+A difference counts only if its paired 95% interval excludes 0. "Learned faster" = higher AUC.
 
 | What | Finding | Strength |
 |---|---|---|
 | Stage 1 gate | C learner reproduces the Python Q16.16 reference bit for bit | deterministic test |
-| Stage 2, table | final return rises monotonically with memory: −948 ± 47 at 1.0 KB → −245 ± 70 at 12.2 KB; ~530 instructions/step | 10 seeds |
-| Main comparison | streaming network best per byte (2.8 KB: −179 ± 41) but 30–60× the table's instructions; tile coding best overall (13 KB: −142 ± 13) | 5 seeds, first pass |
-| On-chip learning | learning on the emulated M4 reproduces host learning bit for bit (4 learner types) | deterministic test |
+| Pendulum | replay network (27.2 KB) learned faster than linear tile coding (50.1 KB) at 68.5x the instructions; final return inconclusive | 10 seeds, not pre-registered |
+| Cart-pole | linear tile coding beat the table, at 4.3x the instructions | 10 seeds, pre-registered |
+| Cart-pole | streaming network (3.0 KB) learned faster than linear tile coding (9.4 KB) at 12x the instructions; final return inconclusive | 10 seeds, pre-registered |
+| Adaptation | after a 50% heavier rod the streaming network returned more than linear tile coding, at 20x the instructions | 20 seeds, pre-registered |
+| Replay ratio | 5 replay updates per step did not measurably speed up the table, at 2.7x the instructions | 10 seeds, pre-registered gate |
+| Stochastic rounding | no measurable difference, for any learner | 10 seeds, pre-registered |
+| On-chip learning | learning on the emulated M4 reproduces host learning bit for bit (4 learner types) | deterministic test, QEMU only |
 
-Full table with commits and commands: [`docs/results.md`](docs/results.md). Single-seed observations from the
-build are in [`docs/build_notes.md`](docs/build_notes.md) and are not results.
+Single-seed observations from the build are in [`docs/build_notes.md`](docs/build_notes.md) and are not results.
 
 ## What is in it
 
@@ -76,6 +83,7 @@ make test                                        # C unit tests + Python tests (
 python3 scripts/pil_check.py                     # learning on the emulated chip == laptop
 bash scripts/run_experiment.sh stage2_pendulum_table   # tune + sweep + M4 measurement + plots
 python3 scripts/results_table.py stage2_pendulum_table_tuned   # table for docs/results.md
+python3 scripts/compare.py cartpole_main_tuned   # pre-registered paired differences
 python3 scripts/view_go1.py                      # watch the robot (needs a display)
 ```
 
@@ -88,10 +96,10 @@ python3 scripts/view_go1.py                      # watch the robot (needs a disp
 | 3 | Linear + network learners | `run_experiment.sh pendulum_main`, `… stream_ablation`, `… tile_collisions` | if the network will not learn stably, report it and continue with two |
 | 4 | Replay ratio (compressed buffer) | `run_sweep.py replay_ratio --only table` | stopped at the gate, 22 Nov (D53): not met |
 | 5 | Cart-pole + adaptation | `… cartpole_main`, `… adaptation_pendulum` (+ `_scratch`) | no plot → cut the sweep until one exists |
-| 6 | Write-up | `docs/results.md` | — |
+| 6 | Write-up | `docs/report.md`, `docs/results.md`, `docs/study_guide.md` | — |
 | 7 | Gait adaptation on Go1 | `scripts/go1_difficulty.py --ladder`, `scripts/go1_es.py`, `… go1_gait_v3` | — |
 
-What to read, what to rewrite yourself and what each gate means: [`docs/stages.md`](docs/stages.md).
+What to read and what each gate means: [`docs/stages.md`](docs/stages.md).
 
 ## Repository map
 
@@ -111,7 +119,7 @@ scripts/            run_experiment.sh, run_sweep.py, tune.py, measure_m4.py, mak
                     pil_check.py, bench_kernels.py, tile_collisions.py, go1_difficulty.py, go1_es.py,
                     view_go1.py, setup_ubuntu.sh
 results/            figures, M4 measurements and raw-log archives of reported experiments
-docs/               stages, architecture, decisions, results, research reviews + notes, build notes, changelog
+docs/               report, results, study guide, stages, architecture, decisions, research reviews, build notes, changelog
 ```
 
 ## Ground rules

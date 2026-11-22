@@ -367,3 +367,16 @@ which is written last. **Status: accepted, to implement before the runs.**
 
 **D60 — Deferred: float32 learner build and Q15 weight storage**, unless the write-up leaves time. QEMU cannot show
 whether float is slower (D46), and Q15 needs its own scaling and underflow study. **Status: deferred.**
+
+## Added 22 Nov 2026, during the write-up (results had been seen; no update rule and no result changes)
+
+**D61 — ObGD here against the paper.** The December 2024 version of Elsayed et al. uses
+α / max(1, α κ δ̄ ‖e‖₁); this code uses α · min(1, 1 / (κ δ̄ ‖e‖₁)). The two are equal at α = 1, and every ObGD
+configuration in `configs/` has α = 1, so no result differs. They would differ if α were tuned. The September 2026
+version replaced ObGD by a per-coordinate optimiser, which is not studied here. **Status: documented, rule unchanged.**
+
+**D62 — The linear learner's instructions per step are path dependent.** The two-slot feature cache replaces
+round-robin, so after some action sequences it evicts the state it needs next and hashes twice per step instead of
+once. Measured in the benchmark window on cart-pole: 1.72 hashes per step at 256 features (4,155 instructions) and
+1.00 at 1,024 (3,046). Learned values are unaffected. A least-recently-used replacement would remove it, and would
+need every M4 count re-measured. **Status: documented, not changed.**

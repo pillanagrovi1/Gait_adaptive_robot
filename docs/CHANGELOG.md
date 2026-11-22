@@ -49,3 +49,15 @@ learning curve **bit for bit** (passes for table, linear, compressed-replay netw
 On a Nucleo it records cycles per `act()` / `observe()`: the first timing numbers the project may claim.
 The Nucleo build (`make -C m4/pil nucleo`) has **not been run on hardware yet**.
 
+
+## 22 Nov 2026 — pre-registration, the remaining experiments, write-up
+
+| Area | Change |
+|---|---|
+| Protocol | D49–D60 registered before the runs: tuning at the full budget, fixed seeds, primary comparisons, t intervals on differences |
+| Bugs fixed | evaluation at the shift step ran on the shifted task (D58); resume skipped interrupted runs (D59); analysis read unfinished seeds and miscounted pairs; stale configs and host ≠ M4 went unnoticed |
+| Measurement | saturation counter (D55), firmware flash size (D56), γ = 0 baselines (D54), A→B→A shift for forgetting (D57) |
+| Tools | `scripts/results_table.py` refuses tables without valid provenance; `scripts/compare.py` prints the registered differences |
+| Experiments | replay ratio (gate not met, stopped), cart-pole, adaptation, stream ablation: see `docs/results.md` |
+| Documents | `docs/report.md`, `docs/study_guide.md` (replaces the rewrite exercise) |
+| Known, not changed | ObGD differs from the paper for α ≠ 1 (D61); linear instruction count is path dependent (D62) |
