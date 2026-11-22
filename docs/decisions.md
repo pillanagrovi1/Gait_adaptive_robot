@@ -381,7 +381,12 @@ once. Measured in the benchmark window on cart-pole: 1.72 hashes per step at 256
 1.00 at 1,024 (3,046). Learned values are unaffected. Removing it needs two parts, and every M4 count re-measured.
 *Corrected 22 Nov:* this entry first said a least-recently-used replacement would remove it. Alone it does not: after
 a random action it evicts the state needed next (1.05 hashes per step at ε = 0.05, 2.00 at ε = 1). The second part is
-to look up s before the target. **Status: fix allowed by Rahul on condition that linear replays are byte-identical.**
+to look up s before the target. That pair (4fa0de6) worked but sat in the shared tr_agent.c and cost the table and
+replay-network learners instructions and 8 B of stack, so it was replaced the same evening (e98a5da): the learner
+gives up the slot of the state it has just learned from, inside tr_linear.c only. One hash per step plus one per
+episode start on every tested path. Condition set by Rahul, met on e98a5da: seeds 0-2 of all 22 linear configs replay
+byte for byte (66/66, plus 4 controls of other learners). Every reported M4 count was re-measured at 296e101.
+**Status: fixed.**
 
 **D63 — Memory claims need equal-memory comparisons (22 Nov, after the results).** Rahul set the rule and the 3-10x
 band. Claude chose "about equal = within 1.5x" afterwards, having seen all 41 pairs. The cutoff matters: for final

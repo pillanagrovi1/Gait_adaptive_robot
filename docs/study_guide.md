@@ -515,7 +515,7 @@ difference counts only if its interval excludes 0. Everything else is called inc
 1. Pre-registered: written down before seeing the data. Exploratory: anything else. It can suggest, not confirm.
 2. Each interval contains the luck the arms share. The difference removes it.
 3. Determinism on that platform. A wrong program can be perfectly reproducible.
-4. Faster in samples can cost approximately 12-68x the compute per step. Without both numbers the trade is hidden.
+4. Faster in samples can cost 12-75x the compute per step. Without both numbers the trade is hidden.
 5. Timing, power, behaviour on real hardware or a real robot, and being the first to do this.
 
 ---
