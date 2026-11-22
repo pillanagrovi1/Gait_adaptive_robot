@@ -238,3 +238,149 @@ committed tuned config. The runs are deterministic on x86-64 Linux; this experim
   instructions) and the two larger ones once (3,046–3,047). The table size is not the cause, and ratios against the
   linear learner are uncertain by about that much.
 - Update underflow is high for both networks (13–47% of update products round to zero).
+
+## Stage 5: adaptation to a heavier rod and back, pendulum (22 Nov 2026)
+
+![post-shift return vs peak SRAM](../results/figures/adaptation_pendulum_adaptation.png)
+
+![learning curves with both switches](../results/figures/adaptation_pendulum_curves.png)
+
+**Provenance.** Run at `ed27042` · 20 paired seeds (0–19) · A (normal rod) for 300k steps, B (+50% mass) until 450k,
+A again until 600k (D57); `adaptation_pendulum_scratch` = fresh learners on B for 150k steps · hyperparameters from
+`pendulum_main_tuned` (D51) · runs `results/raw_archive/adaptation_pendulum.tar.gz`, `…_scratch.tar.gz` · logs and
+versions `results/logs/adaptation_pendulum*` · M4 `results/m4/adaptation_pendulum*.csv` (QEMU, synthetic workload;
+instruction counts, not timing) · tables by `scripts/results_table.py` and `scripts/compare.py`.
+
+**adaptation_pendulum** · commit `ed27042` · config `configs/adaptation_pendulum.json` · command `bash scripts/run_experiment.sh adaptation_pendulum` · seeds per config: 20–20 · intervals: bootstrap 95%
+
+| config | final eval return | mean eval (AUC) | online return | peak SRAM (B) | instr./step (M4) | update underflow | flash, bench firmware with all three learners (B) | update saturation | post-shift AUC (B window) | return on A right after switch back | AUC, second A window | recovered |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| table | -710 ± 46 | -822 ± 7 | -759 ± 17 | 2160 | 529 | 0.0% | 15540 | 0% | -840 ± 12 | -817 ± 82 | -713 ± 12 | 70% |
+| linear | -143 ± 11 | -236 ± 7 | -219 ± 4 | 13220 | 1815 | 0.6% | 15540 | 0% | -484 ± 13 | -307 ± 61 | -145 ± 7 | 0% |
+| net | -173 ± 25 | -234 ± 13 | -233 ± 7 | 25068 | 80043 | 8.3% | 15528 | 0% | -330 ± 20 | -277 ± 109 | -168 ± 9 | 40% |
+| net-stream | -216 ± 39 | -399 ± 22 | -283 ± 9 | 3048 | 36413 | 44.9% | 15528 | 0% | -397 ± 16 | -368 ± 85 | -190 ± 14 | 60% |
+| net-stream-cbp | -666 ± 124 | -651 ± 29 | -669 ± 71 | 3304 | 39680 | 37.0% | 15528 | 0% | -704 ± 62 | -605 ± 139 | -538 ± 72 | 80% |
+| zero-torque | -1068 ± 0 | -1068 ± 0 | -1224 ± 8 | — | — | — | — | — | -1068 ± 0 | -1068 ± 0 | -1068 ± 0 | 100% |
+
+**adaptation_pendulum_scratch** · commit `ed27042` · config `configs/adaptation_pendulum_scratch.json` · command `bash scripts/run_experiment.sh adaptation_pendulum_scratch` · seeds per config: 20–20 · intervals: bootstrap 95%
+
+| config | final eval return | mean eval (AUC) | online return | peak SRAM (B) | instr./step (M4) | update underflow | flash, bench firmware with all three learners (B) | update saturation |
+|---|---|---|---|---|---|---|---|---|
+| table | -867 ± 49 | -941 ± 9 | -901 ± 24 | 2160 | 529 | 0.0% | 15540 | 0% |
+| linear | -440 ± 46 | -592 ± 16 | -473 ± 17 | 13220 | 1815 | 0.2% | 15540 | 0% |
+| net | -318 ± 51 | -513 ± 19 | -436 ± 15 | 25068 | 80043 | 4.8% | 15528 | 0% |
+| net-stream | -485 ± 60 | -739 ± 25 | -545 ± 23 | 3048 | 36413 | 36.4% | 15528 | 0% |
+| net-stream-cbp | -761 ± 62 | -937 ± 23 | -802 ± 35 | 3304 | 39680 | 32.9% | 15528 | 0% |
+| zero-torque | -1068 ± 0 | -1068 ± 0 | -1208 ± 12 | — | — | — | — | — |
+
+**Metrics.** Final (P) = mean of the last 3 evaluations before the first shift; AUC = mean evaluation return before
+it. Post-shift AUC = mean over the B window only. Return right after the switch back = evaluated on A before any
+further learning. Recovered = reached P − 0.1·|P| within the B window (3-point moving average).
+
+**Reproducibility.** Each run was made once, and its metadata records the commit and full configuration. The runs are
+deterministic on x86-64 Linux.
+
+**Pre-registered differences** (paired by seed, Student-t 95%).
+
+| A − B | metric | status | pairs | mean | 95% CI | verdict |
+|---|---|---|---|---|---|---|
+| net-stream − linear | post_auc | pre-registered | 20 | +86.8 | [+66.9, +106.8] | A higher |
+| net-stream-cbp − net-stream | post_auc | pre-registered | 20 | -306.8 | [-369.7, -244.0] | A lower |
+| forward transfer, table (after the shift − from scratch) | post_auc − auc | pre-registered | 20 | +101.7 | [+84.5, +118.9] | A higher |
+| forward transfer, linear (after the shift − from scratch) | post_auc − auc | pre-registered | 20 | +108.4 | [+84.3, +132.5] | A higher |
+| forward transfer, net (after the shift − from scratch) | post_auc − auc | pre-registered | 20 | +182.7 | [+157.6, +207.8] | A higher |
+| forward transfer, net-stream (after the shift − from scratch) | post_auc − auc | pre-registered | 20 | +341.6 | [+310.7, +372.6] | A higher |
+| forward transfer, net-stream-cbp (after the shift − from scratch) | post_auc − auc | pre-registered | 20 | +233.0 | [+161.4, +304.5] | A higher |
+| forgetting, table (right after switch back − P) | back − final | pre-registered | 20 | -106.8 | [-223.4, +9.8] | inconclusive |
+| forgetting, linear (right after switch back − P) | back − final | pre-registered | 20 | -164.6 | [-226.6, -102.5] | A lower |
+| forgetting, net (right after switch back − P) | back − final | pre-registered | 20 | -104.0 | [-216.4, +8.4] | inconclusive |
+| forgetting, net-stream (right after switch back − P) | back − final | pre-registered | 20 | -152.0 | [-257.6, -46.5] | A lower |
+| forgetting, net-stream-cbp (right after switch back − P) | back − final | pre-registered | 20 | +61.0 | [-126.3, +248.2] | inconclusive |
+| second A window, table (mean − P) | a2_auc − final | pre-registered, secondary | 20 | -2.64 | [-52.28, +47.00] | inconclusive |
+| second A window, linear (mean − P) | a2_auc − final | pre-registered, secondary | 20 | -2.43 | [-16.65, +11.79] | inconclusive |
+| second A window, net (mean − P) | a2_auc − final | pre-registered, secondary | 20 | +4.82 | [-24.00, +33.64] | inconclusive |
+| second A window, net-stream (mean − P) | a2_auc − final | pre-registered, secondary | 20 | +26.0 | [-17.6, +69.6] | inconclusive |
+| second A window, net-stream-cbp (mean − P) | a2_auc − final | pre-registered, secondary | 20 | +127.9 | [-24.1, +279.9] | inconclusive |
+
+**Findings** (one task, one shift size).
+
+1. After the shift the streaming network (3.0 KB) returns more than linear tile coding (13.2 KB): post-shift AUC +87
+   [+67, +107], at 20x the instructions per step.
+2. Continual backprop, at this untuned setting (one unit per 500 updates, maturity 5,000), makes the streaming
+   network worse after the shift (−307 [−370, −244]). The curves show that it was already degrading before the shift,
+   so this says nothing about continual backprop in general.
+3. All five learners do better on B when they arrive from A than fresh learners do (forward transfer above 0). The
+   fresh learners also have to explore (ε from 1 to 0.05 over 90k steps), and that is part of the difference.
+4. Linear tile coding and the streaming network forgot: right after the switch back they are below P (−165
+   [−227, −102] and −152 [−258, −46]). For the table, the replay network and continual backprop forgetting is
+   inconclusive. Over the whole second A window no learner differs measurably from P.
+
+**Limits.**
+
+- "Recovered" is relative to each learner's own P, so a poor learner has an easy target (zero torque "recovers" in
+  100% of seeds). It must not be used to rank learners.
+- The heavier rod may allow a lower best return, so a drop after the shift is not all lost skill.
+- The return right after the switch back is a single evaluation of 10 episodes, against P's three.
+
+## Stage 3: stream ablation, one ingredient at a time (22 Nov 2026)
+
+**Provenance.** Run at `ed27042` · seeds 0–9 · untuned, so only comparisons within a learner are valid (D51) · runs
+`results/raw_archive/stream_ablation.tar.gz` · log and versions `results/logs/stream_ablation.*` · M4
+`results/m4/stream_ablation.csv` (QEMU, synthetic workload; instruction counts, not timing) · tables by
+`scripts/results_table.py` and `scripts/compare.py`.
+
+**stream_ablation** · commit `ed27042` · config `configs/stream_ablation.json` · command `bash scripts/run_experiment.sh stream_ablation` · seeds per config: 10–10 · intervals: t 95%
+
+| config | final eval return | mean eval (AUC) | online return | peak SRAM (B) | instr./step (M4) | update underflow | flash, bench firmware with all three learners (B) | update saturation |
+|---|---|---|---|---|---|---|---|---|
+| table-sgd | -335 ± 110 | -574 ± 24 | -479 ± 19 | 16684 | 641 | 0.0% | 15528 | 0% |
+| table-bandit | -1156 ± 46 | -1140 ± 16 | -1226 ± 24 | 16684 | 641 | 0.1% | 15528 | 0% |
+| table-obgd | -397 ± 85 | -607 ± 30 | -514 ± 15 | 17184 | 915 | 0.0% | 15528 | 0% |
+| table-obgd-lam | -204 ± 37 | -322 ± 18 | -334 ± 10 | 17184 | 2839 | 64.5% | 15528 | 0% |
+| table-obgd-lam-sr | -192 ± 30 | -337 ± 21 | -331 ± 22 | 17184 | 2932 | 61.5% | 15528 | 0% |
+| linear-sgd | -152 ± 9 | -351 ± 15 | -263 ± 15 | 13264 | 1990 | 0.8% | 15528 | 0% |
+| linear-bandit | -1157 ± 93 | -1152 ± 45 | -1278 ± 65 | 13264 | 1990 | 1.0% | 15528 | 0% |
+| linear-obgd | -160 ± 28 | -325 ± 18 | -264 ± 13 | 13776 | 2988 | 0.2% | 15528 | 0% |
+| linear-obgd-lam | -127 ± 5 | -173 ± 9 | -209 ± 7 | 13776 | 16304 | 22.8% | 15528 | 0% |
+| linear-obgd-lam-sr | -128 ± 7 | -171 ± 6 | -213 ± 11 | 13776 | 16261 | 21.6% | 15528 | 0% |
+| net-sgd | -168 ± 38 | -439 ± 51 | -229 ± 16 | 2124 | 11946 | 13.7% | 15528 | 0% |
+| net-replay-target | -203 ± 43 | -215 ± 38 | -252 ± 23 | 25068 | 80068 | 5.0% | 15528 | 0% |
+| net-obgd | -169 ± 21 | -430 ± 29 | -246 ± 32 | 3024 | 16900 | 18.5% | 15528 | 0% |
+| net-obgd-lam | -259 ± 83 | -585 ± 61 | -304 ± 33 | 3024 | 24149 | 40.6% | 15528 | 0% |
+| net-obgd-lam-ln | -284 ± 71 | -421 ± 45 | -319 ± 35 | 3048 | 34967 | 33.8% | 15528 | 0% |
+| net-obgd-lam-ln-sr | -317 ± 74 | -405 ± 34 | -319 ± 31 | 3048 | 36534 | 32.1% | 15528 | 0% |
+| random | -1147 ± 20 | -1133 ± 5 | -1233 ± 12 | — | — | — | — | — |
+| zero-torque | -1068 ± 0 | -1068 ± 0 | -1229 ± 11 | — | — | — | — | — |
+
+**Metrics.** Final = mean of the last 3 evaluations. AUC = mean evaluation return over training (30 evaluations in
+300k steps). `sgd` = one-step update, `obgd` = step-size cap, `lam` = traces, `ln` = LayerNorm, `sr` = stochastic
+rounding, `bandit` = γ = 0.
+
+**Reproducibility.** The experiment was run once, and every run's metadata records the commit and full configuration.
+The runs are deterministic on x86-64 Linux.
+
+**Pre-registered differences** (paired by seed, Student-t 95%).
+
+| A − B | metric | status | pairs | mean | 95% CI | verdict |
+|---|---|---|---|---|---|---|
+| table-obgd-lam-sr − table-obgd-lam | final | pre-registered | 10 | +12.3 | [-36.0, +60.5] | inconclusive |
+| table-obgd-lam-sr − table-obgd-lam | auc | pre-registered | 10 | -15.1 | [-45.1, +15.0] | inconclusive |
+| linear-obgd-lam-sr − linear-obgd-lam | final | pre-registered | 10 | -1.38 | [-10.00, +7.25] | inconclusive |
+| linear-obgd-lam-sr − linear-obgd-lam | auc | pre-registered | 10 | +2.23 | [-8.71, +13.16] | inconclusive |
+| net-obgd-lam-ln-sr − net-obgd-lam-ln | final | pre-registered | 10 | -32.6 | [-115.1, +49.8] | inconclusive |
+| net-obgd-lam-ln-sr − net-obgd-lam-ln | auc | pre-registered | 10 | +16.0 | [-33.2, +65.2] | inconclusive |
+| table-sgd − table-bandit | final | pre-registered | 10 | +820.2 | [+692.2, +948.3] | A higher |
+| table-sgd − table-bandit | auc | pre-registered | 10 | +566.0 | [+538.3, +593.8] | A higher |
+| linear-sgd − linear-bandit | final | pre-registered | 10 | +1005.6 | [+912.1, +1099.1] | A higher |
+| linear-sgd − linear-bandit | auc | pre-registered | 10 | +800.9 | [+753.2, +848.5] | A higher |
+
+**Findings** (one task, untuned).
+
+1. Stochastic rounding made no measurable difference for any learner, on final return or AUC, although 22–65% of the
+   update products round to zero without it in the table and linear learners with traces, and 34% in the network.
+   Underflow of this size was not shown to matter. The intervals still allow effects of up to about ±10 (linear),
+   ±60 (table, final) and ±115 (network, final).
+2. Bootstrapping is needed on this task: with γ = 0 the table and linear learners end near the random policy, far
+   below their Q-learning twins.
+3. Descriptive, not tested: the one-step network without replay, target or trace (`net-sgd`) also learned here
+   (final −168 ± 38). The other ingredients' effects were not pre-registered and are not claimed.
