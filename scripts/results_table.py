@@ -78,8 +78,13 @@ def main():
     print(f"**{name}** · {commit} · config `configs/{name}.json` · "
           f"command `{command}` · "
           f"seeds per config: {int(d['n_seeds'].min())}–{int(d['n_seeds'].max())} · intervals: {d['ci_method'].iloc[0]} 95%\n")
-    print("| config | final eval return | mean eval (AUC) | online return | peak SRAM (B) | instr./step (M4) | update underflow |")
-    print("|---|---|---|---|---|---|---|")
+    extra = [(col, head, show) for col, head, show in (
+        ("flash_bytes", "flash, whole bench firmware (B)", lambda v: f"{v:.0f}"),      # D56
+        ("saturation_frac", "update saturation", lambda v: f"{100 * v:.2g}%"),         # D55
+    ) if col in d]
+    print("| config | final eval return | mean eval (AUC) | online return | peak SRAM (B) | instr./step (M4) | update underflow |"
+          + "".join(f" {head} |" for _, head, _ in extra))
+    print("|---|---|---|---|---|---|---|" + "---|" * len(extra))
     for _, r in d.iterrows():
         peak = f"{int(r['peak_bytes'])}" + ("" if r.get("peak_source") == "m4-qemu" else " (est.)")
         if str(r["kind"]).startswith("baseline"):      # no learner, so no working memory to report
@@ -87,7 +92,8 @@ def main():
         ins = f"{r['insns_learn_step']:.0f}" if "insns_learn_step" in r and not pd.isna(r.get("insns_learn_step")) else "—"
         uf = f"{100 * r['underflow_frac']:.1f}%" if "underflow_frac" in r and not pd.isna(r.get("underflow_frac")) else "—"
         print(f"| {r['run_id']} | {fmt(r['final_mean'], r['final_ci95'])} | {fmt(r['auc_mean'], r['auc_ci95'])} | "
-              f"{fmt(r.get('online_mean'), r.get('online_ci95'))} | {peak} | {ins} | {uf} |")
+              f"{fmt(r.get('online_mean'), r.get('online_ci95'))} | {peak} | {ins} | {uf} |"
+              + "".join(f" {'—' if pd.isna(r[col]) else show(r[col])} |" for col, _, show in extra))
 
 
 if __name__ == "__main__":

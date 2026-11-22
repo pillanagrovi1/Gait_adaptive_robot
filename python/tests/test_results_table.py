@@ -97,3 +97,18 @@ def test_baselines_have_no_memory_size(tmp_path, monkeypatch, capsys):
     d.to_csv(p, index=False)
     code, out, _ = table(tmp_path, monkeypatch, capsys)
     assert code == 0 and "220" not in out and "| 1008 |" in out
+
+
+def test_flash_and_saturation_columns_only_if_measured(tmp_path, monkeypatch, capsys):
+    build(tmp_path)
+    _, out, _ = table(tmp_path, monkeypatch, capsys)
+    assert "flash" not in out and "saturation" not in out      # summaries from before D55/D56
+    p = tmp_path / "results/figures/e_summary.csv"
+    d = pd.read_csv(p)
+    d["flash_bytes"] = [15540.0, float("nan")]
+    d["saturation_frac"] = [0.0000042, float("nan")]
+    d.to_csv(p, index=False)
+    code, out, _ = table(tmp_path, monkeypatch, capsys)
+    assert code == 0
+    assert "flash, whole bench firmware (B) | update saturation |" in out
+    assert "| 15540 | 0.00042% |" in out and "| — | — |\n" in out
