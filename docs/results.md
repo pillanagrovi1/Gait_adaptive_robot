@@ -91,9 +91,9 @@ results, and stay at 10 seeds (D50).
 1. The first pass held for final and online return: all 38 ten-seed means lie inside their 5-seed intervals. For AUC
    37 of 38 do; the exception is linear, angle, 256 features (moved by −20.0, 5-seed half-width 17.9).
 2. The replay network (cos/sin, 64 hidden, 27.2 KB) and linear tile coding (cos/sin, 4,096 features, 50.1 KB) are
-   inconclusive on final return. The network learns faster, at 68.5x the instructions per step as measured.
+   inconclusive on final return. The network learns faster, at approximately 68.5x the instructions per step.
 3. The streaming network (angle, 32 hidden, 2.8 KB) and linear tile coding (angle, 256 features, 4.0 KB) are
-   inconclusive on final return and on AUC. The streaming network costs 17.7x the instructions per step.
+   inconclusive on final return and on AUC. The streaming network costs approximately 17.7x the instructions per step.
 4. Descriptive: every point on the mean final-return frontier above 1,296 B and up to 5.2 KB is a streaming
    network. From 13.3 KB the frontier is linear tile coding and the replay network. The table is on it only at
    1,008 B and 1,296 B.
@@ -111,6 +111,34 @@ results, and stay at 10 seeds (D50).
   configurations read 1,814–2,280 although the table size does not matter, so ratios against it carry that uncertainty.
 - The committed counts for the 8 streaming networks are 1 instruction per step higher than current code, which has
   the undefined-behaviour fix `6e8904b`. Learned values are identical.
+
+**Exploratory, not pre-registered: the streaming net against linear tile coding by SRAM (D63).** Every pair on the
+same task variant in either band, by `scripts/compare.py pendulum_main_tuned --by-sram`. No correction for multiple comparisons.
+
+| SRAM band | A = streaming net (B) | B = linear (B) | SRAM B / A | final, A − B | AUC, A − B |
+|---|---|---|---|---|---|
+| about equal (within 1.5x) | net-stream_obs_modetrig_hidden64 (5224) | linear_obs_modetrig_features256 (4048) | 0.77 | +611.3 [+509.2, +713.5] A higher | +575.0 [+512.9, +637.0] A higher |
+| about equal (within 1.5x) | net-stream_obs_modeangle_hidden64 (4708) | linear_obs_modeangle_features256 (4004) | 0.85 | +52.6 [-9.2, +114.5] inconclusive | +129.7 [+104.7, +154.8] A higher |
+| about equal (within 1.5x) | net-stream_obs_modetrig_hidden16 (1960) | linear_obs_modetrig_features64 (1744) | 0.89 | +954.6 [+846.5, +1062.7] A higher | +650.1 [+613.7, +686.6] A higher |
+| about equal (within 1.5x) | net-stream_obs_modeangle_hidden16 (1828) | linear_obs_modeangle_features64 (1700) | 0.93 | +699.0 [+570.7, +827.3] A higher | +527.9 [+447.2, +608.7] A higher |
+| about equal (within 1.5x) | net-stream_obs_modetrig_hidden8 (1416) | linear_obs_modetrig_features64 (1744) | 1.23 | +723.5 [+536.8, +910.2] A higher | +276.4 [+122.9, +429.9] A higher |
+| about equal (within 1.5x) | net-stream_obs_modeangle_hidden8 (1348) | linear_obs_modeangle_features64 (1700) | 1.26 | +510.6 [+264.5, +756.6] A higher | +253.1 [+133.4, +372.8] A higher |
+| about equal (within 1.5x) | net-stream_obs_modetrig_hidden32 (3048) | linear_obs_modetrig_features256 (4048) | 1.33 | +527.7 [+404.4, +650.9] A higher | +579.9 [+524.4, +635.4] A higher |
+| about equal (within 1.5x) | net-stream_obs_modeangle_hidden32 (2788) | linear_obs_modeangle_features256 (4004) | 1.44 | +51.4 [-2.9, +105.8] inconclusive | +45.4 [-7.9, +98.8] inconclusive |
+| 3-10x less for the streaming net | net-stream_obs_modetrig_hidden32 (3048) | linear_obs_modetrig_features1024 (13264) | 4.35 | -98.7 [-213.8, +16.3] inconclusive | -63.5 [-98.4, -28.7] A lower |
+| 3-10x less for the streaming net | net-stream_obs_modeangle_hidden32 (2788) | linear_obs_modeangle_features1024 (13220) | 4.74 | -14.4 [-55.9, +27.2] inconclusive | -180.9 [-238.2, -123.5] A lower |
+| 3-10x less for the streaming net | net-stream_obs_modetrig_hidden16 (1960) | linear_obs_modetrig_features1024 (13264) | 6.77 | -59.6 [-127.2, +8.1] inconclusive | -163.6 [-198.5, -128.7] A lower |
+| 3-10x less for the streaming net | net-stream_obs_modeangle_hidden16 (1828) | linear_obs_modeangle_features1024 (13220) | 7.23 | -103.8 [-160.7, -46.9] A lower | -351.0 [-403.3, -298.8] A lower |
+| 3-10x less for the streaming net | net-stream_obs_modetrig_hidden8 (1416) | linear_obs_modetrig_features1024 (13264) | 9.37 | -290.7 [-457.4, -124.0] A lower | -537.3 [-693.4, -381.2] A lower |
+| 3-10x less for the streaming net | net-stream_obs_modetrig_hidden64 (5224) | linear_obs_modetrig_features4096 (50128) | 9.60 | -33.3 [-82.1, +15.4] inconclusive | -170.8 [-199.0, -142.6] A lower |
+| 3-10x less for the streaming net | net-stream_obs_modeangle_hidden8 (1348) | linear_obs_modeangle_features1024 (13220) | 9.81 | -292.2 [-536.3, -48.1] A lower | -625.9 [-730.7, -521.1] A lower |
+
+| SRAM band | metric | pairs | streaming net higher | inconclusive | streaming net lower |
+|---|---|---|---|---|---|
+| about equal (within 1.5x) | final | 8 | 6 | 2 | 0 |
+| about equal (within 1.5x) | auc | 8 | 7 | 1 | 0 |
+| 3-10x less for the streaming net | final | 7 | 0 | 4 | 3 |
+| 3-10x less for the streaming net | auc | 7 | 0 | 0 | 7 |
 
 ## Stage 4: replay ratio on the pendulum, table arm (22 Nov 2026)
 
@@ -218,12 +246,12 @@ committed tuned config. The runs are deterministic on x86-64 Linux; this experim
 
 **Findings.**
 
-1. Linear tile coding (1,024 features, 9.4 KB) beats the table (8 bins, 33.5 KB) on final return and on AUC, at 4.3x
-   the table's instructions per step.
-2. The streaming network (32 hidden, 3.0 KB) learns faster than linear tile coding (1,024 features, 9.4 KB) in a third
-   of the memory, at 12x the instructions per step. The difference in final return is inconclusive.
-3. The replay network (32 hidden, 29.1 KB) learns more slowly than linear tile coding (1,024 features), at 28x the
-   instructions per step. The difference in final return is inconclusive.
+1. Linear tile coding (1,024 features, 9.4 KB) beats the table (8 bins, 33.5 KB) on final return and on AUC, at
+   approximately 4.3x the table's instructions per step.
+2. The streaming network (32 hidden, 3.0 KB) learns faster than linear tile coding (1,024 features, 9.4 KB), at
+   approximately 12x the instructions per step. Equal-memory pairs are in the exploratory table below. The difference in final return is inconclusive.
+3. The replay network (32 hidden, 29.1 KB) learns more slowly than linear tile coding (1,024 features), at approximately 28x
+   the instructions per step. The difference in final return is inconclusive.
 4. Descriptive, not tested: more memory did not raise the table's mean final return (388 at 2.8 KB, 284 at 12 bins).
    The 12-bin table does not fit in the 128 KB of SRAM; its return comes from the host run only.
 
@@ -238,6 +266,23 @@ committed tuned config. The runs are deterministic on x86-64 Linux; this experim
   instructions) and the two larger ones once (3,046–3,047). The table size is not the cause, and ratios against the
   linear learner are uncertain by about that much.
 - Update underflow is high for both networks (13–47% of update products round to zero).
+
+**Exploratory, not pre-registered: the streaming net against linear tile coding by SRAM (D63).** Every pair on the
+same task variant in either band, by `scripts/compare.py cartpole_main_tuned --by-sram`. No correction for multiple comparisons.
+
+| SRAM band | A = streaming net (B) | B = linear (B) | SRAM B / A | final, A − B | AUC, A − B |
+|---|---|---|---|---|---|
+| about equal (within 1.5x) | net-stream_hidden32 (3040) | linear_features256 (3256) | 1.07 | +37.5 [-15.3, +90.3] inconclusive | +134.4 [+95.0, +173.8] A higher |
+| 3-10x less for the streaming net | net-stream_hidden32 (3040) | linear_features1024 (9400) | 3.09 | +13.5 [-37.2, +64.3] inconclusive | +63.6 [+26.0, +101.1] A higher |
+| 3-10x less for the streaming net | net-stream_hidden16 (1952) | linear_features1024 (9400) | 4.82 | -99.9 [-204.3, +4.5] inconclusive | +12.8 [-35.3, +60.9] inconclusive |
+| 3-10x less for the streaming net | net-stream_hidden64 (5216) | linear_features4096 (33976) | 6.51 | -65.6 [-136.5, +5.2] inconclusive | -52.8 [-99.1, -6.5] A lower |
+
+| SRAM band | metric | pairs | streaming net higher | inconclusive | streaming net lower |
+|---|---|---|---|---|---|
+| about equal (within 1.5x) | final | 1 | 0 | 1 | 0 |
+| about equal (within 1.5x) | auc | 1 | 1 | 0 | 0 |
+| 3-10x less for the streaming net | final | 3 | 0 | 3 | 0 |
+| 3-10x less for the streaming net | auc | 3 | 1 | 1 | 1 |
 
 ## Stage 5: adaptation to a heavier rod and back, pendulum (22 Nov 2026)
 
@@ -305,8 +350,8 @@ deterministic on x86-64 Linux.
 **Findings** (one task, one shift size).
 
 1. After the shift the streaming network (3.0 KB) returns more than linear tile coding (13.2 KB): post-shift AUC +87
-   [+67, +107], at 20x the instructions per step.
-2. Continual backprop, at this untuned setting (one unit per 500 updates, maturity 5,000), makes the streaming
+   [+67, +107], at approximately 20x the instructions per step. The memory differs, so this is not a per-byte claim.
+2. Continual backprop (comparison pre-registered in the 22 Nov table above D49, hyperparameters from D51), at this untuned setting (one unit per 500 updates, maturity 5,000), makes the streaming
    network worse after the shift (−307 [−370, −244]). The curves show that it was already degrading before the shift,
    so this says nothing about continual backprop in general.
 3. All five learners do better on B when they arrive from A than fresh learners do (forward transfer above 0). The
@@ -376,10 +421,11 @@ The runs are deterministic on x86-64 Linux.
 
 **Findings** (one task, untuned).
 
-1. Stochastic rounding made no measurable difference for any learner, on final return or AUC, although 22–65% of the
-   update products round to zero without it in the table and linear learners with traces, and 34% in the network.
-   Underflow of this size was not shown to matter. The intervals still allow effects of up to about ±10 (linear),
-   ±60 (table, final) and ±115 (network, final).
+1. Stochastic rounding made no detectable difference for any learner: table +12.3 [−36.0, +60.5], linear −1.38 [−10.00, +7.25], network −32.6 [−115.1, +49.8] on final return; table
+  −15.1 [−45.1, +15.0], linear +2.23 [−8.71, +13.16], network +16.0 [−33.2, +65.2] on AUC.
+   Without it 22–65% of the update products round to zero in the table and linear learners with traces, and 34% in
+   the network. The intervals still allow effects of up to about ±10 (linear), ±60 (table, final) and ±115
+   (network, final).
 2. Bootstrapping is needed on this task: with γ = 0 the table and linear learners end near the random policy, far
    below their Q-learning twins.
 3. Descriptive, not tested: the one-step network without replay, target or trace (`net-sgd`) also learned here

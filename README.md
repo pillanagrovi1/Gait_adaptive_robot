@@ -21,17 +21,25 @@ adaptation speed and compute cost against peak working memory when learning onli
 
 ## Results so far
 
+On two tasks, with an equal tuning budget, the streaming net showed no detectable difference in final return from
+linear tile coding at approximately 3-10x less SRAM in 7 of the 10 configuration pairs in that band, and was lower in
+the other 3 (all pendulum). It learned more slowly (lower AUC) in all 7 pendulum pairs; on cart-pole one of 3 was
+faster, one inconclusive, one slower. At about equal SRAM (within 1.5x) the pendulum comparison of final return is
+inconclusive in the 2 pairs against 256-feature linear coding with the angle input, and favours the streaming net in
+the other 6. On cart-pole the one equal-SRAM pair is inconclusive on final return, and the streaming net learned
+faster. These memory comparisons are exploratory (D63). "No detectable difference" does not mean equal.
+
 A difference counts only if its paired 95% interval excludes 0. "Learned faster" = higher AUC.
 
 | What | Finding | Strength |
 |---|---|---|
 | Stage 1 gate | C learner reproduces the Python Q16.16 reference bit for bit | deterministic test |
-| Pendulum | replay network (27.2 KB) learned faster than linear tile coding (50.1 KB) at 68.5x the instructions; final return inconclusive | 10 seeds, not pre-registered |
-| Cart-pole | linear tile coding beat the table, at 4.3x the instructions | 10 seeds, pre-registered |
-| Cart-pole | streaming network (3.0 KB) learned faster than linear tile coding (9.4 KB) at 12x the instructions; final return inconclusive | 10 seeds, pre-registered |
-| Adaptation | after a 50% heavier rod the streaming network returned more than linear tile coding, at 20x the instructions | 20 seeds, pre-registered |
+| Pendulum | replay network (27.2 KB) learned faster than linear tile coding (50.1 KB) at approximately 68.5x the instructions; final return inconclusive | 10 seeds, not pre-registered |
+| Cart-pole | linear tile coding beat the table, at approximately 4.3x the instructions | 10 seeds, pre-registered |
+| Cart-pole | streaming network (3.0 KB) learned faster than linear tile coding (9.4 KB) at approximately 12x the instructions; final return inconclusive | 10 seeds, pre-registered |
+| Adaptation | after a 50% heavier rod the streaming network returned more than linear tile coding, at approximately 20x the instructions (different SRAM: 3.0 vs 13.2 KB, so no per-byte claim) | 20 seeds, pre-registered |
 | Replay ratio | 5 replay updates per step did not measurably speed up the table, at 2.7x the instructions | 10 seeds, pre-registered gate |
-| Stochastic rounding | no measurable difference, for any learner | 10 seeds, pre-registered |
+| Stochastic rounding | no detectable difference. Final: table +12.3 [−36.0, +60.5], linear −1.38 [−10.00, +7.25], network −32.6 [−115.1, +49.8]. AUC: table −15.1 [−45.1, +15.0], linear +2.23 [−8.71, +13.16], network +16.0 [−33.2, +65.2] | 10 seeds, pre-registered |
 | On-chip learning | learning on the emulated M4 reproduces host learning bit for bit (4 learner types) | deterministic test, QEMU only |
 
 Single-seed observations from the build are in [`docs/build_notes.md`](docs/build_notes.md) and are not results.
@@ -127,7 +135,9 @@ docs/               report, results, study guide, stages, architecture, decision
 - No result without a measurement behind it, and no hardware, timing or power claims from QEMU. QEMU counts
   instructions, not cycles, and it is not the STM32F446RE.
 - A number enters `docs/results.md` only with its seeds, commit and command; raw logs go to `results/raw_archive/`.
-- Novelty wording: "a controlled comparison was not found in a limited search". Never "first".
+- Novelty wording: learning on a microcontroller is established (Elsayed, Lupu, Vasan, Mahmood, arXiv:2410.14606v3,
+  21 Sep 2026: Pong on an ESP32-S3), and so is learning a gait on one. Our claim is only the controlled
+  memory-vs-representation comparison: "a controlled comparison was not found in a limited search". Never "first".
 - Design choices live in [`docs/decisions.md`](docs/decisions.md). Change one by adding a new entry, never by editing history.
 
 ## Credits
