@@ -1,6 +1,6 @@
 {
   "name": "go1_gait_v3",
-  "_note": "Stage 7, after docs/research_review_2.md: the learner TUNES a self-adapting gait instead of replacing it. Stumble reflex on; persistent parameters (clearance, posture-reflex gain, body height) nudged every half cycle; state = half-cycle IMU + pair bit + foot-contact mismatch + the 3 parameters (10-D). Baselines: B0 open loop, B3 stumble reflex alone, B4 all reflexes (untuned gains). Roughness 0.10, where the 10-episode probe gave B0 0.1 and B3 0.7 success. A 10-D table only fits with 2 bins: that is the curse of dimensionality, reported, not hidden. UNTUNED.",
+  "_note": "Stage 7, after docs/research_review_2.md: the learner TUNES a self-adapting gait instead of replacing it. Stumble reflex on; persistent parameters (clearance, posture-reflex gain, body height) nudged every half cycle; state = half-cycle IMU + pair bit + foot-contact mismatch + the 3 parameters (10-D). Baselines: B0 open loop, B3 stumble reflex alone, B4 all reflexes (untuned gains). Roughness 0.10, where the 10-episode probe gave B0 0.1 and B3 0.7 success. A 10-D table only fits with 2 bins: that is the curse of dimensionality, reported, not hidden. UNTUNED. '*-bandit' = the same learner with gamma = 0 (baseline, D54).",
   "task": {
     "name": "go1",
     "obs_mode": "imu4pc",
@@ -45,6 +45,22 @@
         "kind": "linear",
         "alpha": 0.1,
         "gamma": 0.9,
+        "tilings": 16,
+        "tiles": 3
+      },
+      "sweep": {
+        "features": [
+          1024,
+          4096
+        ]
+      }
+    },
+    {
+      "label": "linear-bandit",
+      "base": {
+        "kind": "linear",
+        "alpha": 0.1,
+        "gamma": 0.0,
         "tilings": 16,
         "tiles": 3
       },
