@@ -5,32 +5,38 @@ archive. The rules that were fixed before the runs are in [`decisions.md`](decis
 
 ## Summary
 
-```
-                     peak SRAM for a      final return        instructions per    after the rod
-                     good result          (best mean)         learning step       got 50% heavier
- table               large                weakest             525-715             lowest post-shift AUC
- linear tile coding  medium (9-50 KB)     among the best      1,814-4,155         forgot on the way back
- streaming network   smallest (2-5 KB)    good, more varied   10,530-71,974       beat linear, also forgot
- replay network      19-31 KB (buffer)    among the best      24,426-159,046      (no registered comparison)
-```
+On two tasks, with an equal tuning budget, the streaming net showed no detectable difference in final return from
+linear tile coding at approximately 3-10x less SRAM in 7 of the 10 configuration pairs in that band, and was lower in
+the other 3 (all pendulum). It learned more slowly (lower AUC) in all 7 pendulum pairs; on cart-pole one of 3 was
+faster, one inconclusive, one slower. At about equal SRAM (within 1.5x) the pendulum comparison of final return is
+inconclusive in the 2 pairs against 256-feature linear coding with the angle input, and favours the streaming net in
+the other 6. On cart-pole the one equal-SRAM pair is inconclusive on final return, and the streaming net learned
+faster. These memory comparisons are exploratory (D63). "No detectable difference" does not mean equal.
 
-*The picture is descriptive. The tested statements are the ones below.*
-
-- On cart-pole, linear tile coding beat the table on final return (+141.3 [+96.9, +185.7]) and AUC, at 4.3x the
-  instructions per step.
-- On cart-pole, the streaming network learned faster than linear tile coding (AUC +63.6 [+26.0, +101.1]) in a third of the
-  memory, at 12x the instructions. The difference in final return is inconclusive.
-- After a change of dynamics on the pendulum, the streaming network returned more than linear tile coding (+87
-  [+67, +107]) in under a quarter of the memory, at 20x the instructions.
+- On cart-pole, linear tile coding (9.4 KB) beat the table (33.5 KB) on final return (+141.3 [+96.9, +185.7]) and
+  AUC, at approximately 4.3x the instructions per step.
+- On cart-pole at about equal SRAM (3,040 B against 3,256 B) the streaming net learned faster than linear tile coding
+  (AUC +134.4 [+95.0, +173.8], exploratory). The registered comparison, 3,040 B against 9,400 B, also has the
+  streaming net faster (AUC +63.6 [+26.0, +101.1]), at approximately 12x the instructions, with final return
+  inconclusive.
+- After a change of dynamics on the pendulum, the streaming net returned more than linear tile coding (+86.8
+  [+66.9, +106.8]) at approximately 20x the instructions. The two differ in SRAM (3,048 B against 13,220 B). No
+  equal-memory adaptation comparison was run, so this supports no claim about adaptation per byte.
 - 5 replay updates per step did not measurably speed up the table (AUC difference +25, 95% CI [-22, +72], 10 paired
   seeds) at 2.7x the instructions per step. Stage 4 stopped there, as registered.
-- Stochastic rounding made no measurable difference, although a fifth to two thirds of the update products underflow.
+- Stochastic rounding made no detectable difference: table +12.3 [−36.0, +60.5], linear −1.38 [−10.00, +7.25], network −32.6 [−115.1, +49.8] on final return; table
+  −15.1 [−45.1, +15.0], linear +2.23 [−8.71, +13.16], network +16.0 [−33.2, +65.2] on AUC.
 
 ## 1. Question
 
 How do different reinforcement-learning representations (tabular, linear tile coding, tiny neural network) trade
 learning performance, adaptation speed and compute cost against peak working memory, when learning online on a
-Cortex-M4-class platform? A controlled comparison was not found in a limited search.
+Cortex-M4-class platform?
+
+Learning on a microcontroller is established: Elsayed, Lupu, Vasan and Mahmood (arXiv:2410.14606v3, 21 Sep 2026)
+report Stream-Q learning Pong from pixels directly on an ESP32-S3. The contribution claimed here is narrower: a
+controlled comparison of representations by learning performance against peak working memory. Such a comparison was
+not found in a limited search. Learning a gait on a microcontroller is not claimed (see §6).
 
 ## 2. Setup
 
@@ -90,9 +96,11 @@ extension, gait tuning on a simulated Unitree Go1.
 ![pendulum](../results/figures/pendulum_main_tuned_headline.png)
 
 - Replay network (27.2 KB) against linear tile coding (50.1 KB): final return inconclusive (−8.73 [−25.28, +7.82]). The
-  network learned faster (AUC +40.9 [+20.6, +61.2]) at 68.5x the instructions per step. *Not pre-registered.*
+  network learned faster (AUC +40.9 [+20.6, +61.2]) at approximately 68.5x the instructions per step. *Not pre-registered.*
 - Streaming network (2.8 KB) against linear tile coding (4.0 KB): inconclusive on final return (+51.4 [−2.9, +105.8])
-  and on AUC (+45.4 [−7.9, +98.8]), at 17.7x the instructions per step. *Not pre-registered.*
+  and on AUC (+45.4 [−7.9, +98.8]), at approximately 17.7x the instructions per step. *Not pre-registered.*
+- At about equal SRAM and in the 3-10x band every same-encoding pair is tabulated in `results.md` (exploratory,
+  D63). None is picked by hand.
 - Descriptively, the streaming networks hold the mean final-return frontier between 1.3 and 5.2 KB. Linear coding
   and the replay network hold it from 13.3 KB. The table is on it only at 1,008 B and 1,296 B.
 - The table's mean return rises with its size (−948 ± 47 at 1.0 KB to −245 ± 70 at 12.2 KB in the table-only
@@ -103,11 +111,11 @@ extension, gait tuning on a simulated Unitree Go1.
 
 ![cart-pole](../results/figures/cartpole_main_tuned_headline.png)
 
-| A − B | final return | AUC | instructions, A / B |
+| A − B | final return | AUC | approximate instructions, A / B |
 |---|---|---|---|
-| linear 1,024 (9.4 KB) − table 8 bins (33.5 KB) | +141.3 [+96.9, +185.7], higher | +80.4 [+53.0, +107.8], higher | 4.3x |
-| replay net 32 (29.1 KB) − linear 1,024 | −21.3 [−128.6, +86.0], inconclusive | −114.4 [−160.9, −67.9], lower | 28x |
-| streaming net 32 (3.0 KB) − linear 1,024 | +13.5 [−37.2, +64.3], inconclusive | +63.6 [+26.0, +101.1], higher | 12x |
+| linear 1,024 (9.4 KB) − table 8 bins (33.5 KB) | +141.3 [+96.9, +185.7], higher | +80.4 [+53.0, +107.8], higher | ≈ 4.3x |
+| replay net 32 (29.1 KB) − linear 1,024 | −21.3 [−128.6, +86.0], inconclusive | −114.4 [−160.9, −67.9], lower | ≈ 28x |
+| streaming net 32 (3.0 KB) − linear 1,024 | +13.5 [−37.2, +64.3], inconclusive | +63.6 [+26.0, +101.1], higher | ≈ 12x |
 
 The table gains nothing visible from more memory here. At 12 bins it no longer fits in 128 KB.
 
@@ -137,8 +145,8 @@ the benchmark takes (one or two hashes per step, D62), so ratios against it are 
 | streaming net | 3,048 B | −397 ± 16 | +341.6 [+310.7, +372.6] | −152.0 [−257.6, −46.5], forgot |
 | streaming net + continual backprop | 3,304 B | −704 ± 62 | +233.0 [+161.4, +304.5] | +61.0 [−126.3, +248.2], inconclusive |
 
-- Streaming network − linear, post-shift AUC: +86.8 [+66.9, +106.8], at 20x the instructions.
-- Continual backprop (Dohare et al. 2024) at one untuned setting made the streaming network worse after the shift
+- Streaming network − linear, post-shift AUC: +86.8 [+66.9, +106.8], at approximately 20x the instructions, with different SRAM (3,048 B and 13,220 B).
+- Continual backprop (Dohare et al. 2024; comparison pre-registered, its own two parameters untuned) at one setting made the streaming network worse after the shift
   (−306.8 [−369.7, −244.0]). It was already degrading before the shift, so this is not a verdict on the method.
 - Over the whole second A window no learner differed measurably from its pre-shift level.
 - Forward transfer includes the fresh learner's exploration cost.
@@ -162,7 +170,7 @@ In the pendulum comparison the streaming networks round 24–51% of their update
 | linear | 22.8% | −1.38 [−10.00, +7.25] | +2.23 [−8.71, +13.16] |
 | network | 33.8% | −32.6 [−115.1, +49.8] | +16.0 [−33.2, +65.2] |
 
-All six are inconclusive. The same experiment shows that bootstrapping is needed on this task: with γ = 0 the table
+All six show no detectable difference: each interval includes 0. The same experiment shows that bootstrapping is needed on this task: with γ = 0 the table
 and linear learners end 820 and 1,006 below their Q-learning twins.
 
 ### 4.7 Reproducibility
@@ -188,30 +196,44 @@ hosts.
 
 ## 6. Related work
 
-Elsayed et al. (2024) showed that deep RL can learn from a stream, without a buffer, by combining normalisation,
-representation stabilisation and controlled updates. Their continuous-control benchmark networks are larger (for
+Elsayed, Lupu, Vasan and Mahmood (arXiv:2410.14606v3, 21 Sep 2026) showed that deep RL can learn from a stream, without a buffer, by combining normalisation,
+representation stabilisation and controlled updates, and report Stream-Q learning Pong from pixels directly on an
+ESP32-S3 microcontroller (512 KB of SRAM). Their continuous-control benchmark networks are larger (for
 example two layers of 128 units). This project tested a reduced form of their earlier recipe at 8–64 units in fixed
 point. Gallici et al. (2024) give theory and evidence
 that LayerNorm can replace target networks in temporal-difference learning. Sutton & Barto (2018) describe hashing
 as a way to free tile coding's memory from the state dimension, which is the memory knob used here. Gupta et al.
-(2015) trained networks in 16-bit fixed point with stochastic rounding; here, at 32 bits, rounding made no measurable
-difference. Dohare et al. (2024) introduced continual backpropagation against loss of plasticity. RLtools (Eschmann
+(2015) trained networks in 16-bit fixed point with stochastic rounding; here, at 32 bits, rounding made no detectable
+difference (§4.6 has the intervals). Dohare et al. (2024) introduced continual backpropagation against loss of plasticity. RLtools (Eschmann
 et al. 2023) reports training deep RL directly on a microcontroller. For legged robots, CPG-RL (Bellegarda & Ijspeert
 2022) lets a policy modulate oscillators and not joints, which is the structure of the Go1 extension here.
 
-A controlled comparison of these three representations on return against peak SRAM was not found in a limited
-search.
+On-microcontroller gait learning is not new either. A 2016 hobby project, described by Williams (2016), taught a
+four-servo robot to walk with a small neural network running on a Cortex-M4. In this project the Go1 learner runs on
+the laptop in simulation; the same C code is only measured on an emulated M4. So no on-microcontroller gait-learning
+claim is made.
+
+The claim is limited to a controlled comparison of table, linear tile coding and tiny network on learning
+performance against peak working memory. It was not found in a limited search. The work above was found in that
+search and does not make this comparison.
 
 ## 7. Conclusion
 
-On these two tasks the choice is a trade between bytes and instructions, and no learner is best at both.
+On two tasks, with an equal tuning budget, the streaming net showed no detectable difference in final return from
+linear tile coding at approximately 3-10x less SRAM in 7 of the 10 configuration pairs in that band, and was lower in
+the other 3 (all pendulum). It learned more slowly (lower AUC) in all 7 pendulum pairs; on cart-pole one of 3 was
+faster, one inconclusive, one slower. At about equal SRAM (within 1.5x) the pendulum comparison of final return is
+inconclusive in the 2 pairs against 256-feature linear coding with the angle input, and favours the streaming net in
+the other 6. On cart-pole the one equal-SRAM pair is inconclusive on final return, and the streaming net learned
+faster. These memory comparisons are exploratory (D63). "No detectable difference" does not mean equal.
 
-- If **SRAM** binds, the streaming network is the candidate: 2–5 KB, good returns, better than linear tile coding
-  after a change of dynamics. It pays 12x to 20x linear's instructions and varies more between seeds.
-- If **compute** binds, linear tile coding is the candidate: a few thousand instructions per step and among the best
-  returns, for roughly 9–50 KB.
-- The **table** is the cheapest per step, and was beaten by linear coding on cart-pole even with more memory.
-- **More replay updates** and **stochastic rounding** did not show a measurable benefit where they were tested.
+- The streaming net pays approximately 12x to 20x linear's instructions per step in the registered comparisons, and
+  its returns vary more between seeds.
+- Linear tile coding beat the table on cart-pole with less memory, at approximately 4.3x the table's instructions.
+  The table is the cheapest per step.
+- More replay updates were not shown to speed up the one table tested (+25 [-22, +72]).
+- Stochastic rounding made no detectable difference: table +12.3 [−36.0, +60.5], linear −1.38 [−10.00, +7.25], network −32.6 [−115.1, +49.8] on final return; table
+  −15.1 [−45.1, +15.0], linear +2.23 [−8.71, +13.16], network +16.0 [−33.2, +65.2] on AUC.
 
 Whether the instruction counts fit a real control period is a question for the board, which this project has not
 answered.
@@ -224,10 +246,12 @@ Only sources that were opened for this report are listed. For those marked (abst
 - Bellegarda, G. & Ijspeert, A. (2022). *CPG-RL: Learning Central Pattern Generators for Quadruped Locomotion.* arXiv:2211.00458. (abstract)
 - Colas, C., Sigaud, O. & Oudeyer, P.-Y. (2018). *How Many Random Seeds? Statistical Power Analysis in Deep Reinforcement Learning Experiments.* arXiv:1806.08295. (abstract)
 - Dohare, S. et al. (2024). *Loss of plasticity in deep continual learning.* Nature, doi:10.1038/s41586-024-07711-7. (abstract)
-- Elsayed, M. et al. (2024). *Streaming Deep Reinforcement Learning Finally Works.* arXiv:2410.14606 (v3 read in part: method and Appendix C, which describes the earlier version).
+- Elsayed, M., Lupu, E. S., Vasan, G. & Mahmood, A. R. (2026). *Streaming Deep Reinforcement Learning Finally Works.* arXiv:2410.14606v3, 21 Sep 2026 (read in part: abstract, method, Appendix C on the earlier version, Appendix E.5 on the ESP32-S3).
 - Eschmann, J., Albani, D. & Loianno, G. (2023). *RLtools: A Fast, Portable Deep Reinforcement Learning Library for Continuous Control.* arXiv:2306.03530. (abstract)
 - Gallici, M. et al. (2024). *Simplifying Deep Temporal Difference Learning.* arXiv:2407.04811. (abstract)
 - Gupta, S. et al. (2015). *Deep Learning with Limited Numerical Precision.* ICML, PMLR 37. (abstract)
 - Henderson, P. et al. (2017). *Deep Reinforcement Learning that Matters.* arXiv:1709.06560. (abstract)
 - Patterson, A. et al. (2023). *Empirical Design in Reinforcement Learning.* arXiv:2304.01315. (abstract)
+- Williams, E. (2016). *Train Your Robot To Walk With A Neural Network.* Hackaday, 11 Dec 2016,
+  https://hackaday.com/2016/12/11/train-your-robot-to-walk-with-a-neural-network/ (secondary source; the author's Arm blog post could not be opened).
 - Sutton, R. S. & Barto, A. G. (2018). *Reinforcement Learning: An Introduction*, 2nd ed., §9.5.4.

@@ -36,3 +36,11 @@ def test_primary_set_is_the_registered_one(cmp):
     n = {k: sum(c.primary for c in v) for k, v in cmp.COMPARISONS.items()}
     assert n == {"pendulum_main_tuned": 0, "replay_ratio": 1, "cartpole_main_tuned": 6,
                  "adaptation_pendulum": 12, "stream_ablation": 10, "go1_gait_v3": 10}
+
+
+@pytest.mark.parametrize("ratio,band", [(1.0, "about equal"), (0.67, "about equal"), (1.5, "about equal"),
+                                        (3.0, "3-10x"), (10.0, "3-10x"),
+                                        (0.66, None), (2.9, None), (10.1, None)])
+def test_memory_bands(cmp, ratio, band):
+    got = cmp.memory_band(ratio)
+    assert (got is None) if band is None else got.startswith(band)

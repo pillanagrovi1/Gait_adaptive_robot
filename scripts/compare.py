@@ -5,6 +5,7 @@ The comparisons are the ones in docs/decisions.md (pre-registration of 22 Nov 20
 no difference in results.md is typed by hand. Intervals: Student-t 95% on per-seed differences (D52).
 
     python3 scripts/compare.py cartpole_main_tuned
+    python3 scripts/compare.py cartpole_main_tuned --by-sram   # exploratory: every pair at similar or 3-10x SRAM
 """
 import argparse
 import sys
@@ -85,10 +86,55 @@ def verdict(mean: float, half: float) -> str:
     return "inconclusive"
 
 
+def memory_band(ratio: float) -> str | None:
+    """linear SRAM / streaming-net SRAM -> the band it is compared in (D63), or None."""
+    if 1 / 1.5 <= ratio <= 1.5:
+        return "about equal (within 1.5x)"
+    if 3 <= ratio <= 10:
+        return "3-10x less for the streaming net"
+    return None
+
+
+def by_sram(exp: str) -> None:
+    """Every streaming-net / linear pair on the same task variant that falls in a band: none hand-picked."""
+    d = analysis.summarize(exp)
+    variant = [c for c in d if c == "sweep_obs_mode"]
+    rows = []
+    for _, s in d[d["label"] == "net-stream"].iterrows():
+        for _, lin in d[d["label"] == "linear"].iterrows():
+            ratio = lin["peak_bytes"] / s["peak_bytes"]
+            band = memory_band(ratio)
+            if band and all(s[v] == lin[v] for v in variant):
+                rows.append((band, ratio, s, lin))
+    print("| SRAM band | A = streaming net (B) | B = linear (B) | SRAM B / A | final, A − B | AUC, A − B |")
+    print("|---|---|---|---|---|---|")
+    count = {}
+    for band, ratio, s, lin in sorted(rows, key=lambda r: (r[0] != "about equal (within 1.5x)", r[1])):
+        cells = []
+        for metric in ("final", "auc"):
+            r = analysis.paired_diff(exp, s["run_id"], lin["run_id"], metric)
+            m, h = r["mean_diff"], r["ci95"]
+            v = verdict(m, h)
+            tally = count.setdefault((band, metric), {"A higher": 0, "inconclusive": 0, "A lower": 0})
+            tally[v] += 1
+            cells.append(f"{m:+.1f} [{m - h:+.1f}, {m + h:+.1f}] {v}")
+        print(f"| {band} | {s['run_id']} ({int(s['peak_bytes'])}) | {lin['run_id']} ({int(lin['peak_bytes'])}) | "
+              f"{ratio:.2f} | {cells[0]} | {cells[1]} |")
+    print()
+    print("| SRAM band | metric | pairs | streaming net higher | inconclusive | streaming net lower |")
+    print("|---|---|---|---|---|---|")
+    for (band, metric), n in count.items():
+        print(f"| {band} | {metric} | {sum(n.values())} | {n['A higher']} | {n['inconclusive']} | {n['A lower']} |")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("experiment", choices=sorted(COMPARISONS))
+    ap.add_argument("--by-sram", action="store_true", help="exploratory equal-memory table (D63)")
     a = ap.parse_args()
+    if a.by_sram:
+        by_sram(a.experiment)
+        return
     print("| A − B | metric | status | pairs | mean | 95% CI | verdict |")
     print("|---|---|---|---|---|---|---|")
     for c in COMPARISONS[a.experiment]:

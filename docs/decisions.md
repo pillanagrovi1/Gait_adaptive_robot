@@ -380,3 +380,13 @@ round-robin, so after some action sequences it evicts the state it needs next an
 once. Measured in the benchmark window on cart-pole: 1.72 hashes per step at 256 features (4,155 instructions) and
 1.00 at 1,024 (3,046). Learned values are unaffected. A least-recently-used replacement would remove it, and would
 need every M4 count re-measured. **Status: documented, not changed.**
+
+**D63 — Memory claims need equal-memory comparisons (Rahul, 22 Nov, after the results).** Exploratory, not
+pre-registered: every streaming-net / linear pair on the same task variant whose SRAM is about equal (within 1.5x) or
+where the streaming net uses 3-10x less, by `scripts/compare.py <exp> --by-sram`. The bands were chosen after the
+results were seen; every pair inside them is reported. **Status: accepted.**
+
+**D64 — Novelty claim narrowed (22 Nov).** Elsayed, Lupu, Vasan and Mahmood (arXiv:2410.14606v3, 21 Sep 2026) learn
+Pong on an ESP32-S3, and is citable from now on. Learning a gait on a microcontroller has also been done (Hackaday,
+11 Dec 2016, a four-servo walker on a Cortex-M4), and this project's Go1 learner runs on the host, so that is not
+claimed. The claim is the controlled memory-vs-representation comparison only. **Status: accepted.**
