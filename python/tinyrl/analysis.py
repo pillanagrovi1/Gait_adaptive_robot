@@ -39,6 +39,8 @@ Patterson et al. 2024, Colas et al. 2019, Agarwal et al. 2021).
                       sizeof(agent) + arena + learner stack. If a configuration
                       was not measured, `peak_source` says "host-estimate" and the
                       value is arena + 220 B, which plots draw hollow.
+  flash_bytes         text + data of that benchmark firmware (learner, harness and startup),
+                      not of the learner alone (D56).
 """
 from __future__ import annotations
 
@@ -219,6 +221,8 @@ def summarize(exp_name_or_path) -> pd.DataFrame:
             row["fits_f446"] = int(mm["fits"])
             for k in ("insns_learn_step", "insns_greedy_step", "stack_learner", "agent_bytes"):
                 row[k] = float(mm[k]) if mm.get(k) else np.nan
+            text, data = mm.get("flash_text"), mm.get("ram_data")
+            row["flash_bytes"] = int(text) + int(data) if text and data else np.nan
         else:
             row["peak_bytes"] = meta["arena_bytes"] + 220
             row["peak_source"] = "host-estimate"
