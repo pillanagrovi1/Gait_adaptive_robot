@@ -117,6 +117,9 @@ results, and stay at 10 seeds (D50).
 same task variant in either band, by `scripts/compare.py pendulum_main_tuned --by-sram`. No correction for multiple comparisons.
 These are 15 of the 19 reported pairs, out of 41 examined. D63 has the number of differences to expect by
 chance if no true difference existed. Read the counts, not any one pair.
+**These pairs compare learning rules as well as representations (D69).** Only the streaming net had traces and
+ObGD; table and linear were one-step learners whose tuning searched α only. In the untuned ablation (exploratory),
+adding λ 0.8 on top of ObGD changed AUC by +284.9 (table), +152.1 (linear) and −154.5 (network).
 
 | SRAM band | A = streaming net (B) | B = linear (B) | SRAM B / A | final, A − B | AUC, A − B |
 |---|---|---|---|---|---|
@@ -283,6 +286,9 @@ committed tuned config. The runs are deterministic on x86-64 Linux; this experim
 same task variant in either band, by `scripts/compare.py cartpole_main_tuned --by-sram`. No correction for multiple comparisons.
 These are 4 of the 19 reported pairs, out of 41 examined. D63 has the number of differences to expect by
 chance if no true difference existed. Read the counts, not any one pair.
+**These pairs compare learning rules as well as representations (D69).** Only the streaming net had traces and
+ObGD; table and linear were one-step learners whose tuning searched α only. In the untuned ablation (exploratory),
+adding λ 0.8 on top of ObGD changed AUC by +284.9 (table), +152.1 (linear) and −154.5 (network).
 
 | SRAM band | A = streaming net (B) | B = linear (B) | SRAM B / A | final, A − B | AUC, A − B |
 |---|---|---|---|---|---|
@@ -418,7 +424,7 @@ rounding, `bandit` = γ = 0.
 **Reproducibility.** The experiment was run once, and every run's metadata records the commit and full configuration.
 The runs are deterministic on x86-64 Linux.
 
-**Pre-registered differences** (paired by seed, Student-t 95%).
+**Differences** (paired by seed, Student-t 95%; the last eight were added after the results, D69).
 
 | A − B | metric | status | pairs | mean | 95% CI | verdict |
 |---|---|---|---|---|---|---|
@@ -432,6 +438,14 @@ The runs are deterministic on x86-64 Linux.
 | table-sgd − table-bandit | auc | pre-registered | 10 | +566.0 | [+538.3, +593.8] | A higher |
 | linear-sgd − linear-bandit | final | pre-registered | 10 | +1005.6 | [+912.1, +1099.1] | A higher |
 | linear-sgd − linear-bandit | auc | pre-registered | 10 | +800.9 | [+753.2, +848.5] | A higher |
+| table-obgd-lam − table-obgd | final | exploratory, added after the results (D69) | 10 | +193.1 | [+104.7, +281.6] | A higher |
+| table-obgd-lam − table-obgd | auc | exploratory, added after the results (D69) | 10 | +284.9 | [+251.4, +318.5] | A higher |
+| linear-obgd-lam − linear-obgd | final | exploratory, added after the results (D69) | 10 | +33.4 | [+6.1, +60.7] | A higher |
+| linear-obgd-lam − linear-obgd | auc | exploratory, added after the results (D69) | 10 | +152.1 | [+132.6, +171.5] | A higher |
+| net-obgd-lam − net-obgd | final | exploratory, added after the results (D69) | 10 | -90.5 | [-165.7, -15.4] | A lower |
+| net-obgd-lam − net-obgd | auc | exploratory, added after the results (D69) | 10 | -154.5 | [-218.5, -90.6] | A lower |
+| net-sgd − net-obgd-lam-ln-sr | final | exploratory, added after the results (D69) | 10 | +149.0 | [+70.7, +227.4] | A higher |
+| net-sgd − net-obgd-lam-ln-sr | auc | exploratory, added after the results (D69) | 10 | -34.3 | [-101.6, +33.0] | inconclusive |
 
 **Findings** (one task, untuned).
 
@@ -442,8 +456,10 @@ The runs are deterministic on x86-64 Linux.
    (network, final).
 2. Bootstrapping is needed on this task: with γ = 0 the table and linear learners end near the random policy, far
    below their Q-learning twins.
-3. Descriptive, not tested: the one-step network without replay, target or trace (`net-sgd`) also learned here
-   (final −168 ± 38). The other ingredients' effects were not pre-registered and are not claimed.
+3. Exploratory, added after the results (D69): traces (λ 0.8, on top of ObGD) helped the table and the linear
+   learner and hurt the network, on both metrics. The one-step network without replay, target or trace (`net-sgd`)
+   ended higher than the full streaming recipe (final +149.0 [+70.7, +227.4]; AUC inconclusive). Untuned, one task,
+   10 seeds. These are why the main comparisons are confounded: there only the network had traces.
 
 ## Stage 7: tuning a self-adapting gait, Go1 in simulation (22 Nov 2026)
 

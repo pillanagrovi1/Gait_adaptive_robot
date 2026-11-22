@@ -18,6 +18,13 @@ better encoding on final return. That is 86 uncorrected 95% intervals, so if no 
 "detectable" differences per metric, about four in total, would be expected by chance. Read the counts, not any one pair.
 "No detectable difference" does not mean equal.
 
+**Representation and update rule are confounded (D69).** In the pendulum, cart-pole, adaptation and Go1
+experiments only the streaming net had traces and ObGD; table and linear were one-step learners, tuned on α only.
+In the untuned ablation (exploratory), adding λ 0.8 on top of ObGD raised AUC for the table (+284.9 [+251.4, +318.5])
+and linear (+152.1 [+132.6, +171.5]) and lowered it for the network (−154.5 [−218.5, −90.6]); the one-step network
+beat the full streaming recipe on final return (+149.0 [+70.7, +227.4]). So no difference between the streaming net
+and the other learners below can be put down to representation alone.
+
 - On cart-pole, linear tile coding (9.4 KB) beat the table (33.5 KB) on final return (+141.3 [+96.9, +185.7]) and
   AUC, at 4.3x the instructions per step.
 - On cart-pole, in the registered comparison (3,040 B against 9,400 B, so not at equal memory), the streaming net
@@ -64,6 +71,11 @@ not found in a limited search. Learning a gait on a microcontroller is not claim
   is not studied here. Observation normalisation, reward scaling by a running statistic and sparse initialisation
   from that recipe are not used (D23, D61).
 
+**Not the same update rule.** In the main experiments only the streaming network used traces and ObGD; the table and
+linear learners did one-step Q-learning, and their tuning searched α only. The streaming net's tuning offered λ 0.6,
+0.8 and 0.9 and chose 0.6, the smallest, on both tasks (D69). Every comparison with the streaming net therefore
+changes the update rule as well as the representation.
+
 **Fixed point.** All learner arithmetic is Q16.16 C with static allocation. Counters record update products that
 round to zero (underflow) or clip (saturation). No measured saturation was above 0% in any experiment that recorded
 it (replay ratio, cart-pole, adaptation, ablation).
@@ -97,6 +109,8 @@ extension, gait tuning on a simulated Unitree Go1.
   training return over the last 20% of episodes.
 
 ## 4. Results
+
+Every comparison with the streaming network in §4.1, §4.2, §4.4 and §4.8 is also a comparison of update rules (D69).
 
 ### 4.1 Pendulum: return against SRAM
 
@@ -176,7 +190,9 @@ In the pendulum comparison the streaming networks round 24–51% of their update
 | linear | 22.8% | −1.38 [−10.00, +7.25] | +2.23 [−8.71, +13.16] |
 | network | 33.8% | −32.6 [−115.1, +49.8] | +16.0 [−33.2, +65.2] |
 
-All six show no detectable difference: each interval includes 0. The same experiment shows that bootstrapping is needed on this task: with γ = 0 the table
+All six show no detectable difference: each interval includes 0. Added after the results (exploratory, D69): traces
+helped the table and linear learners and hurt the network (AUC +284.9, +152.1, −154.5), and the one-step network beat
+the full recipe on final return (+149.0 [+70.7, +227.4]). The same experiment shows that bootstrapping is needed on this task: with γ = 0 the table
 and linear learners end 820 and 1,006 below their Q-learning twins.
 
 ### 4.7 Reproducibility
@@ -252,7 +268,9 @@ of the work above (for most of it, the abstract only).
 At approximately 3-10x less SRAM the streaming net showed no detectable difference from linear tile coding in final
 return in 7 of 10 pairs but learned more slowly on the pendulum, and at equal SRAM it was not shown to differ in final
 return from linear's better encoding once linear had the 4 KB it needs to learn (exploratory: counts and caveats in
-the [Summary](#summary)).
+the [Summary](#summary)). These are comparisons of representation and update rule together: only the streaming
+net had traces and ObGD, and traces changed table and linear AUC by +285 and +152 in the ablation (D69). A comparison
+that gives every learner the same choice of λ and κ is proposed, not run.
 
 - The streaming net pays 12.2x to 20.0x linear's instructions per step in the registered comparisons, and
   its returns vary more between seeds.

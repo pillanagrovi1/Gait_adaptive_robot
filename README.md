@@ -35,6 +35,10 @@ better encoding on final return. That is 86 uncorrected 95% intervals, so if no 
 "detectable" differences per metric, about four in total, would be expected by chance. Read the counts, not any one pair.
 "No detectable difference" does not mean equal.
 
+**Confounded (D69):** only the streaming net had traces and ObGD; table and linear were one-step learners tuned on
+α only. Traces alone changed AUC by +285 (table), +152 (linear) and −155 (network) in the untuned ablation, so these
+comparisons are of representation and update rule together.
+
 A difference counts only if its paired 95% interval excludes 0. "Learned faster" = higher AUC.
 
 | What | Finding | Strength |
@@ -42,10 +46,11 @@ A difference counts only if its paired 95% interval excludes 0. "Learned faster"
 | Stage 1 gate | C learner reproduces the Python Q16.16 reference bit for bit | deterministic test |
 | Pendulum | replay network (27.2 KB) learned faster than linear tile coding (50.1 KB) at 74.7x the instructions; final return inconclusive | 10 seeds, not pre-registered |
 | Cart-pole | linear tile coding beat the table, at 4.3x the instructions | 10 seeds, pre-registered |
-| Cart-pole | streaming network (3.0 KB) learned faster than linear tile coding (9.4 KB) at 12.2x the instructions; final return inconclusive | 10 seeds, pre-registered |
-| Adaptation | after a 50% heavier rod the streaming network returned more than linear tile coding, at 20.0x the instructions (different SRAM: 3.0 vs 13.2 KB, so no per-byte claim) | 20 seeds, pre-registered |
+| Cart-pole | streaming network (3.0 KB) learned faster than linear tile coding (9.4 KB) at 12.2x the instructions; final return inconclusive | 10 seeds, pre-registered; update rule differs (D69) |
+| Adaptation | after a 50% heavier rod the streaming network returned more than linear tile coding, at 20.0x the instructions (different SRAM: 3.0 vs 13.2 KB, so no per-byte claim) | 20 seeds, pre-registered; update rule differs (D69) |
 | Replay ratio | 5 replay updates per step did not measurably speed up the table, at 2.7x the instructions | 10 seeds, pre-registered gate |
 | Stochastic rounding | no detectable difference. Final: table +12.3 [−36.0, +60.5], linear −1.38 [−10.00, +7.25], network −32.6 [−115.1, +49.8]. AUC: table −15.1 [−45.1, +15.0], linear +2.23 [−8.71, +13.16], network +16.0 [−33.2, +65.2] | 10 seeds, pre-registered |
+| Traces (λ 0.8) | helped table (AUC +284.9 [+251.4, +318.5]) and linear (+152.1 [+132.6, +171.5]), hurt the network (−154.5 [−218.5, −90.6]); one-step network beat the full streaming recipe on final return (+149.0 [+70.7, +227.4]) | 10 seeds, untuned, exploratory (D69) |
 | Go1 (simulation) | the bar was not met: no learner beat the stumble-reflex gait, and none differed detectably from random nudges | 10 seeds, pre-registered bar; random comparison exploratory |
 | On-chip learning | learning on the emulated M4 reproduces host learning bit for bit (4 learner types) | deterministic test, QEMU only |
 

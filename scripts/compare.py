@@ -73,6 +73,13 @@ COMPARISONS = {
                      ("table-sgd", "table-bandit"),
                      ("linear-sgd", "linear-bandit"))
         for m in ("final", "auc")
+    ] + [
+        *[C(a, b, m, "exploratory, added after the results (D69)")
+          for a, b in (("table-obgd-lam", "table-obgd"),
+                       ("linear-obgd-lam", "linear-obgd"),
+                       ("net-obgd-lam", "net-obgd"),
+                       ("net-sgd", "net-obgd-lam-ln-sr"))
+          for m in ("final", "auc")],
     ],
     "go1_gait_v3": [
         *[C(a, b, "final") for a in GO1 for b in ("B3-stumble", "B4-all-reflexes")],
