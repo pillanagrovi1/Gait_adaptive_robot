@@ -56,12 +56,14 @@ def main() -> int:
     results = (ROOT / "docs/results.md").read_text()
     lines = set(results.split("\n"))
     problems = []
-    for archive in sorted((ROOT / "results" / "raw_archive").glob("*.tar.gz")):
-        name = archive.name.removesuffix(".tar.gz")
-        if not (ROOT / "results" / "raw" / name).exists():
+    archives = sorted((ROOT / "results" / "raw_archive").glob("*.tar.gz"))
+    for archive in archives:            # all first: some comparisons span two experiments
+        if not (ROOT / "results" / "raw" / archive.name.removesuffix(".tar.gz")).exists():
             (ROOT / "results" / "raw").mkdir(parents=True, exist_ok=True)
             with tarfile.open(archive) as t:
                 t.extractall(ROOT / "results" / "raw", filter="data")
+    for archive in archives:
+        name = archive.name.removesuffix(".tar.gz")
         problems += summary_problems(name)
         header = re.search(rf"^\*\*{re.escape(name)}\*\* · .*command `([^`]*)`", results, re.M)
         printed = []
