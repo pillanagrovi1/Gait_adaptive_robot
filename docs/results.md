@@ -92,8 +92,8 @@ results, and stay at 10 seeds (D50).
    37 of 38 do; the exception is linear, angle, 256 features (moved by −20.0, 5-seed half-width 17.9).
 2. The replay network (cos/sin, 64 hidden, 27.2 KB) and linear tile coding (cos/sin, 4,096 features, 50.1 KB) are
    inconclusive on final return. The network learns faster, at approximately 68.5x the instructions per step.
-3. The streaming network (angle, 32 hidden, 2.8 KB) and linear tile coding (angle, 256 features, 4.0 KB) are
-   inconclusive on final return and on AUC. The streaming network costs approximately 17.7x the instructions per step.
+3. Streaming network against linear tile coding by SRAM: counts only, in the exploratory tables at the end of this
+   section (D63). The one pair in the post-hoc table above is not a finding by itself.
 4. Descriptive: every point on the mean final-return frontier above 1,296 B and up to 5.2 KB is a streaming
    network. From 13.3 KB the frontier is linear tile coding and the replay network. The table is on it only at
    1,008 B and 1,296 B.
@@ -114,6 +114,8 @@ results, and stay at 10 seeds (D50).
 
 **Exploratory, not pre-registered: the streaming net against linear tile coding by SRAM (D63).** Every pair on the
 same task variant in either band, by `scripts/compare.py pendulum_main_tuned --by-sram`. No correction for multiple comparisons.
+These are 19 pairs, so about 19 uncorrected comparisons at 95% per metric, and roughly one "detectable" difference
+per metric (about two over final return and AUC) is expected by chance; read the counts, not any one pair.
 
 | SRAM band | A = streaming net (B) | B = linear (B) | SRAM B / A | final, A − B | AUC, A − B |
 |---|---|---|---|---|---|
@@ -269,6 +271,8 @@ committed tuned config. The runs are deterministic on x86-64 Linux; this experim
 
 **Exploratory, not pre-registered: the streaming net against linear tile coding by SRAM (D63).** Every pair on the
 same task variant in either band, by `scripts/compare.py cartpole_main_tuned --by-sram`. No correction for multiple comparisons.
+These are 19 pairs, so about 19 uncorrected comparisons at 95% per metric, and roughly one "detectable" difference
+per metric (about two over final return and AUC) is expected by chance; read the counts, not any one pair.
 
 | SRAM band | A = streaming net (B) | B = linear (B) | SRAM B / A | final, A − B | AUC, A − B |
 |---|---|---|---|---|---|
