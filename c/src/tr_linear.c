@@ -91,6 +91,7 @@ static const uint32_t *active_features(tr_agent_t *ag, const q16_t *obs)
     for (int s = 0; s < 2; s++) {
         if (L->cache.valid[s] && memcmp(L->cache.obs[s], obs, (size_t)d * sizeof(q16_t)) == 0) {
             L->idx = L->cache.idx[s];
+            L->cache.next = (uint8_t)(1 - s);   /* least recently used goes next; see tr_lin_touch (D62) */
             return L->idx;
         }
     }
@@ -140,6 +141,10 @@ void tr_lin_q(tr_agent_t *ag, const q16_t *obs, q16_t *out, int use_target)
         out[k] = q16_sat(acc);
     }
 }
+
+/* Called with s before the target looks up s', so that s' never evicts s: a random action did not
+ * look at s, so least-recently-used eviction alone would (D62). Cache only; no value changes. */
+void tr_lin_touch(tr_agent_t *ag, const q16_t *obs) { (void)active_features(ag, obs); }
 
 void tr_lin_update(tr_agent_t *ag, const q16_t *obs, int a, q16_t y)
 {
