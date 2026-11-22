@@ -26,8 +26,12 @@ linear tile coding at approximately 3-10x less SRAM in 7 of the 10 configuration
 the other 3 (all pendulum). It learned more slowly (lower AUC) in all 7 pendulum pairs; on cart-pole one of 3 was
 faster, one inconclusive, one slower. At about equal SRAM (within 1.5x) there are 9 pairs (8 pendulum, 1 cart-pole): final return favoured the streaming
 net in 6 (all pendulum) and showed no detectable difference in 3, and AUC favoured it in 8 and showed none in 1.
-These memory comparisons are exploratory (D63). These are 19 pairs, so about 19 uncorrected comparisons at 95% per metric, and roughly one "detectable" difference
-per metric (about two over final return and AUC) is expected by chance; read the counts, not any one pair.
+All 6 are against linear configurations that scored −769 or worse, two of them near the random policy (−1157 against
+−1147). Against linear's better input encoding no difference was detected at about 4 KB (linear −224, 4 pairs); at
+1.7 KB, where linear's best is −961, the streaming net was higher (4 pairs).
+These memory comparisons are exploratory (D63): 19 pairs reported out of 41 examined, plus a check against linear's
+better encoding on final return. That is 86 uncorrected 95% intervals, so if no true difference existed about two
+"detectable" differences per metric, about four in total, would be expected by chance. Read the counts, not any one pair.
 "No detectable difference" does not mean equal.
 
 A difference counts only if its paired 95% interval excludes 0. "Learned faster" = higher AUC.
