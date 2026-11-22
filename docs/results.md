@@ -45,6 +45,7 @@ arm. α was tuned without replay, on the angle input (D51). All three arms peak 
 n = 5 − n = 1 on AUC must lie above 0. It does not, so Stage 4 stops and the linear and network arms were not run, nor the references
 (random, zero-torque, table-stream, net-stream).
 D53 replaced the criterion of 17 Nov (steps-to-threshold), which is reported below as a secondary check.
+D53 was written after the no-replay pendulum results were seen, before any replay-ratio run.
 The original metric gives the same decision (inconclusive).
 
 **Metrics.** AUC = mean greedy evaluation return over training (30 evaluations in 300k steps; higher = learned
