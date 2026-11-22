@@ -325,11 +325,16 @@ percentile bootstrap at n ≥ 20 (through `ci95`), which would apply to the adap
 Per-configuration intervals keep D27. A difference counts only if its interval excludes 0; otherwise it is
 "inconclusive". Forward transfer pairs the same seed across the two adaptation experiments. **Status: accepted.**
 
-**D53 — Stage 4 kill criterion is measured on AUC (set by Rahul, 22 Nov).** The table with n = 5 replay updates per
+**D53 — Stage 4 kill criterion is measured on AUC.** The table with n = 5 replay updates per
 step must beat n = 1 (both with the 1000-transition buffer) on AUC, with the paired interval above 0. The table arm
 runs first; if it fails, Stage 4 stops and the null result is reported. This replaces "steps-to-threshold" in
 `replay_ratio.json` and `stages.md`, which is undefined for runs that never reach the threshold.
 Steps-to-threshold, where reported, always comes with the number of seeds that reached it. **Status: accepted.**
+*Provenance (corrected 22 Nov, after the run; the entry first said "set by Rahul"):* Set via Rahul's master prompt
+(Phase 3: 'paired AUC difference excludes 0'), which replaced steps-to-threshold without flagging it; Rahul confirmed
+on 22 Nov after the run. Committed 57 min before any replay-ratio result. The original metric
+gives the same decision (inconclusive).
+Steps-to-threshold, n = 1 vs n = 5: 9/10 vs 10/10 seeds reached -200; the direction depends on how the missing seed is counted, so inconclusive.
 
 **D54 — γ = 0 bandit baseline.** Same representation and α, no bootstrapping: `table-bandit` and `linear-bandit` in
 `stream_ablation` (against `table-sgd`, `linear-sgd`), `linear-bandit` in `go1_gait_v3`. Not on cart-pole, where the
