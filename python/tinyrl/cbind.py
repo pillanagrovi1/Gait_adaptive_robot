@@ -85,7 +85,7 @@ LEARNER_DEFAULTS = {
     "hidden": 32, "td_clip": 0.0, "target_period": 0,
     "replay_cap": 0, "batch": 1,
     # added after the literature review (docs/research_review.md); 0 = original behaviour
-    "lam": 0.0,          # Watkins Q(lambda) trace decay
+    "lam": 0.0,          # Q(lambda) trace decay; no Watkins cut (D68)
     "obgd_kappa": 0.0,   # ObGD step-size cap (Elsayed et al. 2024), typical 2.0
     "round_mode": 0,     # 1 = stochastic rounding of updates
     "norm": 0,           # MLP: 1 = parameter-free LayerNorm on the hidden layer

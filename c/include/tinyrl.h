@@ -68,7 +68,7 @@ typedef struct {
     int32_t batch;                    /* updates per env step when replay is on */
     /* ---- added 17 Nov 2026 after the literature review (docs/research_review.md) ----
      * All default to 0 = the original behaviour, bit for bit. */
-    q16_t   lambda;                   /* Watkins Q(lambda) trace decay; >0 enables traces */
+    q16_t   lambda;                   /* Q(lambda) trace decay, no Watkins cut (D68); >0 enables traces */
     q16_t   obgd_kappa;               /* ObGD step-size cap (Elsayed et al. 2024), 0 = off; typical 2.0 */
     int32_t round_mode;               /* 0 = round to nearest, 1 = stochastic rounding of updates */
     int32_t norm;                     /* MLP only: 0 = none, 1 = parameter-free LayerNorm on hidden layer */

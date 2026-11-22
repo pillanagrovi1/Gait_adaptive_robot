@@ -320,11 +320,11 @@ void tr_episode_start(tr_agent_t *ag)
 }
 
 /*
- * Streaming update: Watkins Q(lambda) with an ObGD step-size cap
+ * Streaming update: Q(lambda) WITHOUT the Watkins cut, with an ObGD step-size cap
  * (Elsayed, Vasan & Mahmood 2024, "Streaming Deep RL Finally Works").
  *
  *   y      = r + gamma * max_a' Q_target(s', a')      (r if terminal): the SAME target
- *   e      <- gamma*lambda * e + grad Q(s, a)          e <- grad Q(s,a) if a was exploratory
+ *   e      <- gamma*lambda * e + grad Q(s, a)          (never cut after an exploratory action: D68)
  *   delta  = y - Q(s, a)
  *   ObGD:  dbar = max(|delta|, 1);  alpha_eff = alpha * min(1, 1 / (kappa * dbar * ||e||_1))
  *   w      <- w + alpha_eff * delta * e

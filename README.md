@@ -55,7 +55,7 @@ Single-seed observations from the build are in [`docs/build_notes.md`](docs/buil
 
 | Part | Contents |
 |---|---|
-| Learners (`c/`) | table, hashed tile coding (FNV + finaliser, or dense), tiny ReLU network; one shared Q-learning target; optional replay (plain or compressed), target network, TD clipping, Watkins Q(λ) + ObGD step cap for all three (streaming), LayerNorm, continual backprop, stochastic rounding; underflow counter |
+| Learners (`c/`) | table, hashed tile coding (FNV + finaliser, or dense), tiny ReLU network; one shared Q-learning target; optional replay (plain or compressed), target network, TD clipping, Q(λ) without the Watkins cut + ObGD step cap for all three (streaming; D68), LayerNorm, continual backprop, stochastic rounding; underflow counter |
 | Tasks (`python/tinyrl/envs/`) | corridor (Stage 1), pendulum, cart-pole, Unitree Go1 trot on rough ground with a CPG, phase lock, foot contacts, reflexes (Tegotae, posture, stumble) and three action modes |
 | Protocol | step budgets, 10 paired seeds, equal-budget tuning on separate seeds, baselines in every experiment, paired differences, adaptation metric with a from-scratch reference |
 | Measurement | every configuration built for the Cortex-M4 and run in QEMU: peak SRAM (agent + arena + stack), instructions per step, host == M4 checksum; kernel trade-off map (Q16.16 / float32 / q15, LSTD-Q, Dyna-Q) |
@@ -121,7 +121,7 @@ What to read and what each gate means: [`docs/stages.md`](docs/stages.md).
 
 ```
 c/include/          tr_fixed.h (Q16.16 maths), tr_rng.h (xorshift32), tinyrl.h (learner API)
-c/src/              tr_agent.c (shared target, ε-greedy, replay, streaming Q(λ)+ObGD), tr_tabular.c,
+c/src/              tr_agent.c (shared target, ε-greedy, replay, streaming Q(λ), no Watkins cut, +ObGD), tr_tabular.c,
                     tr_linear.c, tr_mlp.c, tr_trace.c
 c/envs/, c/tests/   corridor in C; unit tests, corridor trace, host build of the M4 benchmark
 m4/                 Cortex-M4 benchmark firmware: startup, linker script (F446 memory map), semihosting

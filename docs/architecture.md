@@ -16,7 +16,7 @@ Since 17 Nov there is a second, opt-in update path with the same target (`learn_
 ```mermaid
 flowchart LR
     Y["y = r + γ max Q(s′,·)  (same target)"] --> D["δ = y − Q(s,a)"]
-    G["∇Q(s,a)"] --> E["trace e ← γλ·e + ∇Q(s,a)<br/>(e ← ∇Q if a was exploratory: Watkins)"]
+    G["∇Q(s,a)"] --> E["trace e ← γλ·e + ∇Q(s,a)<br/>(no Watkins cut after exploratory actions: D68)"]
     E --> O["ObGD: α_eff = α·min(1, 1 / (κ·max(|δ|,1)·‖e‖₁))"]
     D --> O
     O --> W["w ← w + α_eff·δ·e   (stochastic rounding optional)"]

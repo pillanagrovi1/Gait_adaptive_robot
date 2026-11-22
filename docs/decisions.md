@@ -169,6 +169,7 @@ Same rule: made by Claude, **to review**. All new C features are opt-in config f
 original behaviour (the C unit tests confirm identical regression errors; the Stage 1 gate still passes bit for bit).
 
 **D23 — Streaming path: Watkins Q(λ) + ObGD step-size cap (Elsayed et al. 2024), available to ALL three learners.**
+*Corrected 23 Nov by D68:* the code never made the Watkins cut described below; it is Q(λ) without the cut.
 Config: `lam` (trace decay), `obgd_kappa` (cap; 0 = off). The learning target stays the shared max-target
 y = r + γ max Q(s′,·); λ only spreads δ over recent states, with the trace cut after exploratory actions
 (Watkins). Making λ available to every learner keeps the comparison about representation (λ is a shared
@@ -374,6 +375,7 @@ whether float is slower (D46), and Q15 needs its own scaling and underflow study
 α / max(1, α κ δ̄ ‖e‖₁); this code uses α · min(1, 1 / (κ δ̄ ‖e‖₁)). The two are equal at α = 1, and every ObGD
 configuration in `configs/` has α = 1, so no result differs. They would differ if α were tuned. The September 2026
 version replaced ObGD by a per-coordinate optimiser, which is not studied here. **Status: documented, rule unchanged.**
+*Added 23 Nov (D68):* a second deviation. The trace is not cut after a non-greedy action, as the authors' code does.
 
 **D62 — The linear learner's instructions per step are path dependent.** The two-slot feature cache replaces
 round-robin, so after some action sequences it evicts the state it needs next and hashes twice per step instead of
@@ -425,3 +427,20 @@ moves cart-pole online means by at most 0.35 and pendulum, adaptation, ablation 
 that could not be measured on the M4 were estimated as arena + 220 B; the measured agent struct and stack are 688 B,
 so the estimate now uses the measured overhead (cart-pole 12 bins: 166,600 B, still far above 128 KB). Baselines now
 get 0 B, as they have no learner. No registered comparison changes. **Status: fixed.**
+
+## Added 23 Nov 2026, after a review from claude.ai (all results had been seen)
+
+**D68 — The streaming path has no Watkins cut.** D23 says the trace is cut after an exploratory action; `learn_stream`
+in `tr_agent.c` never does this. The trace is reset only at episode start and at terminal states. So every
+configuration with `lam` > 0 ran Q(λ) *without the Watkins cut*: the streaming network in `pendulum_main_tuned`,
+`cartpole_main_tuned`, `adaptation_pendulum` (+ `_scratch`) and `go1_gait_v3`, and the `*-lam*` arms of
+`stream_ablation`. The authors' code cuts it: in `stream_q.py` (github.com/mohmdelsayed/streaming-drl, branch 2026,
+commit 9326fc3, opened 23 Nov) the update sets `reset = terminated or truncated or is_nongreedy`, where
+`is_nongreedy` says the next action is a random one that differs from the greedy one, and `optimizer.py` then zeroes
+the trace after the weight step. Check (23 Nov, two states, table and linear, α 0.5, γ 0.9, λ 0.9): after the
+transition (s0, a0) → s1, a non-greedy a0 in s1 ending with reward 1 moves Q(s0, a0) from 0.225 to 0.63; with the cut
+it would stay at 0.225. Without the cut, credit flows back through exploratory actions, so the traces mix the
+behaviour policy's returns into the Q-learning target. How much this changed any result was not measured.
+The code is **not** changed, so that every archive still replays byte for byte. Every description now says
+"Q(λ) without the Watkins cut", and D61 lists it as a deviation from the paper. An opt-in cut, with a unit test that
+fails without it, is part of the proposed `*_v2` experiments. **Status: documented, code unchanged.**

@@ -28,7 +28,7 @@ void     tr_mlp_update(tr_agent_t *ag, const q16_t *obs, int a, q16_t y);
 void     tr_mlp_sync_target(tr_agent_t *ag);
 uint32_t tr_mlp_nparams(const tr_cfg_t *c);
 
-/* ---- Streaming path (Watkins Q(lambda) + ObGD), used when tr_is_stream(cfg) ----
+/* ---- Streaming path (Q(lambda) without the Watkins cut, + ObGD), used when tr_is_stream(cfg) ----
  * X_trace: forward on (s, ·) leaving Q(s, ·) in ag->q, then
  *          e <- decay * e + grad_w Q(s, a); writes ||e||_1 to *norm1; returns Q(s, a).
  * X_apply: w <- w + (step * e) >> sh   (sh = 16: step is Q16.16; sh = 30: step is Q2.30,
