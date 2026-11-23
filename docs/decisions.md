@@ -612,3 +612,9 @@ may have held linear back. `configs/pendulum_linear_wide.json`: v2's two linear 
 seeds and evaluation states) with λ {0.8, 0.9, 0.95, 0.98} and κ {0, 3, 4, 6}. Reported: the chosen values, linear
 1,024 (angle) wide − v2, and wide-grid linear 1,024 − v2's streaming net 32 (the 16 KB pair). Runs after D77.
 About 30 min. **Status: built; runs after the D77 run.**
+## Added 23 Nov 2026, after the adaptation v2 run (its results had been seen)
+
+**D79 — Adaptation v2 result.** `adaptation_pendulum_v2` and its scratch reference ran as registered in D77 (commit
+`9cd3469`). Primary: streaming net − linear, post-shift AUC +9.85 [−17.25, +36.95], inconclusive; v1's +86.8 is
+therefore not supported once every learner has its own tuned update rule. The Summary, §4.4 and the README now say
+so; the v1 table stays, labelled v1. **Status: reported.**

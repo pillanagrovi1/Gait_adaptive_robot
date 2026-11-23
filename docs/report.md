@@ -13,13 +13,13 @@ At matched peak SRAM the answer depended on the budget: on the pendulum the best
 far at 4 KB (AUC +489.6 [+443.3, +536.0]), where only 64 hashed features fit, but tile coding was better at 16 KB
 (AUC −221.7 [−265.2, −178.1]), and on cart-pole the network was better at no budget (lower at 64 KB, AUC −61.9
 [−82.4, −41.3]).
-After the pendulum's rod got heavier the streaming network returned more than tile coding (+86.8 [+66.9, +106.8],
-v1 design, update rule confounded), five replay updates per step did not measurably speed up the table, stochastic
+After the pendulum's rod got heavier the streaming network and tile coding did not differ detectably once each had
+its own tuned update rule (+9.85 [−17.25, +36.95]; v1's +86.8 came with traces for the network only), five replay updates per step did not measurably speed up the table, stochastic
 rounding made no detectable difference, and on the simulated Go1 no learner beat a fixed stumble-reflex gait, even at
 a roughness where a better fixed setting was shown to exist (+4.36 [+2.59, +6.13] over it on new terrain).
 
 *Caveats:* simulation and QEMU only (memory and instruction counts, no timing, no hardware); 10 seeds, 20 for
-adaptation; 12 uncorrected matched-SRAM intervals per task; adaptation, replay and the ablation keep v1's update rules
+adaptation; 12 uncorrected matched-SRAM intervals per task; replay and the ablation keep v1's update rules
 (D69) and traces without the Watkins cut (D68).
 
 ## 1. Question
@@ -151,6 +151,8 @@ learner's feature cache was fixed (D62): it hashes once per step, whatever path 
 
 ![both switches](../results/figures/adaptation_pendulum_curves.png)
 
+**v1** (only the streaming net had traces and ObGD, D69):
+
 | learner | peak SRAM | post-shift AUC | forward transfer | forgetting |
 |---|---|---|---|---|
 | table | 2,160 B | −840 ± 12 | +101.7 [+84.5, +118.9] | −106.8 [−223.4, +9.8], inconclusive |
@@ -164,6 +166,13 @@ learner's feature cache was fixed (D62): it hashes once per step, whatever path 
   (−306.8 [−369.7, −244.0]). It was already degrading before the shift, so this is not a verdict on the method.
 - Over the whole second A window no learner differed measurably from its pre-shift level.
 - Forward transfer includes the fresh learner's exploration cost.
+
+**v2 (D77).** The same experiment with every learner's hyperparameters from v2's tuning (§4.9); v2 chose no traces
+and no ObGD for the streaming net here, so it ran as a one-step network with LayerNorm and stochastic rounding.
+Streaming net − linear on post-shift AUC: +9.85 [−17.25, +36.95], inconclusive. The v1 advantage did not hold up.
+Continual backprop again made the streaming net worse after the shift (−450.3 [−569.0, −331.5]). Every learner
+transferred forward; table and linear forgot measurably, the networks' forgetting intervals include 0
+(results.md, "Adaptation v2").
 
 ### 4.5 Replay ratio: a null result
 
