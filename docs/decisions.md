@@ -618,3 +618,7 @@ About 30 min. **Status: built; runs after the D77 run.**
 `9cd3469`). Primary: streaming net − linear, post-shift AUC +9.85 [−17.25, +36.95], inconclusive; v1's +86.8 is
 therefore not supported once every learner has its own tuned update rule. The Summary, §4.4 and the README now say
 so; the v1 table stays, labelled v1. **Status: reported.**
+
+**D80 — D78 result.** Ran at commit `54c2f3b`. Angle: same values as v2, identical runs. Trig: λ 0.95, κ 6, again at
+the edge of κ. No v2 conclusion changes; report §4.9 now says that trig linear chose the largest
+κ offered again. **Status: reported, exploratory.**

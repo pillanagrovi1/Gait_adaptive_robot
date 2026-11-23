@@ -1,0 +1,87 @@
+{
+  "name": "pendulum_linear_wide_tuned",
+  "_note": "EXPLORATORY (D78), designed after the v2 results: v2's linear tuning chose the largest lambda (0.9) and kappa (3) on both encodings. Same as pendulum_main_v2's linear arms, with a wider grid: lambda {0.8, 0.9, 0.95, 0.98}, kappa {0, 3, 4, 6}. Question: does the 16 KB matched result move? Hyperparameters tuned by scripts/tune.py: K=40 per learner, tuning seeds [1000, 1001, 1002], score auc.",
+  "task": {
+    "name": "pendulum"
+  },
+  "run": {
+    "steps": 300000,
+    "decay_steps": 180000,
+    "eval_every_steps": 10000,
+    "eval_episodes": 10
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "learners": [
+    {
+      "label": "linear-angle",
+      "base": {
+        "kind": "linear",
+        "gamma": 0.95,
+        "tilings": 8,
+        "watkins": 1,
+        "lam": 0.9,
+        "obgd_kappa": 3.0,
+        "alpha": 1.0
+      },
+      "task": {
+        "obs_mode": "angle"
+      },
+      "sweep": {
+        "features": [
+          64,
+          256,
+          1024,
+          4096
+        ],
+        "tiles": [
+          2,
+          5,
+          10,
+          22
+        ]
+      },
+      "sweep_zip": true
+    },
+    {
+      "label": "linear-trig",
+      "base": {
+        "kind": "linear",
+        "gamma": 0.95,
+        "tilings": 8,
+        "watkins": 1,
+        "lam": 0.95,
+        "obgd_kappa": 6.0,
+        "alpha": 1.0
+      },
+      "task": {
+        "obs_mode": "trig"
+      },
+      "sweep": {
+        "features": [
+          64,
+          256,
+          1024,
+          4096
+        ],
+        "tiles": [
+          1,
+          2,
+          4,
+          7
+        ]
+      },
+      "sweep_zip": true
+    }
+  ]
+}
