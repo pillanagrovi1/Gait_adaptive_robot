@@ -1,0 +1,9 @@
+experiment,run_id,cfg_id,kind,fits,peak_bytes,agent_bytes,arena_bytes,stack_learner,stack_total,insns_learn_step,insns_greedy_step,flash_text,ram_data,ram_bss,host_match,peak_bytes_estimate,error
+pendulum_linear_wide_tuned,linear-angle_features64-tiles2,fc74ebdfec,linear,1,2200,372,1444,384,416,6788.3,1084.0,15696,0,1824,1,,
+pendulum_linear_wide_tuned,linear-angle_features256-tiles5,703d339af5,linear,1,4504,372,3748,384,416,10409.4,1084.0,15696,0,4128,1,,
+pendulum_linear_wide_tuned,linear-angle_features1024-tiles10,47a006093e,linear,1,13720,372,12964,384,416,12692.6,1084.0,15696,0,13344,1,,
+pendulum_linear_wide_tuned,linear-angle_features4096-tiles22,9029dfccc4,linear,1,50584,372,49828,384,416,11192.2,1084.0,15696,0,50208,1,,
+pendulum_linear_wide_tuned,linear-trig_features64-tiles1,d109b2791c,linear,1,2244,372,1488,384,416,6300.6,1239.0,15684,0,1872,1,,
+pendulum_linear_wide_tuned,linear-trig_features256-tiles2,d63130279c,linear,1,4548,372,3792,384,416,9798.9,1239.0,15684,0,4176,1,,
+pendulum_linear_wide_tuned,linear-trig_features1024-tiles4,c0de5a2f5b,linear,1,13764,372,13008,384,416,12092.5,1239.0,15684,0,13392,1,,
+pendulum_linear_wide_tuned,linear-trig_features4096-tiles7,944e74bc8e,linear,1,50628,372,49872,384,416,12543.3,1239.0,15684,0,50256,1,,

@@ -828,3 +828,35 @@ Paired by seed, Student-t 95%:
 3. Every learner did better after the shift than a fresh learner (forward transfer, all intervals above 0). The
    table and linear learner forgot measurably (return right after the switch back below the pre-shift level); the
    networks' forgetting intervals include 0.
+
+## Exploratory: a wider λ/κ grid for tile coding on the pendulum (23 Nov 2026)
+
+Designed after the v2 results (D78), so exploratory. v2's two linear arms, tuned again (K = 40, same tuning seeds
+and evaluation states) with λ {0.8, 0.9, 0.95, 0.98} and κ {0, 3, 4, 6}. Chosen: angle λ 0.9, κ 3 (the same as v2);
+trig λ 0.95, κ 6 (κ again the largest offered).
+
+**pendulum_linear_wide_tuned** · commit `54c2f3b` · config `configs/pendulum_linear_wide_tuned.json` · command `JOBS=8 bash scripts/run_experiment.sh pendulum_linear_wide` · seeds per config: 10–10 · intervals: t 95%
+
+| config | final eval return | mean eval (AUC) | online return | peak SRAM (B) | instr./step (M4) | update underflow | flash, bench firmware with all three learners (B) | update saturation | hash load, tilings × (tiles+1)^d / features |
+|---|---|---|---|---|---|---|---|---|---|
+| linear-angle_features64-tiles2 | -716 ± 76 | -893 ± 34 | -801 ± 32 | 2200 | 6788 | 3.7% | 15696 | 0% | 1.12 |
+| linear-angle_features256-tiles5 | -406 ± 67 | -477 ± 26 | -468 ± 16 | 4504 | 10409 | 4.2% | 15696 | 0% | 1.12 |
+| linear-angle_features1024-tiles10 | -120 ± 8 | -182 ± 12 | -195 ± 5 | 13720 | 12693 | 10.2% | 15696 | 0% | 0.95 |
+| linear-angle_features4096-tiles22 | -123 ± 3 | -301 ± 9 | -251 ± 6 | 50584 | 11192 | 6.1% | 15696 | 0% | 1.03 |
+| linear-trig_features64-tiles1 | -653 ± 95 | -950 ± 33 | -764 ± 33 | 2244 | 6301 | 2.1% | 15684 | 0% | 1.00 |
+| linear-trig_features256-tiles2 | -357 ± 119 | -567 ± 43 | -473 ± 18 | 4548 | 9799 | 4.6% | 15684 | 0% | 0.84 |
+| linear-trig_features1024-tiles4 | -157 ± 28 | -280 ± 16 | -249 ± 7 | 13764 | 12092 | 7.7% | 15684 | 0% | 0.98 |
+| linear-trig_features4096-tiles7 | -117 ± 3 | -239 ± 17 | -180 ± 3 | 50628 | 12543 | 19.1% | 15684 | 0% | 1.00 |
+
+| A − B | metric | status | pairs | mean | 95% CI | verdict |
+|---|---|---|---|---|---|---|
+| linear 1,024 (angle): wide grid − v2 grid | final | exploratory (D78) | 10 | +0.00 | [+0.00, +0.00] | inconclusive |
+| linear 1,024 (angle): wide grid − v2 grid | auc | exploratory (D78) | 10 | +0.00 | [+0.00, +0.00] | inconclusive |
+| 16 KB: wide-grid linear 1,024 (angle) − v2 streaming net 32 (trig) | final | exploratory (D78) | 10 | +31.2 | [+2.7, +59.7] | A higher |
+| 16 KB: wide-grid linear 1,024 (angle) − v2 streaming net 32 (trig) | auc | exploratory (D78) | 10 | +221.7 | [+178.1, +265.2] | A higher |
+
+**Findings.**
+1. On the angle encoding the wider grid chose v2's values, so its runs equal v2's (difference exactly 0). The 16 KB
+   matched result, linear 1,024 over the streaming net, is unchanged.
+2. On trig, tuning chose the largest κ again, so trig linear may still be limited by the grid. The matched
+   comparisons picked the angle encoding for linear at 16 and 64 KB, so this does not change them.

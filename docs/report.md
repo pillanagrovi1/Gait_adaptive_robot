@@ -267,6 +267,9 @@ to learn; with 16 KB, tile coding was better. On the pendulum the streaming netw
 ObGD (λ 0, κ 0) on both encodings, so its pendulum results are those of a one-step network with LayerNorm and
 stochastic rounding. With 12 uncorrected intervals per task, about 0.6 per task could exclude 0 by chance.
 
+*Exploratory (D78):* re-tuning tile coding with a wider grid (λ up to 0.98, κ up to 6) chose the same values on the
+angle encoding, so the 16 KB result is unchanged; on trig it again chose the largest κ offered.
+
 ## 5. Limitations
 
 - **No hardware.** No timing, cycles, energy or power. The Nucleo build never ran.
