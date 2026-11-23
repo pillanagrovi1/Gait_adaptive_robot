@@ -512,3 +512,45 @@ their commits.
 *Cost estimate* from v1 wall times (pendulum ~21 s, cart-pole ~11 s per run on this laptop, 2 jobs): tuning about
 3.5 h + 1 h, selection about 0.5 h, reporting runs about 1.5 h, M4 measurement extra. Under the 12-hour rule, one
 heavy run at a time, in a separate worktree. **Status: proposed, not approved, nothing run.**
+## Proposed 23 Nov 2026: pre-registration of Go1 v4, headroom first (not run; needs Rahul's approval)
+
+**D71 — Go1 v4: first show that there is something to learn.** Written after every v3 result had been seen. Why: in
+v3 no learner beat B3, and random nudges scored like the learners (D65). A review from claude.ai reported its own
+check (a check by the reviewer, not a result of this project, not reproduced here): at roughness 0.10 a fixed setting
+chosen on the 5 evaluation terrains beat B3 there but not on 20 other terrains, and at 0.12 no setting walked. If no
+reachable fixed setting beats B3 on terrain it was not chosen on, a learner that only moves these parameters cannot
+either, so v3's null result may say nothing about the learners.
+
+*Stage A, headroom* (`scripts/go1_headroom.py`, no learning). The learner's action space reaches 180 fixed settings
+(clearance 0.8-1.8 step 0.2 × posture gain 0-1 step 0.2 × height −0.1-0.1 step 0.05); B3 is the default setting
+(1.0, 0, 0) with the stumble reflex. Task as `go1_gait_v3`, no shift, action 0 = hold the setting all episode. At
+each roughness in {0.06, 0.08, 0.10}:
+1. *select*: every setting and B3 on terrains 30000-30019; take the setting with the highest mean return;
+2. *confirm*: that one setting and B3 on terrains 40000-40029, paired by terrain, Student-t 95%.
+Headroom exists at a roughness only if the confirmation interval lies above 0. Rule: v4 runs at the **highest**
+roughness with headroom. If there is none, v4 stops there and the null is reported: no learner is run. About 2 h on
+this laptop (0.65 s per episode, 2 jobs). The confirmed gap, best − B3, is reported as the most a parameter-nudging
+learner could gain.
+
+*Stage B, learners* (only if stage A finds headroom; config `go1_gait_v4` written then, from v3 with these changes):
+roughness = the stage A level, no shift; learners table (2 bins), linear 1,024 and 4,096, streaming net 16 and 32,
+**all with the same update rule**: λ 0.8, ObGD κ 2, α 1, Watkins cut (`watkins: 1`, D68, D69), γ 0.9. Untuned:
+tuning at 390 s per Go1 run would cost about 80 h, which is over the 12-hour rule. Baselines: B3, B4, random nudges,
+and *B-best* = the stage A setting, held fixed. 10 seeds. Learning curves keep 5 evaluation terrains (10000-10004).
+After training each seed is scored once on **30 held-out terrains** (`heldout_episodes` 30, `heldout_base_seed`
+20000: terrains 20000-20029), metric `heldout`.
+
+*Comparisons* (paired by seed, Student-t 95%, metric `heldout`): primary, each learner − B3 (5 intervals; the bar:
+a learner beats B3 if its interval lies above 0); secondary, each learner − random and each learner − B-best. With
+5 uncorrected primary intervals, about 0.25 would exclude 0 by chance if no difference existed.
+
+*Code added with this proposal* (opt-in, defaults unchanged): `init_params` in the Go1 environment (start every
+episode from a given setting), `heldout_episodes` / `heldout_base_seed` in the harness with metric `heldout` in
+`analysis.py`, `scripts/go1_headroom.py`; tests in `python/tests/test_go1_headroom.py`. Check: the script's B3 score
+on terrains 10000-10004 is 19.2025, the archived v3 B3 evaluation. **Status: proposed, not approved, nothing run.**
+
+## Approved 23 Nov 2026
+
+**D72 — Rahul approved D70 and D71 as written.** Order: Go1 v4 stage A first, then the D70 runs, one heavy run at a
+time. D70's still-to-build parts (selection run, comparison 2, load column) are added before any D70 run, without
+changing its design. **Status: approved; D71 stage A running.**

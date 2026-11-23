@@ -170,6 +170,9 @@ def _per_seed_metrics(xs, M, shift, threshold, df, back=None, metas=None):
             tail = tr["train_return"].to_numpy()
             if len(tail):
                 m["online"] = float(np.mean(tail[-max(1, len(tail) // 5):]))
+        v = (metas or {}).get(seed, {}).get("eval_heldout")
+        if v is not None:
+            m["heldout"] = v                # final greedy return on the held-out states (D71)
         if shift is not None and back is not None:
             m["a2_auc"] = float(np.nanmean(row[xs > back]))
             v = (metas or {}).get(seed, {}).get("eval_after_shift_back")
