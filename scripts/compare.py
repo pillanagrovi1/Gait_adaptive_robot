@@ -35,6 +35,7 @@ class C(NamedTuple):
 
 POST_HOC = "not pre-registered"
 ADAPT = ("table", "linear", "net", "net-stream", "net-stream-cbp")
+ADAPT2 = ADAPT + ("net-sgd",)
 GO1_V4 = ("table", "linear_features1024", "linear_features4096", "net-stream_hidden16", "net-stream_hidden32")
 GO1 = ("table", "linear_features1024", "linear_features4096", "net-stream_hidden16", "net-stream_hidden32")
 
@@ -66,6 +67,15 @@ COMPARISONS = {
         *[C(r, r, "back", metric_b="final", name=f"forgetting, {r} (right after switch back − P)") for r in ADAPT],
         *[C(r, r, "a2_auc", "pre-registered, secondary", metric_b="final",
             name=f"second A window, {r} (mean − P)") for r in ADAPT],
+    ],
+    "adaptation_pendulum_v2": [         # D77: v1's set, every learner with v2's tuned update rule
+        C("net-stream", "linear", "post_auc"),
+        C("net-stream-cbp", "net-stream", "post_auc"),
+        *[C(r, r, "post_auc", metric_b="auc", exp_b="adaptation_pendulum_scratch_v2",
+            name=f"forward transfer, {r} (after the shift − from scratch)") for r in ADAPT2],
+        *[C(r, r, "back", metric_b="final", name=f"forgetting, {r} (right after switch back − P)") for r in ADAPT2],
+        *[C(r, r, "a2_auc", "pre-registered, secondary", metric_b="final",
+            name=f"second A window, {r} (mean − P)") for r in ADAPT2],
     ],
     "stream_ablation": [
         C(a, b, m)

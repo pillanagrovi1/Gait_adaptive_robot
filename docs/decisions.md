@@ -591,3 +591,17 @@ cart-pole; the streaming network's v1 cart-pole AUC advantage did not reappear; 
 at the pendulum's 4 KB budget. The v1 tables stay, labelled v1. Not planned in D70 but needed to check the docs:
 summary CSVs for the two `_select` archives (`make_plots.py`). The tuned-values table marks a value as *edge* if it is
 the first or last grid choice, or an α within 25% of a log-uniform bound. **Status: reported.**
+
+## Proposed 23 Nov 2026: adaptation with the same choice of update rule (v2 results had been seen)
+
+**D77 — `adaptation_pendulum_v2`.** Why: the adaptation result (streaming net − linear after the heavier rod,
++86.8) is the last headline number from a design where only the network had traces (D69). Design: v1's task,
+schedule (shift at 300k, back at 450k, 600k steps), 20 seeds and from-scratch reference, unchanged; every learner's
+hyperparameters copied from `pendulum_main_v2_tuned` (as v1 copied `pendulum_main_tuned`, D51), at v1's sizes:
+table 11 bins and linear 1,024 features (tiles 10, load 0.95) on the angle encoding; replay, streaming and one-step
+networks with 32 hidden units on trig; `net-stream-cbp` = the streaming net plus continual backprop as in v1. Note
+that v2's tuning chose λ 0 and κ 0 for the streaming net on trig, so here it is a one-step network with LayerNorm
+and stochastic rounding; that is the tuned learner, and the comparison keeps it. Comparisons: v1's set, with
+`net-sgd` added to the per-learner rows (`scripts/compare.py`, `adaptation_pendulum_v2`): primary streaming net −
+linear and cbp − streaming net on post-shift AUC, forward transfer, forgetting; secondary, the second A window.
+Cost: about 1 h on this laptop with 8 jobs. **Status: proposed; runs after merge, per Rahul's "do it" of 23 Nov.**

@@ -1,0 +1,146 @@
+{
+ "name": "adaptation_pendulum_v2",
+ "_note": "PROPOSED (D77). As adaptation_pendulum, with every learner's hyperparameters from pendulum_main_v2_tuned (same choice of lambda, kappa, alpha for all, Watkins cut), at v1's sizes: table 11 bins, linear 1024 features (tiles 10, hash load 0.95), networks 32 hidden. net-sgd added. Encodings as v1 (table and linear angle, networks trig).",
+ "task": {
+  "name": "pendulum",
+  "obs_mode": "trig"
+ },
+ "run": {
+  "steps": 600000,
+  "decay_steps": 180000,
+  "eval_every_steps": 5000,
+  "eval_episodes": 10,
+  "shift_at_step": 300000,
+  "shift_level": 0.5,
+  "shift_back_at_step": 450000
+ },
+ "seeds": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  13,
+  14,
+  15,
+  16,
+  17,
+  18,
+  19
+ ],
+ "learners": [
+  {
+   "label": "table",
+   "base": {
+    "kind": "tabular",
+    "gamma": 0.95,
+    "watkins": 1,
+    "lam": 0.8,
+    "obgd_kappa": 0,
+    "alpha": 0.08072331297197934,
+    "bins": 11
+   },
+   "task": {
+    "obs_mode": "angle"
+   }
+  },
+  {
+   "label": "linear",
+   "base": {
+    "kind": "linear",
+    "gamma": 0.95,
+    "tilings": 8,
+    "watkins": 1,
+    "lam": 0.9,
+    "obgd_kappa": 3.0,
+    "alpha": 1.0,
+    "features": 1024,
+    "tiles": 10
+   },
+   "task": {
+    "obs_mode": "angle"
+   }
+  },
+  {
+   "label": "net",
+   "base": {
+    "kind": "mlp",
+    "gamma": 0.95,
+    "td_clip": 1.0,
+    "replay_cap": 2000,
+    "batch": 8,
+    "replay_compact": 1,
+    "alpha": 0.009055160611949215,
+    "target_period": 500,
+    "hidden": 32
+   },
+   "task": {
+    "obs_mode": "trig"
+   }
+  },
+  {
+   "label": "net-stream",
+   "base": {
+    "kind": "mlp",
+    "gamma": 0.95,
+    "norm": 1,
+    "round_mode": 1,
+    "watkins": 1,
+    "lam": 0,
+    "obgd_kappa": 0,
+    "alpha": 0.004008403763330861,
+    "hidden": 32
+   },
+   "task": {
+    "obs_mode": "trig"
+   }
+  },
+  {
+   "label": "net-stream-cbp",
+   "base": {
+    "kind": "mlp",
+    "gamma": 0.95,
+    "norm": 1,
+    "round_mode": 1,
+    "watkins": 1,
+    "lam": 0,
+    "obgd_kappa": 0,
+    "alpha": 0.004008403763330861,
+    "hidden": 32,
+    "cbp_period": 500,
+    "cbp_maturity": 5000
+   },
+   "task": {
+    "obs_mode": "trig"
+   }
+  },
+  {
+   "label": "net-sgd",
+   "base": {
+    "kind": "mlp",
+    "gamma": 0.95,
+    "td_clip": 1.0,
+    "alpha": 0.03560485406122951,
+    "hidden": 32
+   },
+   "task": {
+    "obs_mode": "trig"
+   }
+  },
+  {
+   "label": "zero-torque",
+   "base": {
+    "kind": "baseline_const",
+    "action": 1
+   }
+  }
+ ]
+}
