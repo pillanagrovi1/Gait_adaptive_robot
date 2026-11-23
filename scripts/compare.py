@@ -68,6 +68,13 @@ COMPARISONS = {
         *[C(r, r, "a2_auc", "pre-registered, secondary", metric_b="final",
             name=f"second A window, {r} (mean − P)") for r in ADAPT],
     ],
+    "pendulum_linear_wide_tuned": [     # D78, exploratory: a wider lambda/kappa grid for linear only
+        *[C("linear-angle_features1024-tiles10", "linear-angle_features1024-tiles10", m, "exploratory (D78)",
+            exp_b="pendulum_main_v2_tuned", name="linear 1,024 (angle): wide grid − v2 grid") for m in ("final", "auc")],
+        *[C("linear-angle_features1024-tiles10", "net-stream-trig_hidden32", m, "exploratory (D78)",
+            exp_b="pendulum_main_v2_tuned", name="16 KB: wide-grid linear 1,024 (angle) − v2 streaming net 32 (trig)")
+          for m in ("final", "auc")],
+    ],
     "adaptation_pendulum_v2": [         # D77: v1's set, every learner with v2's tuned update rule
         C("net-stream", "linear", "post_auc"),
         C("net-stream-cbp", "net-stream", "post_auc"),

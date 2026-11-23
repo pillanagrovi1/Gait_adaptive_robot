@@ -605,3 +605,10 @@ and stochastic rounding; that is the tuned learner, and the comparison keeps it.
 `net-sgd` added to the per-learner rows (`scripts/compare.py`, `adaptation_pendulum_v2`): primary streaming net −
 linear and cbp − streaming net on post-shift AUC, forward transfer, forgetting; secondary, the second A window.
 Cost: about 1 h on this laptop with 8 jobs. **Status: proposed; runs after merge, per Rahul's "do it" of 23 Nov.**
+
+**D78 — Exploratory: a wider λ/κ grid for tile coding on the pendulum.** Designed after the v2 results, so every
+result from it is exploratory. v2's linear tuning chose the largest λ (0.9) and κ (3) on both encodings, so the grid
+may have held linear back. `configs/pendulum_linear_wide.json`: v2's two linear arms only, tuned again (K = 40, same
+seeds and evaluation states) with λ {0.8, 0.9, 0.95, 0.98} and κ {0, 3, 4, 6}. Reported: the chosen values, linear
+1,024 (angle) wide − v2, and wide-grid linear 1,024 − v2's streaming net 32 (the 16 KB pair). Runs after D77.
+About 30 min. **Status: built; runs after the D77 run.**
