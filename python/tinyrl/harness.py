@@ -112,6 +112,8 @@ def run(task: dict, learner: dict, seed: int, run_cfg: dict | None = None,
       episode mode (default): `episodes`, `decay_episodes`, `eval_every` (episodes), `shift_at` (episode)
       step mode (if `steps` is set; recommended, see decision D02 and docs/research_review.md):
         `steps` env steps in total, `decay_steps`, `eval_every_steps`, `shift_at_step`.
+      Either mode: `heldout_episodes` + `heldout_base_seed` add one evaluation after training on other
+      start states (Go1: terrains), saved as meta `eval_heldout` (D71).
         Evaluation happens exactly at each checkpoint, mid-episode if necessary,
         on a separate environment, so every learner is evaluated after the same
         amount of experience. Evaluations are written to seed<k>_eval.csv.
@@ -199,6 +201,10 @@ def run(task: dict, learner: dict, seed: int, run_cfg: dict | None = None,
         rows.append({"episode": ep, "env_steps": t_global, "train_return": ret, "steps": steps,
                      "epsilon": round(eps, 4), "updates": updates, "eval_return": ev})
         ep += 1
+    heldout = None
+    if r.get("heldout_episodes"):
+        # once, after training: a larger set of evaluation states (Go1: terrains) than the curves use (D71)
+        heldout = evaluate(eval_env, agent, int(r["heldout_episodes"]), int(r["heldout_base_seed"]))
     under = agent.underflow() if hasattr(agent, "underflow") else (0, 0)
     saturated = agent.saturation() if hasattr(agent, "saturation") else None
     pil = None
@@ -220,6 +226,8 @@ def run(task: dict, learner: dict, seed: int, run_cfg: dict | None = None,
         "pil": pil, "eval_after_shift_back": after_back,
         "wall_s": round(time.time() - t0, 2), "git_commit": GIT_COMMIT,
     }
+    if heldout is not None:
+        meta["eval_heldout"] = heldout
     if out_dir is not None:
         out_dir.mkdir(parents=True, exist_ok=True)
         with open(out_dir / f"seed{seed}.csv", "w", newline="") as f:
