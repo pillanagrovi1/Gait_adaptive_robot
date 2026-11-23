@@ -1,0 +1,6 @@
+experiment,run_id,cfg_id,kind,fits,peak_bytes,agent_bytes,arena_bytes,stack_learner,stack_total,insns_learn_step,insns_greedy_step,flash_text,ram_data,ram_bss,host_match,peak_bytes_estimate,error
+go1_gait_v4,table,68a0b5657f,tabular,1,29924,372,29252,300,332,4030.9,602.1,15696,0,29632,1,,
+go1_gait_v4,linear_features1024,312466d471,linear,1,31360,372,30612,376,408,38169.8,4124.2,15696,0,30992,1,,
+go1_gait_v4,linear_features4096,0fa5ebc3a8,linear,1,117376,372,116628,376,408,39918.2,4124.2,15700,0,117008,1,,
+go1_gait_v4,net-stream_hidden16,94d654a830,mlp,1,3440,372,2620,448,480,41659.1,4497.3,15696,0,3000,1,,
+go1_gait_v4,net-stream_hidden32,246f5b9793,mlp,1,5936,372,5116,448,480,75660.9,7282.2,15696,0,5496,1,,

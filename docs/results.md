@@ -550,3 +550,53 @@ Pre-registered in D71. Outputs: `results/go1_headroom/` (per-setting returns and
    (no learner beat B3) does not say whether they could learn.
 3. By D71's rule, stage B runs at 0.08 (`configs/go1_gait_v4.json`, B-best = clearance 1.0, posture gain 0.4,
    height −0.05).
+
+## Go1 v4, stage B: learners at roughness 0.08, scored on 30 held-out terrains (23 Nov 2026)
+
+Pre-registered in D71 (approved D72; roughness from stage A, D74). Every learner has the same update rule (λ 0.8,
+ObGD κ 2, α 1, Watkins cut, γ 0.9), untuned. Learning curves: 5 evaluation terrains (10000-10004). After training,
+each seed is scored once on terrains 20000-20029 (`held-out return`, the registered metric).
+
+**go1_gait_v4** · commit `88b4153` · config `configs/go1_gait_v4.json` · command `JOBS=6 bash scripts/run_experiment.sh go1_gait_v4` · seeds per config: 10–10 · intervals: t 95%
+
+| config | final eval return | mean eval (AUC) | online return | peak SRAM (B) | instr./step (M4) | update underflow | flash, bench firmware with all three learners (B) | update saturation | held-out return (after training) |
+|---|---|---|---|---|---|---|---|---|---|
+| table | 32.4 ± 1.5 | 32.0 ± 1.0 | 32.9 ± 0.7 | 29924 | 4031 | 8.9% | 15696 | 0% | 33.3 ± 1.6 |
+| linear_features1024 | 33.6 ± 1.8 | 33.0 ± 0.7 | 34.0 ± 0.3 | 31360 | 38170 | 3.1% | 15696 | 0% | 34.3 ± 0.8 |
+| linear_features4096 | 34.9 ± 1.5 | 32.9 ± 1.4 | 34.3 ± 0.7 | 117376 | 39918 | 2.4% | 15700 | 0% | 35.0 ± 0.9 |
+| net-stream_hidden16 | 32.0 ± 2.2 | 31.7 ± 1.2 | 32.4 ± 0.7 | 3440 | 41659 | 32.8% | 15696 | 0% | 33.6 ± 1.8 |
+| net-stream_hidden32 | 31.9 ± 2.4 | 31.2 ± 0.7 | 32.4 ± 0.9 | 5936 | 75661 | 40.5% | 15696 | 0% | 33.9 ± 1.5 |
+| B3-stumble | 34.3 ± 0.0 | 34.3 ± 0.0 | 33.8 ± 0.3 | — | — | — | — | — | 34.4 ± 0.0 |
+| B4-all-reflexes | 17.3 ± 0.0 | 17.3 ± 0.0 | 16.4 ± 0.5 | — | — | — | — | — | 17.2 ± 0.0 |
+| random | 30.2 ± 2.4 | 30.0 ± 0.8 | 29.9 ± 0.9 | — | — | — | — | — | 29.7 ± 1.0 |
+| B-best | 38.0 ± 0.0 | 38.0 ± 0.0 | 37.6 ± 0.3 | — | — | — | — | — | 38.3 ± 0.0 |
+
+![Go1 v4 learning curves](../results/figures/go1_gait_v4_curves.png)
+
+Paired by seed, metric `heldout`; 5 primary intervals, uncorrected:
+
+| A − B | metric | status | pairs | mean | 95% CI | verdict |
+|---|---|---|---|---|---|---|
+| table − B3-stumble | heldout | pre-registered | 10 | -1.10 | [-2.73, +0.52] | inconclusive |
+| linear_features1024 − B3-stumble | heldout | pre-registered | 10 | -0.13 | [-0.96, +0.70] | inconclusive |
+| linear_features4096 − B3-stumble | heldout | pre-registered | 10 | +0.56 | [-0.35, +1.48] | inconclusive |
+| net-stream_hidden16 − B3-stumble | heldout | pre-registered | 10 | -0.78 | [-2.62, +1.05] | inconclusive |
+| net-stream_hidden32 − B3-stumble | heldout | pre-registered | 10 | -0.54 | [-1.99, +0.92] | inconclusive |
+| table − random | heldout | pre-registered, secondary | 10 | +3.57 | [+1.70, +5.44] | A higher |
+| table − B-best | heldout | pre-registered, secondary | 10 | -4.98 | [-6.60, -3.36] | A lower |
+| linear_features1024 − random | heldout | pre-registered, secondary | 10 | +4.54 | [+3.11, +5.97] | A higher |
+| linear_features1024 − B-best | heldout | pre-registered, secondary | 10 | -4.00 | [-4.83, -3.18] | A lower |
+| linear_features4096 − random | heldout | pre-registered, secondary | 10 | +5.24 | [+4.11, +6.36] | A higher |
+| linear_features4096 − B-best | heldout | pre-registered, secondary | 10 | -3.31 | [-4.23, -2.39] | A lower |
+| net-stream_hidden16 − random | heldout | pre-registered, secondary | 10 | +3.89 | [+1.37, +6.40] | A higher |
+| net-stream_hidden16 − B-best | heldout | pre-registered, secondary | 10 | -4.66 | [-6.49, -2.83] | A lower |
+| net-stream_hidden32 − random | heldout | pre-registered, secondary | 10 | +4.13 | [+2.95, +5.32] | A higher |
+| net-stream_hidden32 − B-best | heldout | pre-registered, secondary | 10 | -4.41 | [-5.87, -2.96] | A lower |
+
+**Findings.**
+1. **The registered bar is not met.** No learner beat B3 on held-out terrain; all five intervals include 0. Unlike
+   v3, this time a better fixed setting was within reach: B-best, held fixed, scored 38.3 against B3's 34.4.
+2. Every learner beat random nudges (secondary, all five intervals above 0) and stayed below B-best (secondary, all
+   five below 0). So the learners did better than chance, but none moved the gait to the better setting in 20,000 steps.
+3. The learners were not tuned (D71), so this does not show that they cannot find the setting with other step sizes,
+   longer training or more exploration.

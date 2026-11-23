@@ -29,8 +29,9 @@ final return inconclusive) and returned more after the pendulum's rod got heavie
 linear's instructions per step, but it alone had traces and ObGD, so these gains cannot be credited to the network
 itself.
 Five replay updates per step did not measurably speed up the table, stochastic rounding made no detectable
-difference, and on the simulated Go1 no learner beat a fixed stumble-reflex gait or differed detectably from random
-nudges of its parameters.
+difference, and on the simulated Go1 no learner beat a fixed stumble-reflex gait, even at a roughness where a better
+fixed setting was shown to exist (+4.36 [+2.59, +6.13] over it on new terrain); the learners there did beat random
+nudges of the same parameters.
 
 *Caveats:* simulation and QEMU only (memory and instruction counts, no timing, no hardware); 10 seeds, 20 for
 adaptation; update rule confounded with representation (D69); traces without the Watkins cut (D68); the equal-memory
@@ -48,7 +49,7 @@ A difference counts only if its paired 95% interval excludes 0. "Learned faster"
 | Replay ratio | 5 replay updates per step did not measurably speed up the table, at 2.7x the instructions | 10 seeds, pre-registered gate |
 | Stochastic rounding | no detectable difference. Final: table +12.3 [−36.0, +60.5], linear −1.38 [−10.00, +7.25], network −32.6 [−115.1, +49.8]. AUC: table −15.1 [−45.1, +15.0], linear +2.23 [−8.71, +13.16], network +16.0 [−33.2, +65.2] | 10 seeds, pre-registered |
 | Traces (λ 0.8) | helped table (AUC +284.9 [+251.4, +318.5]) and linear (+152.1 [+132.6, +171.5]), hurt the network (−154.5 [−218.5, −90.6]); one-step network beat the full streaming recipe on final return (+149.0 [+70.7, +227.4]) | 10 seeds, untuned, exploratory (D69) |
-| Go1 (simulation) | the bar was not met: no learner beat the stumble-reflex gait, and none differed detectably from random nudges | 10 seeds, pre-registered bar; random comparison exploratory |
+| Go1 (simulation) | the bar was not met: no learner beat the stumble-reflex gait, in v3 or in v4, where a better fixed setting was shown to exist; in v4 all beat random nudges | 10 seeds, pre-registered bar; v4 on 30 held-out terrains |
 | On-chip learning | learning on the emulated M4 reproduces host learning bit for bit (4 learner types) | deterministic test, QEMU only |
 
 Single-seed observations from the build are in [`docs/build_notes.md`](docs/build_notes.md) and are not results.
