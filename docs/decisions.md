@@ -573,3 +573,12 @@ posture gain 0.4, height −0.05, the stage A setting at 0.08); 10 seeds; 30 hel
 v3's linear-bandit and B0 arms are dropped, as D71 lists neither. The comparisons are registered in
 `scripts/compare.py` (`go1_gait_v4`): 5 primary (learner − B3, `heldout`), 10 secondary (learner − random,
 learner − B-best). Cost: 90 runs, about 390 s each for the learners; about 2-3 h with 6 jobs. **Status: about to run.**
+
+## Added 23 Nov 2026, after Go1 v4 stage B (its results had been seen)
+
+**D75 — Go1 v4 result: the bar is not met, now with headroom shown.** `go1_gait_v4` ran as registered (commit
+`88b4153`, 90 runs; results.md, "Go1 v4, stage B"). No learner beat B3 on the 30 held-out terrains (5 inconclusive
+intervals). Secondary: every learner beat random nudges and stayed below B-best. The M4 step of
+`run_experiment.sh` failed in the worktree only because the QEMU plugin was not yet built there; it was built and
+`measure_m4.py` and `make_plots.py` were run on the same results, nothing re-run. `results_table.py` gains a held-out
+column, shown only for experiments that have the metric. **Status: reported.**

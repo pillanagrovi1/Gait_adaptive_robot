@@ -12,8 +12,9 @@ final return inconclusive) and returned more after the pendulum's rod got heavie
 linear's instructions per step, but it alone had traces and ObGD, so these gains cannot be credited to the network
 itself.
 Five replay updates per step did not measurably speed up the table, stochastic rounding made no detectable
-difference, and on the simulated Go1 no learner beat a fixed stumble-reflex gait or differed detectably from random
-nudges of its parameters.
+difference, and on the simulated Go1 no learner beat a fixed stumble-reflex gait, even at a roughness where a better
+fixed setting was shown to exist (+4.36 [+2.59, +6.13] over it on new terrain); the learners there did beat random
+nudges of the same parameters.
 
 *Caveats:* simulation and QEMU only (memory and instruction counts, no timing, no hardware); 10 seeds, 20 for
 adaptation; update rule confounded with representation (D69); traces without the Watkins cut (D68); the equal-memory
@@ -208,6 +209,22 @@ to beat both that reflex gait (B3) and the all-reflex gait (B4).
 **The bar is not met.** No learner beat B3. Beating B4 is no evidence of learning, because random nudges score like
 the learners. Evaluation used the same 5 terrains for every seed, so this holds for those terrains only.
 
+**v4, with headroom shown first (D71, D74, D75).** v3's roughness 0.10 turned out to offer nothing to find: the
+best fixed setting the learner can reach was inconclusive against B3 on new terrain (+0.37 [−3.83, +4.57]). At 0.08
+it was not (+4.36 [+2.59, +6.13]), so v4 ran there, every learner with the same update rule, scored on 30 held-out
+terrains:
+
+| learner | − B3 (registered bar) | − random nudges | − B-best (the better fixed setting) |
+|---|---|---|---|
+| table | −1.10 [−2.73, +0.52] | +3.57 [+1.70, +5.44], higher | −4.98 [−6.60, −3.36], lower |
+| linear 1,024 | −0.13 [−0.96, +0.70] | +4.54 [+3.11, +5.97], higher | −4.00 [−4.83, −3.18], lower |
+| linear 4,096 | +0.56 [−0.35, +1.48] | +5.24 [+4.11, +6.36], higher | −3.31 [−4.23, −2.39], lower |
+| streaming net 16 | −0.78 [−2.62, +1.05] | +3.89 [+1.37, +6.40], higher | −4.66 [−6.49, −2.83], lower |
+| streaming net 32 | −0.54 [−1.99, +0.92] | +4.13 [+2.95, +5.32], higher | −4.41 [−5.87, −2.96], lower |
+
+**The bar is again not met**, though this time there was something to find. The learners beat chance but did not
+reach the better setting in 20,000 untuned steps.
+
 ## 5. Limitations
 
 - **No hardware.** No timing, cycles, energy or power. The Nucleo build never ran.
@@ -226,7 +243,7 @@ the learners. Evaluation used the same 5 terrains for every seed, so this holds 
 - **Small scope.** Two control tasks for the core question, one shift size, one replay table and buffer size.
 - **Statistical power.** With 10 seeds many intervals are tens of return units wide. Inconclusive does not mean
   equal. No correction for multiple comparisons was made.
-- **Go1.** Untuned, one roughness, 5 evaluation terrains, simulation only.
+- **Go1.** Untuned, simulation only. v3: one roughness, 5 evaluation terrains. v4: one roughness (0.08), 30 held-out terrains.
 - **Ceiling.** Cart-pole's 500-step limit compresses the differences between good learners.
 - **Measurement detail.** The instruction counts come from a 200-step window of a synthetic workload. The flash figures are for
   a firmware that contains all three learners.
@@ -271,8 +288,8 @@ that gives every learner the same choice of λ and κ is proposed, not run.
 - Stochastic rounding made no detectable difference: table +12.3 [−36.0, +60.5], linear −1.38 [−10.00, +7.25], network −32.6 [−115.1, +49.8] on final return; table
   −15.1 [−45.1, +15.0], linear +2.23 [−8.71, +13.16], network +16.0 [−33.2, +65.2] on AUC.
 
-- As a gait tuner on the simulated Go1 no learner beat a fixed stumble reflex, so learning was not shown to be worth
-  its memory there.
+- As a gait tuner on the simulated Go1 no learner beat a fixed stumble reflex, even where a better fixed setting
+  existed (v4), so learning was not shown to be worth its memory there.
 
 Whether the instruction counts fit a real control period is a question for the board, which this project has not
 answered.
