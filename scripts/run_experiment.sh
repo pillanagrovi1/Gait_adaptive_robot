@@ -11,6 +11,9 @@ JOBS="${JOBS:-$(($(nproc) > 1 ? $(nproc) - 0 : 1))}"
 if python3 -c "import json,sys; sys.exit(0 if 'tune' in json.load(open('configs/$E.json')) else 1)"; then
   python3 scripts/tune.py "$E" --jobs "$JOBS"
   E="${E}_tuned"
+  if [ -f "configs/${E}_select.json" ]; then        # D70/D73: selection runs on the tuning seeds
+    python3 scripts/run_sweep.py "${E}_select" --jobs "$JOBS"
+  fi
 fi
 python3 scripts/run_sweep.py "$E" --jobs "$JOBS" "$@"
 python3 scripts/measure_m4.py "$E"
