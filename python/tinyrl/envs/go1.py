@@ -112,7 +112,7 @@ class Go1Gait(Env):
                  friction_range: tuple | None = None, rate_penalty: float = 0.0,
                  switch_penalty: float = 0.0, fall_penalty: float = 5.0,
                  action_mode: str = "oneshot", tegotae_sigma: float = 0.0,
-                 posture_gain: float = 0.0, stumble: bool = False):
+                 posture_gain: float = 0.0, stumble: bool = False, init_params: dict | None = None):
         if phase_lock:
             decision_dt = 1.0 / (2.0 * freq)
         if action_mode not in ACTION_MODES:
@@ -129,6 +129,13 @@ class Go1Gait(Env):
         self.a_thigh, self.a_calf, self.ext = a_thigh, a_calf, ext
         self.thigh_sign = thigh_sign
         self.tegotae_sigma, self.posture_gain0, self.stumble = tegotae_sigma, posture_gain, stumble
+        # incremental mode: start every episode from these parameter values instead of the defaults
+        # (a fixed setting when the action is always 0, used by scripts/go1_headroom.py, D71)
+        self.init_params = dict(init_params or {})
+        for name, value in self.init_params.items():
+            lo, hi = next((lo, hi) for n, lo, hi, _, _ in INC_PARAMS if n == name)
+            if not lo - 1e-9 <= value <= hi + 1e-9:
+                raise ValueError(f"init_params {name}={value} outside [{lo}, {hi}]")
         self.ctrl_dt = 0.02                                   # CPG update rate 50 Hz
         if phase_lock:
             # the half cycle must be a whole number of CPG ticks, or the decision phase
@@ -173,6 +180,7 @@ class Go1Gait(Env):
 
     def _reset_params(self):
         self.params = {name: init for name, _, _, _, init in INC_PARAMS}
+        self.params.update(getattr(self, "init_params", {}))
         if self.action_mode != "incremental":
             self.params["posture_gain"] = self.posture_gain0
         else:
