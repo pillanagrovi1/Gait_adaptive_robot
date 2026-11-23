@@ -582,3 +582,12 @@ intervals). Secondary: every learner beat random nudges and stayed below B-best.
 `run_experiment.sh` failed in the worktree only because the QEMU plugin was not yet built there; it was built and
 `measure_m4.py` and `make_plots.py` were run on the same results, nothing re-run. `results_table.py` gains a held-out
 column, shown only for experiments that have the metric. **Status: reported.**
+
+## Added 23 Nov 2026, after the v2 runs (their results had been seen)
+
+**D76 — v2 result and how the write-up changes.** `pendulum_main_v2` and `cartpole_main_v2` ran as registered
+(commit `21b3edb`; results.md, "v2"). The report's Summary now leads with v2: tile coding beat the table on
+cart-pole; the streaming network's v1 cart-pole AUC advantage did not reappear; at matched SRAM the network won only
+at the pendulum's 4 KB budget. The v1 tables stay, labelled v1. Not planned in D70 but needed to check the docs:
+summary CSVs for the two `_select` archives (`make_plots.py`). The tuned-values table marks a value as *edge* if it is
+the first or last grid choice, or an α within 25% of a log-uniform bound. **Status: reported.**

@@ -71,3 +71,10 @@ The Nucleo build (`make -C m4/pil nucleo`) has **not been run on hardware yet**.
 |---|---|
 | Known, not changed | the streaming path has no Watkins cut (D68); only the streaming net had traces and ObGD in the main comparisons (D69). Code unchanged so the archives replay |
 | Documents | report Summary rewritten as three sentences and a caveat line; equal-memory counts moved to report §4.1; the kernel trade-off map (D46, single measurements, never reported) is no longer listed as a README feature |
+
+## 23 Nov 2026 — pre-registered reruns: Go1 v4 and v2 (D70-D76)
+
+Go1 v4: a headroom check first (a better fixed setting exists at roughness 0.06 and 0.08, not 0.10), then the learners
+at 0.08 with one update rule, scored on 30 held-out terrains: no learner beat B3. v2: the pendulum and cart-pole
+comparisons with the same choice of λ, κ and α for every learner, the Watkins cut, and a matched-SRAM comparison.
+The report's Summary now leads with v2.

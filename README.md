@@ -8,7 +8,7 @@ compared on learning performance, adaptation speed and compute cost against peak
 **Research question.** How do different reinforcement-learning representations trade learning performance,
 adaptation speed and compute cost against peak working memory when learning online on a Cortex-M4-class platform?
 
-> **Status (22 Nov 2026):** the core experiments (Stages 2-5) are run and written up: read
+> **Status (23 Nov 2026):** the core experiments (Stages 2-5) and their like-for-like rerun (v2, D70) are run and written up: read
 > [`docs/report.md`](docs/report.md), with every number in [`docs/results.md`](docs/results.md). Stage 4 stopped at
 > its pre-registered gate with a null result. Stage 7 (Go1, simulation) missed its
 > pre-registered bar: no learner beat the stumble-reflex gait. No real-hardware timing: the Nucleo build
@@ -22,29 +22,34 @@ adaptation speed and compute cost against peak working memory when learning onli
 
 ## Results so far
 
-On cart-pole, linear tile coding beat the table on final return (+141.3 [+96.9, +185.7]) with less than a third of
-its SRAM (9.4 KB against 33.5 KB), at 4.3x the table's instructions per step.
-The streaming tiny network (about 3 KB) learned cart-pole faster than 9.4 KB of tile coding (AUC +63.6 [+26.0, +101.1],
-final return inconclusive) and returned more after the pendulum's rod got heavier (+86.8 [+66.9, +106.8]), at 12-20x
-linear's instructions per step, but it alone had traces and ObGD, so these gains cannot be credited to the network
-itself.
-Five replay updates per step did not measurably speed up the table, stochastic rounding made no detectable
-difference, and on the simulated Go1 no learner beat a fixed stumble-reflex gait, even at a roughness where a better
-fixed setting was shown to exist (+4.36 [+2.59, +6.13] over it on new terrain); the learners there did beat random
-nudges of the same parameters.
+When every learner could choose the same update rule (v2, D70), tile coding beat the table on cart-pole (AUC +110.0
+[+88.1, +132.0], final +98.0 [+32.2, +163.8]), and the streaming tiny network's earlier cart-pole advantage over tile
+coding did not reappear (AUC −17.1 [−37.5, +3.3], inconclusive; v1's +63.6 [+26.0, +101.1] came with traces for the
+network only, D69).
+At matched peak SRAM the answer depended on the budget: on the pendulum the best network beat the best tile coding by
+far at 4 KB (AUC +489.6 [+443.3, +536.0]), where only 64 hashed features fit, but tile coding was better at 16 KB
+(AUC −221.7 [−265.2, −178.1]), and on cart-pole the network was better at no budget (lower at 64 KB, AUC −61.9
+[−82.4, −41.3]).
+After the pendulum's rod got heavier the streaming network returned more than tile coding (+86.8 [+66.9, +106.8],
+v1 design, update rule confounded), five replay updates per step did not measurably speed up the table, stochastic
+rounding made no detectable difference, and on the simulated Go1 no learner beat a fixed stumble-reflex gait, even at
+a roughness where a better fixed setting was shown to exist (+4.36 [+2.59, +6.13] over it on new terrain).
 
 *Caveats:* simulation and QEMU only (memory and instruction counts, no timing, no hardware); 10 seeds, 20 for
-adaptation; update rule confounded with representation (D69); traces without the Watkins cut (D68); the equal-memory
-comparisons are exploratory ([report §4.1](docs/report.md#41-pendulum-return-against-sram)).
+adaptation; 12 uncorrected matched-SRAM intervals per task; adaptation, replay and the ablation keep v1's update rules
+(D69) and traces without the Watkins cut (D68).
 
 A difference counts only if its paired 95% interval excludes 0. "Learned faster" = higher AUC.
 
 | What | Finding | Strength |
 |---|---|---|
 | Stage 1 gate | C learner reproduces the Python Q16.16 reference bit for bit | deterministic test |
-| Pendulum | replay network (27.2 KB) learned faster than linear tile coding (50.1 KB) at 74.7x the instructions; final return inconclusive | 10 seeds, not pre-registered |
-| Cart-pole | linear tile coding beat the table, at 4.3x the instructions | 10 seeds, pre-registered |
-| Cart-pole | streaming network (3.0 KB) learned faster than linear tile coding (9.4 KB) at 12.2x the instructions; final return inconclusive | 10 seeds, pre-registered; update rule differs (D69) |
+| Pendulum (v1) | replay network (27.2 KB) learned faster than linear tile coding (50.1 KB) at 74.7x the instructions; final return inconclusive | 10 seeds, not pre-registered |
+| Cart-pole (v1) | linear tile coding beat the table, at 4.3x the instructions | 10 seeds, pre-registered |
+| Cart-pole (v1) | streaming network (3.0 KB) learned faster than linear tile coding (9.4 KB) at 12.2x the instructions; final return inconclusive | 10 seeds, pre-registered; update rule differs (D69) |
+| Cart-pole (v2) | linear tile coding beat the table (AUC +110.0 [+88.1, +132.0]) | 10 seeds, pre-registered; same choice of update rule (D70) |
+| Cart-pole (v2) | streaming network (3.0 KB) and linear tile coding (10.4 KB): no detectable difference (AUC −17.1 [−37.5, +3.3]) | 10 seeds, pre-registered (D70) |
+| Pendulum (v2), matched SRAM | best network beat best linear at 4 KB (AUC +489.6 [+443.3, +536.0]); linear better at 16 KB (AUC −221.7 [−265.2, −178.1]) | 10 seeds, pre-registered (D70); 12 uncorrected intervals |
 | Adaptation | after a 50% heavier rod the streaming network returned more than linear tile coding, at 20.0x the instructions (different SRAM: 3.0 vs 13.2 KB, so no per-byte claim) | 20 seeds, pre-registered; update rule differs (D69) |
 | Replay ratio | 5 replay updates per step did not measurably speed up the table, at 2.7x the instructions | 10 seeds, pre-registered gate |
 | Stochastic rounding | no detectable difference. Final: table +12.3 [−36.0, +60.5], linear −1.38 [−10.00, +7.25], network −32.6 [−115.1, +49.8]. AUC: table −15.1 [−45.1, +15.0], linear +2.23 [−8.71, +13.16], network +16.0 [−33.2, +65.2] | 10 seeds, pre-registered |
