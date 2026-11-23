@@ -600,3 +600,162 @@ Paired by seed, metric `heldout`; 5 primary intervals, uncorrected:
    five below 0). So the learners did better than chance, but none moved the gait to the better setting in 20,000 steps.
 3. The learners were not tuned (D71), so this does not show that they cannot find the setting with other step sizes,
    longer training or more exploration.
+
+## v2: the main comparisons with the same choice of update rule for every learner (23 Nov 2026)
+
+Pre-registered in D70 (approved D72, tools D73). Table, linear and streaming network each tuned λ {0, 0.6, 0.8, 0.9}
+and κ {0 = ObGD off, 1.5, 2, 3}, α where ObGD is off, with the Watkins cut; replay network and one-step network
+(`net-sgd`) as listed in D70. K = 40 for every learner, at the full budget, on tuning seeds 1000-1002 and their own
+evaluation states (from 50000). Reporting: seeds 0-9, evaluation states from 10000.
+
+**pendulum_main_v2_tuned** · commit `21b3edb` · config `configs/pendulum_main_v2_tuned.json` · command `JOBS=8 bash scripts/run_experiment.sh pendulum_main_v2` · seeds per config: 10–10 · intervals: t 95%
+
+| config | final eval return | mean eval (AUC) | online return | peak SRAM (B) | instr./step (M4) | update underflow | flash, bench firmware with all three learners (B) | update saturation | hash load, tilings × (tiles+1)^d / features |
+|---|---|---|---|---|---|---|---|---|---|
+| table-angle_bins5 | -827 ± 57 | -947 ± 21 | -818 ± 15 | 1512 | 1517 | 11.8% | 15696 | 0% | — |
+| table-angle_bins7 | -653 ± 22 | -809 ± 31 | -720 ± 10 | 1800 | 1775 | 14.6% | 15696 | 0% | — |
+| table-angle_bins11 | -546 ± 22 | -704 ± 21 | -606 ± 7 | 2664 | 1909 | 19.2% | 15696 | 0% | — |
+| table-angle_bins15 | -291 ± 61 | -532 ± 16 | -449 ± 17 | 3912 | 2140 | 23.4% | 15696 | 0% | — |
+| table-angle_bins21 | -251 ± 87 | -480 ± 18 | -332 ± 14 | 6504 | 2346 | 25.4% | 15696 | 0% | — |
+| linear-angle_features64-tiles2 | -716 ± 76 | -893 ± 34 | -801 ± 32 | 2200 | 6788 | 3.7% | 15696 | 0% | 1.12 |
+| linear-angle_features256-tiles5 | -406 ± 67 | -477 ± 26 | -468 ± 16 | 4504 | 10409 | 4.2% | 15696 | 0% | 1.12 |
+| linear-angle_features1024-tiles10 | -120 ± 8 | -182 ± 12 | -195 ± 5 | 13720 | 12693 | 10.2% | 15696 | 0% | 0.95 |
+| linear-angle_features4096-tiles22 | -123 ± 3 | -301 ± 9 | -251 ± 6 | 50584 | 11192 | 6.1% | 15696 | 0% | 1.03 |
+| net-angle_hidden8 | -968 ± 290 | -1074 ± 144 | -1034 ± 263 | 19360 | 24300 | 4.3% | 15696 | 0% | — |
+| net-angle_hidden16 | -453 ± 247 | -725 ± 211 | -555 ± 271 | 19840 | 40094 | 8.7% | 15696 | 0% | — |
+| net-angle_hidden32 | -269 ± 77 | -402 ± 71 | -324 ± 50 | 20800 | 71279 | 15.4% | 15696 | 0% | — |
+| net-angle_hidden64 | -162 ± 18 | -272 ± 33 | -240 ± 9 | 22720 | 134884 | 24.8% | 15696 | 0% | — |
+| net-stream-angle_hidden8 | -424 ± 211 | -829 ± 143 | -574 ± 205 | 1156 | 7834 | 16.8% | 15696 | 0% | — |
+| net-stream-angle_hidden16 | -226 ± 80 | -487 ± 58 | -234 ± 35 | 1444 | 12645 | 26.4% | 15696 | 0% | — |
+| net-stream-angle_hidden32 | -126 ± 7 | -337 ± 29 | -193 ± 5 | 2020 | 22254 | 32.6% | 15696 | 0% | — |
+| net-stream-angle_hidden64 | -129 ± 13 | -292 ± 23 | -196 ± 9 | 3172 | 41299 | 36.7% | 15696 | 0% | — |
+| net-sgd-angle_hidden8 | -1346 ± 99 | -1312 ± 50 | -1373 ± 75 | 1132 | 3613 | 0.9% | 15696 | 0% | — |
+| net-sgd-angle_hidden16 | -1282 ± 131 | -1250 ± 95 | -1308 ± 125 | 1420 | 5930 | 0.8% | 15696 | 0% | — |
+| net-sgd-angle_hidden32 | -897 ± 178 | -1051 ± 78 | -1003 ± 110 | 1996 | 10679 | 1.0% | 15696 | 0% | — |
+| net-sgd-angle_hidden64 | -888 ± 201 | -991 ± 75 | -880 ± 158 | 3148 | 20214 | 2.1% | 15696 | 0% | — |
+| table-trig_bins5 | -712 ± 12 | -890 ± 20 | -810 ± 10 | 2716 | 2081 | 17.6% | 15684 | 0% | — |
+| table-trig_bins7 | -657 ± 38 | -750 ± 22 | -690 ± 11 | 5332 | 2118 | 21.0% | 15684 | 0% | — |
+| table-trig_bins11 | -336 ± 62 | -506 ± 25 | -407 ± 11 | 17188 | 2819 | 26.4% | 15684 | 0% | — |
+| table-trig_bins15 | -205 ± 54 | -385 ± 11 | -270 ± 10 | 41716 | 3006 | 30.1% | 15684 | 0% | — |
+| table-trig_bins21 | -180 ± 34 | -435 ± 11 | -303 ± 11 | 112348 | 3011 | 33.6% | 15688 | 0% | — |
+| linear-trig_features64-tiles1 | -810 ± 95 | -972 ± 30 | -805 ± 20 | 2244 | 5767 | 2.5% | 15684 | 0% | 1.00 |
+| linear-trig_features256-tiles2 | -402 ± 68 | -627 ± 37 | -513 ± 16 | 4548 | 10898 | 4.1% | 15684 | 0% | 0.84 |
+| linear-trig_features1024-tiles4 | -194 ± 82 | -304 ± 29 | -255 ± 10 | 13764 | 12066 | 6.8% | 15684 | 0% | 0.98 |
+| linear-trig_features4096-tiles7 | -115 ± 0 | -181 ± 7 | -177 ± 5 | 50628 | 13688 | 14.8% | 15684 | 0% | 1.00 |
+| net-trig_hidden8 | -503 ± 177 | -684 ± 85 | -544 ± 131 | 23440 | 27384 | 2.5% | 15684 | 0% | — |
+| net-trig_hidden16 | -239 ± 48 | -348 ± 48 | -343 ± 42 | 23984 | 44896 | 6.4% | 15684 | 0% | — |
+| net-trig_hidden32 | -171 ± 49 | -223 ± 26 | -243 ± 18 | 25072 | 79883 | 10.8% | 15684 | 0% | — |
+| net-trig_hidden64 | -158 ± 37 | -189 ± 15 | -202 ± 14 | 27248 | 149411 | 16.9% | 15684 | 0% | — |
+| net-stream-trig_hidden8 | -1085 ± 208 | -1226 ± 88 | -1074 ± 155 | 1192 | 8462 | 9.6% | 15684 | 0% | — |
+| net-stream-trig_hidden16 | -347 ± 113 | -532 ± 66 | -342 ± 44 | 1512 | 13678 | 20.4% | 15684 | 0% | — |
+| net-stream-trig_hidden32 | -151 ± 26 | -403 ± 33 | -264 ± 18 | 2152 | 23941 | 26.2% | 15684 | 0% | — |
+| net-stream-trig_hidden64 | -153 ± 21 | -410 ± 20 | -221 ± 10 | 3432 | 44757 | 32.7% | 15684 | 0% | — |
+| net-sgd-trig_hidden8 | -706 ± 164 | -913 ± 96 | -760 ± 143 | 1168 | 4036 | 1.1% | 15684 | 0% | — |
+| net-sgd-trig_hidden16 | -282 ± 90 | -643 ± 73 | -377 ± 69 | 1488 | 6647 | 4.3% | 15684 | 0% | — |
+| net-sgd-trig_hidden32 | -201 ± 43 | -475 ± 40 | -221 ± 9 | 2128 | 11940 | 9.4% | 15684 | 0% | — |
+| net-sgd-trig_hidden64 | -135 ± 30 | -379 ± 26 | -181 ± 5 | 3408 | 22477 | 13.9% | 15684 | 0% | — |
+| random | -1147 ± 20 | -1133 ± 5 | -1233 ± 12 | — | — | — | — | — | — |
+| zero-torque | -1068 ± 0 | -1068 ± 0 | -1229 ± 11 | — | — | — | — | — | — |
+
+Registered comparisons (D70, comparison 1: the v1 pairs):
+
+| A − B | metric | status | pairs | mean | 95% CI | verdict |
+|---|---|---|---|---|---|---|
+| net-trig_hidden64 − linear-trig_features4096-tiles7 | final | pre-registered | 10 | -43.2 | [-80.1, -6.3] | A lower |
+| net-trig_hidden64 − linear-trig_features4096-tiles7 | auc | pre-registered | 10 | -8.61 | [-25.70, +8.48] | inconclusive |
+| net-stream-angle_hidden32 − linear-angle_features256-tiles5 | final | pre-registered | 10 | +280.1 | [+216.7, +343.5] | A higher |
+| net-stream-angle_hidden32 − linear-angle_features256-tiles5 | auc | pre-registered | 10 | +140.2 | [+93.4, +187.1] | A higher |
+
+Best network − best linear at matched peak SRAM (D70, comparison 2; each family's entry chosen on the tuning seeds, `pendulum_main_v2_tuned_select`):
+
+| SRAM budget | A = best network (B) | B = best linear (B) | metric | pairs | mean | 95% CI | verdict |
+|---|---|---|---|---|---|---|---|
+| 4 KB | net-stream-trig_hidden32 (2152) | linear-angle_features64-tiles2 (2200) | final | 10 | +565.5 | [+483.2, +647.9] | A higher |
+| 4 KB | net-stream-trig_hidden32 (2152) | linear-angle_features64-tiles2 (2200) | auc | 10 | +489.6 | [+443.3, +536.0] | A higher |
+| 16 KB | net-stream-trig_hidden32 (2152) | linear-angle_features1024-tiles10 (13720) | final | 10 | -31.2 | [-59.7, -2.7] | A lower |
+| 16 KB | net-stream-trig_hidden32 (2152) | linear-angle_features1024-tiles10 (13720) | auc | 10 | -221.7 | [-265.2, -178.1] | A lower |
+| 64 KB | net-trig_hidden64 (27248) | linear-angle_features1024-tiles10 (13720) | final | 10 | -38.5 | [-76.5, -0.6] | A lower |
+| 64 KB | net-trig_hidden64 (27248) | linear-angle_features1024-tiles10 (13720) | auc | 10 | -7.7 | [-24.4, +9.1] | inconclusive |
+
+**cartpole_main_v2_tuned** · commit `21b3edb` · config `configs/cartpole_main_v2_tuned.json` · command `JOBS=8 bash scripts/run_experiment.sh cartpole_main_v2` · seeds per config: 10–10 · intervals: t 95%
+
+| config | final eval return | mean eval (AUC) | online return | peak SRAM (B) | instr./step (M4) | update underflow | flash, bench firmware with all three learners (B) | update saturation | hash load, tilings × (tiles+1)^d / features |
+|---|---|---|---|---|---|---|---|---|---|
+| table_bins4 | 337 ± 49 | 301 ± 22 | 230 ± 7 | 3264 | 2208 | 28.2% | 15688 | 0% | — |
+| table_bins6 | 351 ± 57 | 298 ± 13 | 238 ± 11 | 11584 | 2844 | 30.5% | 15688 | 0% | — |
+| table_bins8 | 339 ± 59 | 279 ± 27 | 235 ± 14 | 33984 | 2798 | 34.1% | 15688 | 0% | — |
+| table_bins10 | 280 ± 77 | 256 ± 33 | 220 ± 25 | 81216 | 2982 | 34.6% | 15692 | 0% | — |
+| table_bins12 | 320 ± 72 | 253 ± 27 | 210 ± 14 | 167104 (est.), does not fit | — | 35.6% | — | 0% | — |
+| linear_features256-tiles1 | 442 ± 49 | 370 ± 25 | 287 ± 5 | 4268 | 14464 | 5.1% | 15688 | 0% | 1.00 |
+| linear_features1024-tiles2 | 437 ± 34 | 389 ± 12 | 259 ± 4 | 10412 | 32132 | 14.6% | 15688 | 0% | 1.27 |
+| linear_features4096-tiles3 | 499 ± 1 | 433 ± 10 | 238 ± 3 | 34988 | 41121 | 9.1% | 15688 | 0% | 1.00 |
+| net_hidden16 | 182 ± 100 | 148 ± 38 | 72.6 ± 27.6 | 27988 | 47621 | 8.7% | 15688 | 0% | — |
+| net_hidden32 | 441 ± 73 | 243 ± 53 | 150 ± 37 | 29076 | 84802 | 19.6% | 15688 | 0% | — |
+| net_hidden64 | 460 ± 40 | 260 ± 27 | 153 ± 24 | 31252 | 159093 | 21.1% | 15688 | 0% | — |
+| net-stream_hidden16 | 358 ± 112 | 341 ± 66 | 258 ± 67 | 1956 | 23258 | 26.9% | 15688 | 0% | — |
+| net-stream_hidden32 | 385 ± 105 | 372 ± 16 | 305 ± 50 | 3044 | 42256 | 41.1% | 15688 | 0% | — |
+| net-stream_hidden64 | 451 ± 77 | 391 ± 49 | 313 ± 42 | 5220 | 79349 | 49.3% | 15688 | 0% | — |
+| net-sgd_hidden16 | 274 ± 111 | 181 ± 42 | 135 ± 33 | 1484 | 7025 | 47.0% | 15688 | 0% | — |
+| net-sgd_hidden32 | 224 ± 109 | 161 ± 53 | 114 ± 47 | 2124 | 12598 | 46.3% | 15688 | 0% | — |
+| net-sgd_hidden64 | 182 ± 78 | 195 ± 60 | 144 ± 48 | 3404 | 23696 | 61.5% | 15688 | 0% | — |
+| random | 21.9 ± 1.6 | 21.4 ± 0.6 | 21.4 ± 0.1 | — | — | — | — | — | — |
+
+Registered comparisons (D70, comparison 1: the v1 pairs):
+
+| A − B | metric | status | pairs | mean | 95% CI | verdict |
+|---|---|---|---|---|---|---|
+| linear_features1024-tiles2 − table_bins8 | final | pre-registered | 10 | +98.0 | [+32.2, +163.8] | A higher |
+| linear_features1024-tiles2 − table_bins8 | auc | pre-registered | 10 | +110.0 | [+88.1, +132.0] | A higher |
+| net_hidden32 − linear_features1024-tiles2 | final | pre-registered | 10 | +4.04 | [-76.44, +84.53] | inconclusive |
+| net_hidden32 − linear_features1024-tiles2 | auc | pre-registered | 10 | -145.8 | [-192.0, -99.7] | A lower |
+| net-stream_hidden32 − linear_features1024-tiles2 | final | pre-registered | 10 | -51.1 | [-151.1, +49.0] | inconclusive |
+| net-stream_hidden32 − linear_features1024-tiles2 | auc | pre-registered | 10 | -17.1 | [-37.5, +3.3] | inconclusive |
+
+Best network − best linear at matched peak SRAM (D70, comparison 2; each family's entry chosen on the tuning seeds, `cartpole_main_v2_tuned_select`):
+
+| SRAM budget | A = best network (B) | B = best linear (B) | metric | pairs | mean | 95% CI | verdict |
+|---|---|---|---|---|---|---|---|
+| 6 KB | net-stream_hidden32 (3044) | linear_features256-tiles1 (4268) | final | 10 | -56.5 | [-186.6, +73.6] | inconclusive |
+| 6 KB | net-stream_hidden32 (3044) | linear_features256-tiles1 (4268) | auc | 10 | +1.9 | [-32.8, +36.6] | inconclusive |
+| 16 KB | net-stream_hidden32 (3044) | linear_features1024-tiles2 (10412) | final | 10 | -51.1 | [-151.1, +49.0] | inconclusive |
+| 16 KB | net-stream_hidden32 (3044) | linear_features1024-tiles2 (10412) | auc | 10 | -17.1 | [-37.5, +3.3] | inconclusive |
+| 64 KB | net-stream_hidden32 (3044) | linear_features4096-tiles3 (34988) | final | 10 | -114.0 | [-218.7, -9.3] | A lower |
+| 64 KB | net-stream_hidden32 (3044) | linear_features4096-tiles3 (34988) | auc | 10 | -61.9 | [-82.4, -41.3] | A lower |
+
+**pendulum_main_v2**: values chosen by tuning (K = 40, tuning seeds; exploratory, D70 comparison 3). *edge* = the end of its grid.
+
+| learner | λ | κ | α | target period |
+|---|---|---|---|---|
+| table-angle | 0.8 | 0 *edge* | 0.08072 | — |
+| linear-angle | 0.9 *edge* | 3 *edge* | 1 (ObGD on) | — |
+| net-angle | — | — | 0.00553 | 500 *edge* |
+| net-stream-angle | 0 *edge* | 0 *edge* | 0.00299 | — |
+| net-sgd-angle | — | — | 0.03632 | — |
+| table-trig | 0.8 | 2 | 1 (ObGD on) | — |
+| linear-trig | 0.9 *edge* | 3 *edge* | 1 (ObGD on) | — |
+| net-trig | — | — | 0.009055 | 500 *edge* |
+| net-stream-trig | 0 *edge* | 0 *edge* | 0.004008 | — |
+| net-sgd-trig | — | — | 0.0356 | — |
+
+**cartpole_main_v2**: values chosen by tuning (K = 40, tuning seeds; exploratory, D70 comparison 3). *edge* = the end of its grid.
+
+| learner | λ | κ | α | target period |
+|---|---|---|---|---|
+| table | 0.6 | 0 *edge* | 0.06461 | — |
+| linear | 0.8 | 0 *edge* | 0.08218 | — |
+| net | — | — | 0.009098 | 500 *edge* |
+| net-stream | 0.6 | 1.5 | 1 (ObGD on) | — |
+| net-sgd | — | — | 0.002237 *edge* | — |
+
+**Findings.**
+1. **Cart-pole: tile coding beat the table again**, now with both free to use traces: +98.0 [+32.2, +163.8] final,
+   +110.0 [+88.1, +132.0] AUC.
+2. **Cart-pole: the streaming network's v1 AUC advantage over linear 1,024 did not reappear** once linear could use
+   traces too: −17.1 [−37.5, +3.3], inconclusive (v1: +63.6 [+26.0, +101.1], with traces for the network only, D69).
+   At matched SRAM it was inconclusive at 6 and 16 KB and lower at 64 KB (AUC −61.9 [−82.4, −41.3]).
+3. **Pendulum, matched SRAM: the answer depends on the budget.** At 4 KB the network was far better (AUC +489.6
+   [+443.3, +536.0]); only 64 hashed features fit there. At 16 KB linear was better (AUC −221.7 [−265.2, −178.1]);
+   at 64 KB linear's final return was better (−38.5 [−76.5, −0.6]) and AUC inconclusive.
+4. 12 matched intervals per task, uncorrected: about 0.6 per task would exclude 0 by chance if nothing differed.
+5. Exploratory: on the pendulum the streaming network's tuning chose λ 0 and κ 0 (no traces, no ObGD) on both
+   encodings; linear chose the largest λ and κ on both. Several choices are on the edge of their grid.

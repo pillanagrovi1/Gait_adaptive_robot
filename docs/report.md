@@ -1,24 +1,26 @@
 # Learning on a microcontroller's memory budget: table, tile coding or tiny network?
 
 Every number below comes from a table or line in [`results.md`](results.md), which names its commit, config and
-archive. The rules that were fixed before the runs are in [`decisions.md`](decisions.md) (D49–D60); D61–D69 were added afterwards and say so.
+archive. The rules that were fixed before the runs are in [`decisions.md`](decisions.md) (D49–D60); D61–D76 were added afterwards and say so; v2 (D70) and Go1 v4 (D71) were registered before their runs.
 
 ## Summary
 
-On cart-pole, linear tile coding beat the table on final return (+141.3 [+96.9, +185.7]) with less than a third of
-its SRAM (9.4 KB against 33.5 KB), at 4.3x the table's instructions per step.
-The streaming tiny network (about 3 KB) learned cart-pole faster than 9.4 KB of tile coding (AUC +63.6 [+26.0, +101.1],
-final return inconclusive) and returned more after the pendulum's rod got heavier (+86.8 [+66.9, +106.8]), at 12-20x
-linear's instructions per step, but it alone had traces and ObGD, so these gains cannot be credited to the network
-itself.
-Five replay updates per step did not measurably speed up the table, stochastic rounding made no detectable
-difference, and on the simulated Go1 no learner beat a fixed stumble-reflex gait, even at a roughness where a better
-fixed setting was shown to exist (+4.36 [+2.59, +6.13] over it on new terrain); the learners there did beat random
-nudges of the same parameters.
+When every learner could choose the same update rule (v2, D70), tile coding beat the table on cart-pole (AUC +110.0
+[+88.1, +132.0], final +98.0 [+32.2, +163.8]), and the streaming tiny network's earlier cart-pole advantage over tile
+coding did not reappear (AUC −17.1 [−37.5, +3.3], inconclusive; v1's +63.6 [+26.0, +101.1] came with traces for the
+network only, D69).
+At matched peak SRAM the answer depended on the budget: on the pendulum the best network beat the best tile coding by
+far at 4 KB (AUC +489.6 [+443.3, +536.0]), where only 64 hashed features fit, but tile coding was better at 16 KB
+(AUC −221.7 [−265.2, −178.1]), and on cart-pole the network was better at no budget (lower at 64 KB, AUC −61.9
+[−82.4, −41.3]).
+After the pendulum's rod got heavier the streaming network returned more than tile coding (+86.8 [+66.9, +106.8],
+v1 design, update rule confounded), five replay updates per step did not measurably speed up the table, stochastic
+rounding made no detectable difference, and on the simulated Go1 no learner beat a fixed stumble-reflex gait, even at
+a roughness where a better fixed setting was shown to exist (+4.36 [+2.59, +6.13] over it on new terrain).
 
 *Caveats:* simulation and QEMU only (memory and instruction counts, no timing, no hardware); 10 seeds, 20 for
-adaptation; update rule confounded with representation (D69); traces without the Watkins cut (D68); the equal-memory
-comparisons are exploratory (§4.1).
+adaptation; 12 uncorrected matched-SRAM intervals per task; adaptation, replay and the ablation keep v1's update rules
+(D69) and traces without the Watkins cut (D68).
 
 ## 1. Question
 
@@ -54,7 +56,7 @@ not found in a limited search. Learning a gait on a microcontroller is not claim
 **Not the same update rule.** In the main experiments only the streaming network used traces and ObGD; the table and
 linear learners did one-step Q-learning, and their tuning searched α only. The streaming net's tuning offered λ 0.6,
 0.8 and 0.9 and chose 0.6, the smallest, on both tasks (D69). Every comparison with the streaming net therefore
-changes the update rule as well as the representation.
+changes the update rule as well as the representation. The v2 rerun (§4.9) removes this for the main comparisons.
 
 **Fixed point.** All learner arithmetic is Q16.16 C with static allocation. Counters record update products that
 round to zero (underflow) or clip (saturation). No measured saturation was above 0% in any experiment that recorded
@@ -90,7 +92,7 @@ extension, gait tuning on a simulated Unitree Go1.
 
 ## 4. Results
 
-Every comparison with the streaming network in §4.1, §4.2, §4.4 and §4.8 is also a comparison of update rules (D69).
+Every comparison with the streaming network in §4.1, §4.2, §4.4 and §4.8 is also a comparison of update rules (D69). §4.9 repeats the main comparisons with the same choice of update rule for every learner.
 
 ### 4.1 Pendulum: return against SRAM
 
@@ -225,6 +227,37 @@ terrains:
 **The bar is again not met**, though this time there was something to find. The learners beat chance but did not
 reach the better setting in 20,000 untuned steps.
 
+### 4.9 v2: the same choice of update rule for every learner
+
+Registered before the run (D70). Table, tile coding and the streaming network each tuned λ, κ and (with ObGD off) α
+from the same grids, with the Watkins cut; a one-step network (`net-sgd`) was added; every learner had K = 40 draws
+at the full budget on tuning seeds and tuning evaluation states of its own (D66). Tables: results.md, "v2".
+
+| comparison | metric | difference, 95% CI | verdict |
+|---|---|---|---|
+| cart-pole: linear 1,024 − table 8 bins | AUC | +110.0 [+88.1, +132.0] | linear higher |
+| cart-pole: streaming net 32 − linear 1,024 | AUC | −17.1 [−37.5, +3.3] | inconclusive |
+| cart-pole: replay net 32 − linear 1,024 | AUC | −145.8 [−192.0, −99.7] | net lower |
+| pendulum: streaming net 32 (angle) − linear 256 (angle) | AUC | +140.2 [+93.4, +187.1] | net higher |
+| pendulum: replay net 64 (trig) − linear 4,096 (trig) | final | −43.2 [−80.1, −6.3] | net lower |
+
+**Best network − best linear at matched peak SRAM** (each family's entry chosen on the tuning seeds only):
+
+| task, budget | network (B) | linear (B) | AUC difference | final difference |
+|---|---|---|---|---|
+| pendulum, 4 KB | streaming 32, trig (2,152) | 64 features, angle (2,200) | +489.6 [+443.3, +536.0] | +565.5 [+483.2, +647.9] |
+| pendulum, 16 KB | streaming 32, trig (2,152) | 1,024 features, angle (13,720) | −221.7 [−265.2, −178.1] | −31.2 [−59.7, −2.7] |
+| pendulum, 64 KB | replay 64, trig (27,248) | 1,024 features, angle (13,720) | −7.7 [−24.4, +9.1] | −38.5 [−76.5, −0.6] |
+| cart-pole, 6 KB | streaming 32 (3,044) | 256 features (4,268) | +1.9 [−32.8, +36.6] | −56.5 [−186.6, +73.6] |
+| cart-pole, 16 KB | streaming 32 (3,044) | 1,024 features (10,412) | −17.1 [−37.5, +3.3] | −51.1 [−151.1, +49.0] |
+| cart-pole, 64 KB | streaming 32 (3,044) | 4,096 features (34,988) | −61.9 [−82.4, −41.3] | −114.0 [−218.7, −9.3] |
+
+**What changed from v1.** With traces open to every learner, the streaming network no longer learned cart-pole
+faster than tile coding. On the pendulum the network's advantage is real only where tile coding has too few features
+to learn; with 16 KB, tile coding was better. On the pendulum the streaming network's tuning chose no traces and no
+ObGD (λ 0, κ 0) on both encodings, so its pendulum results are those of a one-step network with LayerNorm and
+stochastic rounding. With 12 uncorrected intervals per task, about 0.6 per task could exclude 0 by chance.
+
 ## 5. Limitations
 
 - **No hardware.** No timing, cycles, energy or power. The Nucleo build never ran.
@@ -232,9 +265,9 @@ reach the better setting in 20,000 untuned steps.
   training that follows depends on the evaluation schedule (D66). Within one experiment every learner has the same
   schedule; across experiments with different schedules, a learner with the same settings can learn differently.
 - **Tuning saw the test states.** Tuning and reporting were evaluated on the same 10 start states, so each tuned
-  setting was chosen on the states it is later scored on (D66).
+  setting was chosen on the states it is later scored on (D66). v2 tuned on states of its own.
 - **No Watkins cut.** Every learner with traces ran Q(λ) without the Watkins cut: the trace is not reset after an
-  exploratory action, unlike the authors' code (D68). Its effect on the results was not measured.
+  exploratory action, unlike the authors' code (D68). v2 (§4.9) used the cut; the other experiments did not.
 - **QEMU is not timing.** Instructions are not cycles, and the workload behind the counts is synthetic.
 - **One machine type.** x86-64 Linux for learning, one emulated Cortex-M4 for measurement.
 - **Tuning budget.** 20 draws, one tuning point per sweep. The pendulum was tuned on a third of the budget and on
@@ -276,9 +309,9 @@ of the work above (for most of it, the abstract only).
 At approximately 3-10x less SRAM the streaming net showed no detectable difference from linear tile coding in final
 return in 7 of 10 pairs but learned more slowly on the pendulum, and at equal SRAM it was not shown to differ in final
 return from linear's better encoding once linear had the 4 KB it needs to learn (exploratory: counts and caveats in
-[§4.1](#41-pendulum-return-against-sram)). These are comparisons of representation and update rule together: only the streaming
-net had traces and ObGD, and traces changed table and linear AUC by +285 and +152 in the ablation (D69). A comparison
-that gives every learner the same choice of λ and κ is proposed, not run.
+[§4.1](#41-pendulum-return-against-sram)). These v1 comparisons mix representation and update rule (D69). In v2, with the same
+choice of λ and κ for every learner (§4.9), the streaming net's cart-pole advantage did not reappear, and on the
+pendulum the best network beat the best tile coding only at 4 KB, where tile coding has too few features.
 
 - The streaming net pays 12.2x to 20.0x linear's instructions per step in the registered comparisons, and
   its returns vary more between seeds.

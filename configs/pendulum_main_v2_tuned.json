@@ -1,0 +1,282 @@
+{
+  "name": "pendulum_main_v2_tuned",
+  "_note": "PROPOSED, NOT RUN (D70). Every learner that can use traces tunes lam {0,0.6,0.8,0.9} and obgd_kappa {0,1.5,2,3}, alpha only where ObGD is off, Watkins cut on. Same K, full budget, own evaluation states for tuning. Encoding is part of the label, so each is tuned separately. Linear pairs tiles with features so the hash load is 0.8-1.2. Hyperparameters tuned by scripts/tune.py: K=40 per learner, tuning seeds [1000, 1001, 1002], score auc.",
+  "task": {
+    "name": "pendulum"
+  },
+  "run": {
+    "steps": 300000,
+    "decay_steps": 180000,
+    "eval_every_steps": 10000,
+    "eval_episodes": 10
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "learners": [
+    {
+      "label": "table-angle",
+      "base": {
+        "kind": "tabular",
+        "gamma": 0.95,
+        "watkins": 1,
+        "lam": 0.8,
+        "obgd_kappa": 0,
+        "alpha": 0.08072331297197934
+      },
+      "task": {
+        "obs_mode": "angle"
+      },
+      "sweep": {
+        "bins": [
+          5,
+          7,
+          11,
+          15,
+          21
+        ]
+      }
+    },
+    {
+      "label": "linear-angle",
+      "base": {
+        "kind": "linear",
+        "gamma": 0.95,
+        "tilings": 8,
+        "watkins": 1,
+        "lam": 0.9,
+        "obgd_kappa": 3.0,
+        "alpha": 1.0
+      },
+      "task": {
+        "obs_mode": "angle"
+      },
+      "sweep": {
+        "features": [
+          64,
+          256,
+          1024,
+          4096
+        ],
+        "tiles": [
+          2,
+          5,
+          10,
+          22
+        ]
+      },
+      "sweep_zip": true
+    },
+    {
+      "label": "net-angle",
+      "base": {
+        "kind": "mlp",
+        "gamma": 0.95,
+        "td_clip": 1.0,
+        "replay_cap": 2000,
+        "batch": 8,
+        "replay_compact": 1,
+        "alpha": 0.005530481377768111,
+        "target_period": 500
+      },
+      "task": {
+        "obs_mode": "angle"
+      },
+      "sweep": {
+        "hidden": [
+          8,
+          16,
+          32,
+          64
+        ]
+      }
+    },
+    {
+      "label": "net-stream-angle",
+      "base": {
+        "kind": "mlp",
+        "gamma": 0.95,
+        "norm": 1,
+        "round_mode": 1,
+        "watkins": 1,
+        "lam": 0,
+        "obgd_kappa": 0,
+        "alpha": 0.0029902767619555013
+      },
+      "task": {
+        "obs_mode": "angle"
+      },
+      "sweep": {
+        "hidden": [
+          8,
+          16,
+          32,
+          64
+        ]
+      }
+    },
+    {
+      "label": "net-sgd-angle",
+      "base": {
+        "kind": "mlp",
+        "gamma": 0.95,
+        "td_clip": 1.0,
+        "alpha": 0.036318888081581326
+      },
+      "task": {
+        "obs_mode": "angle"
+      },
+      "sweep": {
+        "hidden": [
+          8,
+          16,
+          32,
+          64
+        ]
+      }
+    },
+    {
+      "label": "table-trig",
+      "base": {
+        "kind": "tabular",
+        "gamma": 0.95,
+        "watkins": 1,
+        "lam": 0.8,
+        "obgd_kappa": 2.0,
+        "alpha": 1.0
+      },
+      "task": {
+        "obs_mode": "trig"
+      },
+      "sweep": {
+        "bins": [
+          5,
+          7,
+          11,
+          15,
+          21
+        ]
+      }
+    },
+    {
+      "label": "linear-trig",
+      "base": {
+        "kind": "linear",
+        "gamma": 0.95,
+        "tilings": 8,
+        "watkins": 1,
+        "lam": 0.9,
+        "obgd_kappa": 3.0,
+        "alpha": 1.0
+      },
+      "task": {
+        "obs_mode": "trig"
+      },
+      "sweep": {
+        "features": [
+          64,
+          256,
+          1024,
+          4096
+        ],
+        "tiles": [
+          1,
+          2,
+          4,
+          7
+        ]
+      },
+      "sweep_zip": true
+    },
+    {
+      "label": "net-trig",
+      "base": {
+        "kind": "mlp",
+        "gamma": 0.95,
+        "td_clip": 1.0,
+        "replay_cap": 2000,
+        "batch": 8,
+        "replay_compact": 1,
+        "alpha": 0.009055160611949215,
+        "target_period": 500
+      },
+      "task": {
+        "obs_mode": "trig"
+      },
+      "sweep": {
+        "hidden": [
+          8,
+          16,
+          32,
+          64
+        ]
+      }
+    },
+    {
+      "label": "net-stream-trig",
+      "base": {
+        "kind": "mlp",
+        "gamma": 0.95,
+        "norm": 1,
+        "round_mode": 1,
+        "watkins": 1,
+        "lam": 0,
+        "obgd_kappa": 0,
+        "alpha": 0.004008403763330861
+      },
+      "task": {
+        "obs_mode": "trig"
+      },
+      "sweep": {
+        "hidden": [
+          8,
+          16,
+          32,
+          64
+        ]
+      }
+    },
+    {
+      "label": "net-sgd-trig",
+      "base": {
+        "kind": "mlp",
+        "gamma": 0.95,
+        "td_clip": 1.0,
+        "alpha": 0.03560485406122951
+      },
+      "task": {
+        "obs_mode": "trig"
+      },
+      "sweep": {
+        "hidden": [
+          8,
+          16,
+          32,
+          64
+        ]
+      }
+    },
+    {
+      "label": "random",
+      "base": {
+        "kind": "baseline_random"
+      }
+    },
+    {
+      "label": "zero-torque",
+      "base": {
+        "kind": "baseline_const",
+        "action": 1
+      }
+    }
+  ]
+}

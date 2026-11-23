@@ -1,0 +1,18 @@
+experiment,run_id,cfg_id,kind,fits,peak_bytes,agent_bytes,arena_bytes,stack_learner,stack_total,insns_learn_step,insns_greedy_step,flash_text,ram_data,ram_bss,host_match,peak_bytes_estimate,error
+cartpole_main_v2_tuned,table_bins4,5a06b278eb,tabular,1,3264,372,2584,308,340,2208.3,271.0,15688,0,2968,1,,
+cartpole_main_v2_tuned,table_bins6,c43c59858d,tabular,1,11584,372,10904,308,340,2843.5,271.0,15688,0,11288,1,,
+cartpole_main_v2_tuned,table_bins8,d3002b0f16,tabular,1,33984,372,33304,308,340,2797.7,271.0,15688,0,33688,1,,
+cartpole_main_v2_tuned,table_bins10,f1ed381123,tabular,1,81216,372,80536,308,340,2981.8,271.0,15692,0,80920,1,,
+cartpole_main_v2_tuned,table_bins12,7a144f4e8e,tabular,0,,,166424,,,,,,,,,166724,does not fit in SRAM (link failed)
+cartpole_main_v2_tuned,linear_features256-tiles1,156567b2ea,linear,1,4268,372,3512,384,416,14463.8,2050.0,15688,0,3896,1,,
+cartpole_main_v2_tuned,linear_features1024-tiles2,e39efe9f10,linear,1,10412,372,9656,384,416,32132.0,2050.0,15688,0,10040,1,,
+cartpole_main_v2_tuned,linear_features4096-tiles3,3891757726,linear,1,34988,372,34232,384,416,41121.3,2050.0,15688,0,34616,1,,
+cartpole_main_v2_tuned,net_hidden16,c541b95fe1,mlp,1,27988,372,27176,440,472,47621.3,1568.9,15688,0,27560,1,,
+cartpole_main_v2_tuned,net_hidden32,c8e1b3ef19,mlp,1,29076,372,28264,440,472,84801.9,2660.7,15688,0,28648,1,,
+cartpole_main_v2_tuned,net_hidden64,156a6a9d54,mlp,1,31252,372,30440,440,472,159093.1,4836.6,15688,0,30824,1,,
+cartpole_main_v2_tuned,net-stream_hidden16,882cb3024a,mlp,1,1956,372,1128,456,488,23258.1,2966.6,15688,0,1512,1,,
+cartpole_main_v2_tuned,net-stream_hidden32,8093cee380,mlp,1,3044,372,2216,456,488,42255.7,4876.4,15688,0,2600,1,,
+cartpole_main_v2_tuned,net-stream_hidden64,b97d74b82b,mlp,1,5220,372,4392,456,488,79349.2,8682.5,15688,0,4776,1,,
+cartpole_main_v2_tuned,net-sgd_hidden16,b0dbb9c34e,mlp,1,1484,372,672,440,472,7024.8,1568.9,15688,0,1056,1,,
+cartpole_main_v2_tuned,net-sgd_hidden32,d9cb6e0dea,mlp,1,2124,372,1312,440,472,12597.7,2660.7,15688,0,1696,1,,
+cartpole_main_v2_tuned,net-sgd_hidden64,8c6e96b033,mlp,1,3404,372,2592,440,472,23695.5,4836.6,15688,0,2976,1,,
