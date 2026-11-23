@@ -458,6 +458,60 @@ experiments. `stream_ablation` shows the size of the effect (exploratory, added 
 No result is changed; the report states the confound wherever these comparisons appear. A fair design is proposed as
 `pendulum_main_v2` / `cartpole_main_v2` (every learner tunes λ and κ). **Status: documented.**
 
+## Proposed 23 Nov 2026: pre-registration of `pendulum_main_v2` and `cartpole_main_v2` (not run; needs Rahul's approval)
+
+**D70 — A like-for-like rerun of the two main comparisons.** Written after every v1 result had been seen (D68, D69),
+before any v2 run. Configs `configs/pendulum_main_v2.json` and `configs/cartpole_main_v2.json`; the design is pinned by
+`python/tests/test_v2_tools.py`.
+
+*Learners.* table, linear (hashed tile coding), replay network (`net`), streaming network (`net-stream`, LayerNorm and
+stochastic rounding as in v1) and a new one-step network (`net-sgd`: no replay, no target, no traces, no ObGD).
+Baselines: random, and zero torque on the pendulum. On the pendulum the encoding is part of the label (`-angle`,
+`-trig`), so every learner is tuned on each encoding separately (v1 tuned on the angle encoding only).
+
+*Tuning.* K = 40 draws for every learner, 3 tuning seeds (1000-1002), score AUC, at the full step budget, evaluated on
+their own start states (`eval_base_seed` 50000; reporting keeps 10000, D66). Table, linear and streaming network draw
+λ from {0, 0.6, 0.8, 0.9} and κ from {0, 1.5, 2, 3}; α is drawn (log-uniform: table and linear [0.05, 1], networks
+[0.002, 0.05]) only where κ = 0, and is 1 where ObGD is on (D61). The replay network cannot use traces (D23): α and
+target period as in v1. `net-sgd`: α only. Every learner with traces uses the Watkins cut (`watkins: 1`, D68). Tuning
+happens at the middle of each sweep, as in v1.
+
+*Memory sweeps.* table bins and network widths as in v1. Linear pairs `tiles` with `features` (`sweep_zip`) so the
+hash load, tilings × (tiles + 1)^d / features, stays near 1. It is reported for every linear configuration:
+
+| task, encoding | tilings | features: tiles (load) |
+|---|---|---|
+| pendulum, angle (d = 2) | 8 | 64: 2 (1.12) · 256: 5 (1.12) · 1,024: 10 (0.95) · 4,096: 22 (1.03) |
+| pendulum, trig (d = 3) | 8 | 64: 1 (1.00) · 256: 2 (0.84) · 1,024: 4 (0.98) · 4,096: 7 (1.00) |
+| cart-pole (d = 4) | 16 | 256: 1 (1.00) · 1,024: 2 (1.27) · 4,096: 3 (1.00) |
+
+*Comparisons* (paired by seed, Student-t 95%, final and AUC, `inconclusive` unless the interval excludes 0; 10 seeds,
+none added):
+
+1. Kept from v1, now pre-registered on both tasks, at the same sweep positions: cart-pole linear 1,024 − table 8 bins,
+   net 32 − linear 1,024, net-stream 32 − linear 1,024; pendulum net-trig 64 − linear-trig 4,096 and
+   net-stream-angle 32 − linear-angle 256.
+2. New, primary: **best network against best linear at matched SRAM.** Budgets of peak SRAM measured on the M4:
+   pendulum 4, 16 and 64 KB; cart-pole 6, 16 and 64 KB. In each budget, each family's entry is the configuration with
+   the highest AUC on the tuning seeds and tuning evaluation states among those that fit (network family: `net`,
+   `net-stream`, `net-sgd`, any encoding; linear family: any encoding). The choice uses no reporting seed. The pair
+   is then compared on the reporting seeds. 6 budgets × 2 metrics = 12 intervals, uncorrected: about 0.6 would
+   exclude 0 by chance if no difference existed.
+3. Exploratory, reported for every learner: the λ, κ and α its tuning chose, and whether that value is on the edge of
+   its grid.
+
+*To build after approval, before any run:* the selection run (every sweep point on the tuning seeds, with the tuned
+values) and comparison 2 in `scripts/compare.py`; a load-factor column for linear rows in `scripts/results_table.py`.
+
+*Code added with this proposal* (opt-in, off by default, so every archive replays: 6 archived runs re-run byte for
+byte, `cfg_id` unchanged): `watkins` in `tr_cfg_t`, with `test_watkins_cut` (fails without the cut);
+`eval_base_seed` in the harness; conditional draws (`when`/`otherwise`) in `tune.py`; `sweep_zip` in `sweep.py`. The
+new field makes the M4 agent struct 372 B instead of 368 B in future measurements; archived M4 tables stay valid for
+their commits.
+
+*Cost estimate* from v1 wall times (pendulum ~21 s, cart-pole ~11 s per run on this laptop, 2 jobs): tuning about
+3.5 h + 1 h, selection about 0.5 h, reporting runs about 1.5 h, M4 measurement extra. Under the 12-hour rule, one
+heavy run at a time, in a separate worktree. **Status: proposed, not approved, nothing run.**
 ## Proposed 23 Nov 2026: pre-registration of Go1 v4, headroom first (not run; needs Rahul's approval)
 
 **D71 — Go1 v4: first show that there is something to learn.** Written after every v3 result had been seen. Why: in
@@ -494,3 +548,9 @@ a learner beats B3 if its interval lies above 0); secondary, each learner − ra
 episode from a given setting), `heldout_episodes` / `heldout_base_seed` in the harness with metric `heldout` in
 `analysis.py`, `scripts/go1_headroom.py`; tests in `python/tests/test_go1_headroom.py`. Check: the script's B3 score
 on terrains 10000-10004 is 19.2025, the archived v3 B3 evaluation. **Status: proposed, not approved, nothing run.**
+
+## Approved 23 Nov 2026
+
+**D72 — Rahul approved D70 and D71 as written.** Order: Go1 v4 stage A first, then the D70 runs, one heavy run at a
+time. D70's still-to-build parts (selection run, comparison 2, load column) are added before any D70 run, without
+changing its design. **Status: approved; D71 stage A running.**

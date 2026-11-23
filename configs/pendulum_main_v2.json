@@ -1,0 +1,487 @@
+{
+  "name": "pendulum_main_v2",
+  "_note": "PROPOSED, NOT RUN (D70). Every learner that can use traces tunes lam {0,0.6,0.8,0.9} and obgd_kappa {0,1.5,2,3}, alpha only where ObGD is off, Watkins cut on. Same K, full budget, own evaluation states for tuning. Encoding is part of the label, so each is tuned separately. Linear pairs tiles with features so the hash load is 0.8-1.2.",
+  "task": {
+    "name": "pendulum"
+  },
+  "run": {
+    "steps": 300000,
+    "decay_steps": 180000,
+    "eval_every_steps": 10000,
+    "eval_episodes": 10
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "learners": [
+    {
+      "label": "table-angle",
+      "base": {
+        "kind": "tabular",
+        "gamma": 0.95,
+        "watkins": 1
+      },
+      "task": {
+        "obs_mode": "angle"
+      },
+      "sweep": {
+        "bins": [
+          5,
+          7,
+          11,
+          15,
+          21
+        ]
+      }
+    },
+    {
+      "label": "linear-angle",
+      "base": {
+        "kind": "linear",
+        "gamma": 0.95,
+        "tilings": 8,
+        "watkins": 1
+      },
+      "task": {
+        "obs_mode": "angle"
+      },
+      "sweep": {
+        "features": [
+          64,
+          256,
+          1024,
+          4096
+        ],
+        "tiles": [
+          2,
+          5,
+          10,
+          22
+        ]
+      },
+      "sweep_zip": true
+    },
+    {
+      "label": "net-angle",
+      "base": {
+        "kind": "mlp",
+        "gamma": 0.95,
+        "td_clip": 1.0,
+        "replay_cap": 2000,
+        "batch": 8,
+        "replay_compact": 1
+      },
+      "task": {
+        "obs_mode": "angle"
+      },
+      "sweep": {
+        "hidden": [
+          8,
+          16,
+          32,
+          64
+        ]
+      }
+    },
+    {
+      "label": "net-stream-angle",
+      "base": {
+        "kind": "mlp",
+        "gamma": 0.95,
+        "norm": 1,
+        "round_mode": 1,
+        "watkins": 1
+      },
+      "task": {
+        "obs_mode": "angle"
+      },
+      "sweep": {
+        "hidden": [
+          8,
+          16,
+          32,
+          64
+        ]
+      }
+    },
+    {
+      "label": "net-sgd-angle",
+      "base": {
+        "kind": "mlp",
+        "gamma": 0.95,
+        "td_clip": 1.0
+      },
+      "task": {
+        "obs_mode": "angle"
+      },
+      "sweep": {
+        "hidden": [
+          8,
+          16,
+          32,
+          64
+        ]
+      }
+    },
+    {
+      "label": "table-trig",
+      "base": {
+        "kind": "tabular",
+        "gamma": 0.95,
+        "watkins": 1
+      },
+      "task": {
+        "obs_mode": "trig"
+      },
+      "sweep": {
+        "bins": [
+          5,
+          7,
+          11,
+          15,
+          21
+        ]
+      }
+    },
+    {
+      "label": "linear-trig",
+      "base": {
+        "kind": "linear",
+        "gamma": 0.95,
+        "tilings": 8,
+        "watkins": 1
+      },
+      "task": {
+        "obs_mode": "trig"
+      },
+      "sweep": {
+        "features": [
+          64,
+          256,
+          1024,
+          4096
+        ],
+        "tiles": [
+          1,
+          2,
+          4,
+          7
+        ]
+      },
+      "sweep_zip": true
+    },
+    {
+      "label": "net-trig",
+      "base": {
+        "kind": "mlp",
+        "gamma": 0.95,
+        "td_clip": 1.0,
+        "replay_cap": 2000,
+        "batch": 8,
+        "replay_compact": 1
+      },
+      "task": {
+        "obs_mode": "trig"
+      },
+      "sweep": {
+        "hidden": [
+          8,
+          16,
+          32,
+          64
+        ]
+      }
+    },
+    {
+      "label": "net-stream-trig",
+      "base": {
+        "kind": "mlp",
+        "gamma": 0.95,
+        "norm": 1,
+        "round_mode": 1,
+        "watkins": 1
+      },
+      "task": {
+        "obs_mode": "trig"
+      },
+      "sweep": {
+        "hidden": [
+          8,
+          16,
+          32,
+          64
+        ]
+      }
+    },
+    {
+      "label": "net-sgd-trig",
+      "base": {
+        "kind": "mlp",
+        "gamma": 0.95,
+        "td_clip": 1.0
+      },
+      "task": {
+        "obs_mode": "trig"
+      },
+      "sweep": {
+        "hidden": [
+          8,
+          16,
+          32,
+          64
+        ]
+      }
+    },
+    {
+      "label": "random",
+      "base": {
+        "kind": "baseline_random"
+      }
+    },
+    {
+      "label": "zero-torque",
+      "base": {
+        "kind": "baseline_const",
+        "action": 1
+      }
+    }
+  ],
+  "tune": {
+    "k": 40,
+    "seeds": [
+      1000,
+      1001,
+      1002
+    ],
+    "score": "auc",
+    "run": {
+      "steps": 300000,
+      "eval_base_seed": 50000
+    },
+    "space": {
+      "table-angle": {
+        "lam": {
+          "choice": [
+            0,
+            0.6,
+            0.8,
+            0.9
+          ]
+        },
+        "obgd_kappa": {
+          "choice": [
+            0,
+            1.5,
+            2.0,
+            3.0
+          ]
+        },
+        "alpha": {
+          "log_uniform": [
+            0.05,
+            1.0
+          ],
+          "when": {
+            "obgd_kappa": 0
+          },
+          "otherwise": 1.0
+        }
+      },
+      "linear-angle": {
+        "lam": {
+          "choice": [
+            0,
+            0.6,
+            0.8,
+            0.9
+          ]
+        },
+        "obgd_kappa": {
+          "choice": [
+            0,
+            1.5,
+            2.0,
+            3.0
+          ]
+        },
+        "alpha": {
+          "log_uniform": [
+            0.05,
+            1.0
+          ],
+          "when": {
+            "obgd_kappa": 0
+          },
+          "otherwise": 1.0
+        }
+      },
+      "net-angle": {
+        "alpha": {
+          "log_uniform": [
+            0.002,
+            0.05
+          ]
+        },
+        "target_period": {
+          "choice": [
+            50,
+            100,
+            500
+          ]
+        }
+      },
+      "net-stream-angle": {
+        "lam": {
+          "choice": [
+            0,
+            0.6,
+            0.8,
+            0.9
+          ]
+        },
+        "obgd_kappa": {
+          "choice": [
+            0,
+            1.5,
+            2.0,
+            3.0
+          ]
+        },
+        "alpha": {
+          "log_uniform": [
+            0.002,
+            0.05
+          ],
+          "when": {
+            "obgd_kappa": 0
+          },
+          "otherwise": 1.0
+        }
+      },
+      "net-sgd-angle": {
+        "alpha": {
+          "log_uniform": [
+            0.002,
+            0.05
+          ]
+        }
+      },
+      "table-trig": {
+        "lam": {
+          "choice": [
+            0,
+            0.6,
+            0.8,
+            0.9
+          ]
+        },
+        "obgd_kappa": {
+          "choice": [
+            0,
+            1.5,
+            2.0,
+            3.0
+          ]
+        },
+        "alpha": {
+          "log_uniform": [
+            0.05,
+            1.0
+          ],
+          "when": {
+            "obgd_kappa": 0
+          },
+          "otherwise": 1.0
+        }
+      },
+      "linear-trig": {
+        "lam": {
+          "choice": [
+            0,
+            0.6,
+            0.8,
+            0.9
+          ]
+        },
+        "obgd_kappa": {
+          "choice": [
+            0,
+            1.5,
+            2.0,
+            3.0
+          ]
+        },
+        "alpha": {
+          "log_uniform": [
+            0.05,
+            1.0
+          ],
+          "when": {
+            "obgd_kappa": 0
+          },
+          "otherwise": 1.0
+        }
+      },
+      "net-trig": {
+        "alpha": {
+          "log_uniform": [
+            0.002,
+            0.05
+          ]
+        },
+        "target_period": {
+          "choice": [
+            50,
+            100,
+            500
+          ]
+        }
+      },
+      "net-stream-trig": {
+        "lam": {
+          "choice": [
+            0,
+            0.6,
+            0.8,
+            0.9
+          ]
+        },
+        "obgd_kappa": {
+          "choice": [
+            0,
+            1.5,
+            2.0,
+            3.0
+          ]
+        },
+        "alpha": {
+          "log_uniform": [
+            0.002,
+            0.05
+          ],
+          "when": {
+            "obgd_kappa": 0
+          },
+          "otherwise": 1.0
+        }
+      },
+      "net-sgd-trig": {
+        "alpha": {
+          "log_uniform": [
+            0.002,
+            0.05
+          ]
+        }
+      }
+    }
+  }
+}

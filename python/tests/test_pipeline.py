@@ -11,8 +11,8 @@ pytestmark = pytest.mark.skipif(not cbind.LIB_PATH.exists(), reason="run `make` 
 
 
 def test_cfg_struct_matches_c():
-    # sizeof(tr_cfg_t) = 3 + 12 + 12 + 2 + 1 + 3 + 3 + 2 + 5 + 4 int32 fields
-    assert cbind.C.sizeof(cbind.Cfg) == 47 * 4
+    # sizeof(tr_cfg_t) = 3 + 12 + 12 + 2 + 1 + 3 + 3 + 2 + 5 + 4 + 1 (watkins) int32 fields
+    assert cbind.C.sizeof(cbind.Cfg) == 48 * 4
 
 
 @pytest.mark.parametrize("kind,extra", [

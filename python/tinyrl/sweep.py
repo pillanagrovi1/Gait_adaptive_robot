@@ -9,7 +9,8 @@ Config schema:
   "seeds": [0, 1, 2, 3, 4],
   "learners": [
     {"label": "table", "base": {"kind": "tabular", ...},
-     "sweep": {"bins": [7, 11, 15, 21]},                   # cartesian product
+     "sweep": {"bins": [7, 11, 15, 21]},                   # cartesian product, or with
+     "sweep_zip": true,                                    # the lists paired in order (same length)
      "task": {"obs_mode": "angle"}}                        # optional per-learner task override
   ]
 }
@@ -33,12 +34,18 @@ def load(path) -> dict:
         return json.load(f)
 
 
-def _grid(d: dict):
+def _grid(d: dict, paired: bool = False):
     if not d:
         yield {}
         return
     keys = list(d)
-    for vals in itertools.product(*(d[k] for k in keys)):
+    if paired:
+        if len({len(d[k]) for k in keys}) != 1:
+            raise ValueError(f"sweep_zip needs lists of equal length: {d}")
+        rows = zip(*(d[k] for k in keys))
+    else:
+        rows = itertools.product(*(d[k] for k in keys))
+    for vals in rows:
         yield dict(zip(keys, vals))
 
 
@@ -51,7 +58,7 @@ def expand(exp: dict) -> list[dict]:
     for L in exp["learners"]:
         for tvar in _grid(exp.get("task_sweep", {})):
             task = {**exp["task"], **L.get("task", {}), **tvar}
-            for lvar in _grid(L.get("sweep", {})):
+            for lvar in _grid(L.get("sweep", {}), L.get("sweep_zip", False)):
                 learner = {**L["base"], **lvar}
                 parts = [L["label"]] + [p for p in (_tag(tvar), _tag(lvar)) if p]
                 runs.append({

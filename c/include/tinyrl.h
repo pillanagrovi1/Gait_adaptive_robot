@@ -78,6 +78,8 @@ typedef struct {
     int32_t tile_dense;               /* linear: 1 = collision-free (unhashed) tile indices */
     int32_t cbp_period;               /* MLP: continual backprop, replace 1 unit every N updates, 0 = off */
     int32_t cbp_maturity;             /* MLP: units younger than this many updates are never replaced */
+    /* ---- added 23 Nov 2026 (D68, D70) ---- */
+    int32_t watkins;                  /* traces: 1 = cut the trace after a non-greedy action (Watkins), 0 = never */
 } tr_cfg_t;
 
 typedef struct {

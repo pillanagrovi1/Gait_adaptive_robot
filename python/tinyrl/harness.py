@@ -112,6 +112,7 @@ def run(task: dict, learner: dict, seed: int, run_cfg: dict | None = None,
       episode mode (default): `episodes`, `decay_episodes`, `eval_every` (episodes), `shift_at` (episode)
       step mode (if `steps` is set; recommended, see decision D02 and docs/research_review.md):
         `steps` env steps in total, `decay_steps`, `eval_every_steps`, `shift_at_step`.
+      Either mode: `eval_base_seed` (default 10000) seeds the evaluation start states.
       Either mode: `heldout_episodes` + `heldout_base_seed` add one evaluation after training on other
       start states (Go1: terrains), saved as meta `eval_heldout` (D71).
         Evaluation happens exactly at each checkpoint, mid-episode if necessary,
@@ -158,8 +159,11 @@ def run(task: dict, learner: dict, seed: int, run_cfg: dict | None = None,
         do_shift()
         shifted = True
 
+    # evaluation start states (Go1: terrains) are seeds eval_base, eval_base + 1, ...; tuning uses its own (D66, D70)
+    eval_base = int(r.get("eval_base_seed", 10_000))
+
     def do_eval(ev_step):
-        v = evaluate(eval_env, agent, r["eval_episodes"])
+        v = evaluate(eval_env, agent, r["eval_episodes"], eval_base)
         evals.append({"step": ev_step, "episode": ep, "eval_return": v})
         if verbose:
             print(f"  step {ev_step:7d}  ep {ep:5d}  eval {v:9.2f}")
@@ -192,7 +196,7 @@ def run(task: dict, learner: dict, seed: int, run_cfg: dict | None = None,
                 if back_at is not None and after_back is None and t_global >= back_at:
                     env.set_shift(0.0)
                     eval_env.set_shift(0.0)
-                    after_back = evaluate(eval_env, agent, r["eval_episodes"])
+                    after_back = evaluate(eval_env, agent, r["eval_episodes"], eval_base)
                 if t_global >= budget:
                     break
         ev = ""

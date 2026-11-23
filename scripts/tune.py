@@ -12,10 +12,13 @@ The experiment config gets a "tune" section:
     "k": 20,                              # configurations per learner (same for all)
     "seeds": [1000, 1001, 1002],          # tuning seeds, disjoint from "seeds"
     "score": "auc",                       # "auc" (mean eval over the run) or "final"
-    "run": {"steps": 100000},             # optional cheaper budget for tuning
+    "run": {"steps": 100000},             # optional cheaper budget for tuning; "eval_base_seed" gives
+                                          # tuning its own evaluation start states (D66, D70)
     "space": {
       "table":  {"alpha": {"log_uniform": [0.05, 1.0]}},
-      "net":    {"alpha": {"log_uniform": [0.003, 0.1]}, "target_period": {"choice": [50, 100, 500]}}
+      "net":    {"alpha": {"log_uniform": [0.003, 0.1]}, "target_period": {"choice": [50, 100, 500]}},
+      "linear": {"obgd_kappa": {"choice": [0, 2.0]},          # "when": alpha is sampled only where kappa = 0,
+                 "alpha": {"log_uniform": [0.05, 1.0], "when": {"obgd_kappa": 0}, "otherwise": 1.0}}
     }
   }
 
@@ -55,6 +58,9 @@ def sample(space: dict, rng) -> dict:
             out[k] = spec["choice"][int(rng.integers(len(spec["choice"])))]
         else:
             raise ValueError(f"bad search spec for {k}: {spec}")
+    for k, spec in space.items():          # conditional value, e.g. alpha is tuned only where ObGD is off
+        if "when" in spec and any(out[c] != v for c, v in spec["when"].items()):
+            out[k] = spec["otherwise"]
     return out
 
 
@@ -80,6 +86,12 @@ def main():
         sys.exit("this experiment has no 'tune' section")
     if set(t["seeds"]) & set(exp["seeds"]):
         sys.exit("tuning seeds must differ from reporting seeds")
+    if "eval_base_seed" in t.get("run", {}):
+        n = int(exp.get("run", {}).get("eval_episodes", 5))
+        test = int(exp.get("run", {}).get("eval_base_seed", 10_000))
+        tune_eval = int(t["run"]["eval_base_seed"])
+        if abs(tune_eval - test) < n:
+            sys.exit("tuning evaluation states overlap the reporting ones")
     rng = np.random.default_rng(12345)
     run_cfg = {**exp.get("run", {}), **t.get("run", {})}
     tuned = copy.deepcopy(exp)
