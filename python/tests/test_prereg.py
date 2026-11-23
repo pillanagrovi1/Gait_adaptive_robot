@@ -42,3 +42,16 @@ def test_threshold_reports_how_many_seeds_reached_it(tmp_path, monkeypatch):    
         for seed in exp["seeds"]:
             harness.run(task, learner, seed, run, out_dir=tmp_path / "e" / "zero")
         assert analysis.summarize(tmp_path / "e.json").iloc[0]["x_to_threshold_reached"] == reached
+
+
+@pytest.mark.parametrize("name", ["adaptation_pendulum_v2", "adaptation_pendulum_scratch_v2"])
+def test_adaptation_v2_is_v1_with_v2_hyperparameters(name):                                 # D77
+    v1, exp = sweep.load(name.removesuffix("_v2")), sweep.load(name)
+    assert exp["run"] == v1["run"] and exp["task"] == v1["task"] and exp["seeds"] == list(range(20))
+    src = {x["label"]: x["base"] for x in sweep.load("pendulum_main_v2_tuned")["learners"]}
+    origin = {"table": "table-angle", "linear": "linear-angle", "net": "net-trig", "net-stream": "net-stream-trig",
+              "net-stream-cbp": "net-stream-trig", "net-sgd": "net-sgd-trig"}
+    for x in exp["learners"]:
+        if x["label"] in origin:
+            for k, v in src[origin[x["label"]]].items():
+                assert x["base"][k] == v, (x["label"], k)
