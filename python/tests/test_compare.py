@@ -37,7 +37,7 @@ def test_primary_set_is_the_registered_one(cmp):
     assert n == {"pendulum_main_tuned": 0, "replay_ratio": 1, "cartpole_main_tuned": 6,
                  "adaptation_pendulum": 12, "stream_ablation": 10, "go1_gait_v3": 10,
                  "cartpole_main_v2_tuned": 6, "pendulum_main_v2_tuned": 4,
-                 "go1_gait_v4": 5}
+                 "go1_gait_v4": 5, "pendulum_linear_wide_tuned": 0}
 
 
 @pytest.mark.parametrize("ratio,band", [(1.0, "about equal"), (0.67, "about equal"), (1.5, "about equal"),
