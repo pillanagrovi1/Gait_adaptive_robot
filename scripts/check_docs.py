@@ -23,7 +23,7 @@ sys.path.insert(0, str(ROOT / "python"))
 from tinyrl import analysis  # noqa: E402
 
 sys.path.insert(0, str(ROOT / "scripts"))
-from compare import COMPARISONS  # noqa: E402
+from compare import COMPARISONS, MATCHED  # noqa: E402
 
 DOCS = ["README.md", "docs/report.md", "docs/results.md", "docs/study_guide.md"]
 BY_SRAM = {"pendulum_main_tuned", "cartpole_main_tuned"}
@@ -73,6 +73,8 @@ def main() -> int:
             printed += run("scripts/compare.py", name).split("\n")
         if name in BY_SRAM:
             printed += run("scripts/compare.py", name, "--by-sram").split("\n")
+        if name in MATCHED:
+            printed += run("scripts/compare.py", name, "--matched").split("\n")
         missing = [p for p in printed if p.strip() and p not in lines]
         problems += [f"{name}: not in results.md: {p[:120]}" for p in missing]
         print(f"{name:32s} table {'yes' if header else 'no '}  lines checked {len([p for p in printed if p.strip()]):3d}"

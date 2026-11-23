@@ -21,7 +21,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "python"))
 
-from tinyrl import sweep  # noqa: E402
+from tinyrl import cbind, sweep  # noqa: E402
 
 
 def refuse(*problems):
@@ -34,6 +34,12 @@ def fmt(m, ci):
         return "—"
     digits = 1 if abs(m) < 100 else 0       # Go1 returns are ~20: whole numbers would hide the interval
     return f"{m:.{digits}f} ± {ci:.{digits}f}" if not pd.isna(ci) else f"{m:.{digits}f}"
+
+
+def hash_load(learner: dict, obs_dim: int) -> float:
+    """Tile-coding cells per hashed feature (D70); above 1, different cells must share features."""
+    p = {**cbind.LEARNER_DEFAULTS, **learner}
+    return p["tilings"] * (p["tiles"] + 1) ** int(obs_dim) / p["features"]
 
 
 def main():
@@ -87,6 +93,9 @@ def main():
     print(f"**{name}** · {commit} · config `configs/{name}.json` · "
           f"command `{command}` · "
           f"seeds per config: {int(d['n_seeds'].min())}–{int(d['n_seeds'].max())} · intervals: {d['ci_method'].iloc[0]} 95%\n")
+    if any(L.get("sweep_zip") for L in exp["learners"] if L["base"].get("kind") == "linear"):   # D70
+        d["hash_load"] = [hash_load(specs[run]["learner"], dim) if kind == "linear" else float("nan")
+                          for run, kind, dim in zip(d["run_id"], d["kind"], d["obs_dim"])]
     extra = [(col, head, show) for col, head, show in (
         ("flash_bytes", "flash, bench firmware with all three learners (B)", lambda r, v: f"{v:.0f}"),  # D56
         ("saturation_frac", "update saturation", lambda r, v: f"{100 * v:.2g}%"),                      # D55
@@ -94,6 +103,7 @@ def main():
         ("back_mean", "return on A right after switch back", lambda r, v: fmt(v, r.get("back_ci95"))),
         ("a2_auc_mean", "AUC, second A window", lambda r, v: fmt(v, r.get("a2_auc_ci95"))),
         ("recovered_mean", "recovered", lambda r, v: f"{100 * v:.0f}%"),
+        ("hash_load", "hash load, tilings × (tiles+1)^d / features", lambda r, v: f"{v:.2f}"),
     ) if col in d and d[col].notna().any()]
     print("| config | final eval return | mean eval (AUC) | online return | peak SRAM (B) | instr./step (M4) | update underflow |"
           + "".join(f" {head} |" for _, head, _ in extra))

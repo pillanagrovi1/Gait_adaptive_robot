@@ -64,6 +64,14 @@ def sample(space: dict, rng) -> dict:
     return out
 
 
+def select_config(tuned: dict, t: dict) -> dict:
+    """D70: the tuned sweep on the tuning seeds and tuning evaluation states, to choose comparison 2's pairs."""
+    return {**tuned, "name": tuned["name"] + "_select", "seeds": t["seeds"],
+            "run": {**tuned.get("run", {}), "eval_base_seed": t["run"]["eval_base_seed"]},
+            "_note": "Selection runs (D70): the tuned sweep on the tuning seeds and tuning evaluation states. "
+                     "Used only to choose the matched-SRAM pairs (compare.py --matched); never reported."}
+
+
 def score_run(args):
     task, learner, seed, run_cfg, score = args
     res = harness.run(task, learner, seed, run_cfg)
@@ -133,6 +141,11 @@ def main():
         w.writeheader()
         w.writerows(trials)
     print("wrote", out.relative_to(ROOT), "and", (tdir / f"{exp['name']}.csv").relative_to(ROOT))
+    if "eval_base_seed" in t.get("run", {}):
+        sel = select_config(tuned, t)
+        sel_out = out.with_name(f"{sel['name']}.json")
+        sel_out.write_text(json.dumps(sel, indent=2))
+        print("wrote", sel_out.relative_to(ROOT), "-> python3 scripts/run_sweep.py", sel_out.stem)
     print("next: python3 scripts/run_sweep.py", out.stem)
 
 

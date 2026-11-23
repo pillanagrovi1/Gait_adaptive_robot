@@ -81,3 +81,39 @@ def test_v2_design_is_as_registered(name):
             assert set(sp) == {"alpha"} and not {"lam", "obgd_kappa", "replay_cap", "target_period"} & set(L["base"])
         if family == "linear":
             assert L["sweep_zip"] and len(L["sweep"]["tiles"]) == len(L["sweep"]["features"])
+
+
+def _script(name):
+    spec = importlib.util.spec_from_file_location(name, ROOT / "scripts" / f"{name}.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_matched_pick_uses_only_fitting_runs_and_selection_auc():
+    """D70 comparison 2: per family, the highest selection AUC among the runs that fit; tables never count."""
+    pick = _script("compare").pick
+    sram = {"net_hidden16": 3000, "net-stream_hidden64": 9000, "linear_features256-tiles1": 2000,
+            "linear_features4096-tiles3": 20000, "table_bins12": 1000}
+    auc = {"net_hidden16": 100, "net-stream_hidden64": 400, "linear_features256-tiles1": 50,
+           "linear_features4096-tiles3": 500, "table_bins12": 999}
+    assert pick(6 * 1024, sram, auc) == {"network": "net_hidden16", "linear": "linear_features256-tiles1"}
+    assert pick(16 * 1024, sram, auc) == {"network": "net-stream_hidden64", "linear": "linear_features256-tiles1"}
+    assert pick(64 * 1024, sram, auc)["linear"] == "linear_features4096-tiles3"
+    assert pick(1024, sram, auc) == {}
+
+
+def test_hash_load_matches_d70_table():
+    load = _script("results_table").hash_load
+    assert round(load({"tilings": 8, "tiles": 2, "features": 64}, 2), 2) == 1.12
+    assert round(load({"tilings": 8, "tiles": 7, "features": 4096}, 3), 2) == 1.00
+    assert round(load({"tilings": 16, "tiles": 2, "features": 1024}, 4), 2) == 1.27
+
+
+def test_selection_config_uses_tuning_seeds_and_states_only(tune):
+    exp = sweep.load("cartpole_main_v2")
+    t = exp.pop("tune")
+    sel = tune.select_config({**exp, "name": "cartpole_main_v2_tuned"}, t)
+    assert sel["name"] == "cartpole_main_v2_tuned_select" and sel["seeds"] == t["seeds"]
+    assert not set(sel["seeds"]) & set(exp["seeds"]) and sel["run"]["eval_base_seed"] == 50_000
+    assert {s["run_id"] for s in sweep.expand(sel)} == {s["run_id"] for s in sweep.expand(exp)}

@@ -554,3 +554,11 @@ on terrains 10000-10004 is 19.2025, the archived v3 B3 evaluation. **Status: pro
 **D72 — Rahul approved D70 and D71 as written.** Order: Go1 v4 stage A first, then the D70 runs, one heavy run at a
 time. D70's still-to-build parts (selection run, comparison 2, load column) are added before any D70 run, without
 changing its design. **Status: approved; D71 stage A running.**
+
+**D73 — D70's missing parts, built before any D70 run.** `scripts/tune.py` also writes
+`configs/<name>_tuned_select.json` (the tuned sweep on the tuning seeds 1000-1002 and evaluation states from 50000);
+`scripts/compare.py <name>_tuned --matched` picks, per budget and family, the run with the highest AUC on those
+selection runs among the runs whose M4 peak SRAM fits, and compares the pair on the reporting seeds. 1 KB = 1024 B.
+It refuses to run without M4 measurements. `scripts/results_table.py` adds the hash-load column when a linear learner
+uses `sweep_zip` (v2 only, so the v1 tables are unchanged). The v1 pairs of comparison 1 are registered in
+`COMPARISONS`. Design unchanged. **Status: built; nothing run.**

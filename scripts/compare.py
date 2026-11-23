@@ -6,6 +6,7 @@ no difference in results.md is typed by hand. Intervals: Student-t 95% on per-se
 
     python3 scripts/compare.py cartpole_main_tuned
     python3 scripts/compare.py cartpole_main_tuned --by-sram   # exploratory: every pair at similar or 3-10x SRAM
+    python3 scripts/compare.py cartpole_main_v2_tuned --matched   # D70: best network vs best linear per budget
 """
 import argparse
 import sys
@@ -80,6 +81,19 @@ COMPARISONS = {
                        ("net-obgd-lam", "net-obgd"),
                        ("net-sgd", "net-obgd-lam-ln-sr"))
           for m in ("final", "auc")],
+    ],
+    "cartpole_main_v2_tuned": [         # D70 comparison 1: the v1 pairs, now pre-registered
+        C(a, b, m)
+        for a, b in (("linear_features1024-tiles2", "table_bins8"),
+                     ("net_hidden32", "linear_features1024-tiles2"),
+                     ("net-stream_hidden32", "linear_features1024-tiles2"))
+        for m in ("final", "auc")
+    ],
+    "pendulum_main_v2_tuned": [
+        C(a, b, m)
+        for a, b in (("net-trig_hidden64", "linear-trig_features4096-tiles7"),
+                     ("net-stream-angle_hidden32", "linear-angle_features256-tiles5"))
+        for m in ("final", "auc")
     ],
     "go1_gait_v3": [
         *[C(a, b, "final") for a in GO1 for b in ("B3-stumble", "B4-all-reflexes")],
@@ -157,13 +171,59 @@ def by_sram(exp: str) -> None:
                           f"{lin['final_mean']:.0f} | {m:+.1f} [{m - h:+.1f}, {m + h:+.1f}] {verdict(m, h)} |")
 
 
+MATCHED = {"pendulum_main_v2_tuned": (4, 16, 64), "cartpole_main_v2_tuned": (6, 16, 64)}   # KB (1 KB = 1024 B)
+
+
+def family(label: str) -> str | None:
+    return "network" if label.startswith("net") else "linear" if label.startswith("linear") else None
+
+
+def pick(budget: int, sram, auc) -> dict:
+    """{family: run_id with the highest selection AUC among the runs whose M4 peak SRAM fits the budget}."""
+    best = {}
+    for run, b in sram.items():
+        f = family(run)
+        if f and b <= budget and run in auc and (f not in best or auc[run] > auc[best[f]]):
+            best[f] = run
+    return best
+
+
+def matched(exp: str) -> None:
+    """D70 comparison 2: per SRAM budget, best network − best linear, chosen on the selection runs only."""
+    rep, sel = analysis.summarize(exp), analysis.summarize(exp + "_select")
+    if rep.empty or sel.empty:
+        raise SystemExit(f"compare: need results/raw/{exp}/ and results/raw/{exp}_select/")
+    rep = rep[rep["label"].map(family).notna()]
+    if (rep["peak_source"] != "m4-qemu").any():
+        raise SystemExit("compare: every network and linear run needs its M4 measurement (measure_m4.py) first")
+    sram = dict(zip(rep["run_id"], rep["peak_bytes"]))
+    auc = dict(zip(sel["run_id"], sel["auc_mean"]))
+    print("| SRAM budget | A = best network (B) | B = best linear (B) | metric | pairs | mean | 95% CI | verdict |")
+    print("|---|---|---|---|---|---|---|---|")
+    for kb in MATCHED[exp]:
+        best = pick(kb * 1024, sram, auc)
+        if len(best) < 2:
+            print(f"| {kb} KB | {best.get('network', 'none fits')} | {best.get('linear', 'none fits')} | | | | | |")
+            continue
+        a, b = best["network"], best["linear"]
+        for metric in ("final", "auc"):
+            r = analysis.paired_diff(exp, a, b, metric)
+            m, h = r["mean_diff"], r["ci95"]
+            print(f"| {kb} KB | {a} ({int(sram[a])}) | {b} ({int(sram[b])}) | {metric} | {r['n']} | {m:+.1f} | "
+                  f"[{m - h:+.1f}, {m + h:+.1f}] | {verdict(m, h)} |")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("experiment", choices=sorted(COMPARISONS))
     ap.add_argument("--by-sram", action="store_true", help="exploratory equal-memory table (D63)")
+    ap.add_argument("--matched", action="store_true", help="D70: best network vs best linear per SRAM budget")
     a = ap.parse_args()
     if a.by_sram:
         by_sram(a.experiment)
+        return
+    if a.matched:
+        matched(a.experiment)
         return
     print("| A − B | metric | status | pairs | mean | 95% CI | verdict |")
     print("|---|---|---|---|---|---|---|")
