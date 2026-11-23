@@ -1,0 +1,122 @@
+{
+ "name": "go1_gait_v4",
+ "_note": "Go1 v4 (D71, D74). As go1_gait_v3, at roughness 0.08, the highest level where stage A (scripts/go1_headroom.py) found a fixed setting that beats B3 on held-out terrain. No shift. Every learner has the same update rule (lambda 0.8, ObGD kappa 2, alpha 1, Watkins cut, gamma 0.9). UNTUNED (tuning would cost about 80 h). B-best = the stage A setting, held fixed. Each seed is scored after training on 30 held-out terrains (20000-20029), metric 'heldout'.",
+ "task": {
+  "name": "go1",
+  "obs_mode": "imu4pc",
+  "phase_lock": true,
+  "roughness": 0.08,
+  "action_mode": "incremental",
+  "stumble": true
+ },
+ "run": {
+  "steps": 20000,
+  "decay_steps": 8000,
+  "eval_every_steps": 1000,
+  "eval_episodes": 5,
+  "heldout_episodes": 30,
+  "heldout_base_seed": 20000
+ },
+ "seeds": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9
+ ],
+ "learners": [
+  {
+   "label": "table",
+   "base": {
+    "kind": "tabular",
+    "bins": 2,
+    "alpha": 1.0,
+    "gamma": 0.9,
+    "lam": 0.8,
+    "obgd_kappa": 2.0,
+    "watkins": 1
+   }
+  },
+  {
+   "label": "linear",
+   "base": {
+    "kind": "linear",
+    "tilings": 16,
+    "tiles": 3,
+    "alpha": 1.0,
+    "gamma": 0.9,
+    "lam": 0.8,
+    "obgd_kappa": 2.0,
+    "watkins": 1
+   },
+   "sweep": {
+    "features": [
+     1024,
+     4096
+    ]
+   }
+  },
+  {
+   "label": "net-stream",
+   "base": {
+    "kind": "mlp",
+    "norm": 1,
+    "round_mode": 1,
+    "alpha": 1.0,
+    "gamma": 0.9,
+    "lam": 0.8,
+    "obgd_kappa": 2.0,
+    "watkins": 1
+   },
+   "sweep": {
+    "hidden": [
+     16,
+     32
+    ]
+   }
+  },
+  {
+   "label": "B3-stumble",
+   "base": {
+    "kind": "baseline_const",
+    "action": 0
+   }
+  },
+  {
+   "label": "B4-all-reflexes",
+   "base": {
+    "kind": "baseline_const",
+    "action": 0
+   },
+   "task": {
+    "tegotae_sigma": 1.0,
+    "posture_gain": 0.5
+   }
+  },
+  {
+   "label": "random",
+   "base": {
+    "kind": "baseline_random"
+   }
+  },
+  {
+   "label": "B-best",
+   "base": {
+    "kind": "baseline_const",
+    "action": 0
+   },
+   "task": {
+    "init_params": {
+     "clearance": 1.0,
+     "posture_gain": 0.4,
+     "height": -0.05
+    }
+   }
+  }
+ ]
+}

@@ -527,3 +527,26 @@ intervals above 0.
 **Limits.** Every seed is evaluated on the same 5 terrains, so B0, B3 and B4 have no variance across seeds and the
 intervals against them carry only the learner's variance: the results hold for those 5 terrains. Simulation only, no
 tuning, 20,000 decisions (about 83 minutes of simulated walking).
+
+## Go1 v4, stage A: is there headroom over B3? (23 Nov 2026)
+
+**go1_headroom** · commit `ca9bd9c` · command `python3 scripts/go1_headroom.py --levels 0.06 0.08 0.10 --jobs 8` ·
+task `go1_gait_v3` at each roughness, no learning · 180 fixed settings + B3, selected on terrains 30000-30019,
+confirmed on terrains 40000-40029 · intervals: Student-t 95% over 30 terrains, paired by terrain.
+Pre-registered in D71. Outputs: `results/go1_headroom/` (per-setting returns and the confirmation pairs).
+
+| roughness | best setting (on selection terrains) | its mean − B3 there | confirmation: best − B3, 95% CI (terrains) | headroom |
+|---|---|---|---|---|
+| 0.06 | clearance 1.2, posture_gain 0.6, height 0.1 | +2.24 | +3.37 [+1.36, +5.38] (30) | yes |
+| 0.08 | clearance 1, posture_gain 0.4, height -0.05 | +2.41 | +4.36 [+2.59, +6.13] (30) | yes |
+| 0.1 | clearance 1, posture_gain 0.8, height 0.05 | +8.53 | +0.37 [-3.83, +4.57] (30) | no |
+
+**Findings.**
+1. At roughness 0.06 and 0.08 a fixed setting that the learner's actions can reach beats B3 on terrain it was not
+   chosen on. At 0.08 the gap is +4.36 [+2.59, +6.13]: the most a parameter-nudging learner could be expected to gain
+   there, if it found that setting.
+2. At 0.10, the v3 level, the setting that looked best on the selection terrains (+8.53) is inconclusive on new
+   terrain (+0.37 [−3.83, +4.57]). So v3 may have had nothing for the learners to find, and its null result
+   (no learner beat B3) does not say whether they could learn.
+3. By D71's rule, stage B runs at 0.08 (`configs/go1_gait_v4.json`, B-best = clearance 1.0, posture gain 0.4,
+   height −0.05).
