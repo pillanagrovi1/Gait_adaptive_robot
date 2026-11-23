@@ -605,3 +605,10 @@ and stochastic rounding; that is the tuned learner, and the comparison keeps it.
 `net-sgd` added to the per-learner rows (`scripts/compare.py`, `adaptation_pendulum_v2`): primary streaming net −
 linear and cbp − streaming net on post-shift AUC, forward transfer, forgetting; secondary, the second A window.
 Cost: about 1 h on this laptop with 8 jobs. **Status: proposed; runs after merge, per Rahul's "do it" of 23 Nov.**
+
+## Added 23 Nov 2026, after the adaptation v2 run (its results had been seen)
+
+**D79 — Adaptation v2 result.** `adaptation_pendulum_v2` and its scratch reference ran as registered in D77 (commit
+`9cd3469`). Primary: streaming net − linear, post-shift AUC +9.85 [−17.25, +36.95], inconclusive; v1's +86.8 is
+therefore not supported once every learner has its own tuned update rule. The Summary, §4.4 and the README now say
+so; the v1 table stays, labelled v1. **Status: reported.**

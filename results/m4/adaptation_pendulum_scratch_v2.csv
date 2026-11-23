@@ -1,0 +1,7 @@
+experiment,run_id,cfg_id,kind,fits,peak_bytes,agent_bytes,arena_bytes,stack_learner,stack_total,insns_learn_step,insns_greedy_step,flash_text,ram_data,ram_bss,host_match,peak_bytes_estimate,error
+adaptation_pendulum_scratch_v2,table,13e862b078,tabular,1,2664,372,1984,308,340,1908.9,194.0,15696,0,2368,1,,
+adaptation_pendulum_scratch_v2,linear,47a006093e,linear,1,13720,372,12964,384,416,12692.6,1084.0,15696,0,13344,1,,
+adaptation_pendulum_scratch_v2,net,5aacaebbc7,mlp,1,25072,372,24260,440,472,79883.4,2639.5,15684,0,24640,1,,
+adaptation_pendulum_scratch_v2,net-stream,a25ac326b7,mlp,1,2152,372,1316,464,496,23940.8,4853.3,15684,0,1696,1,,
+adaptation_pendulum_scratch_v2,net-stream-cbp,c86b3798fb,mlp,1,2408,372,1572,464,496,27207.8,4853.3,15684,0,1952,1,,
+adaptation_pendulum_scratch_v2,net-sgd,7b5933200a,mlp,1,2128,372,1316,440,472,11940.4,2639.5,15684,0,1696,1,,

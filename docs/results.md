@@ -759,3 +759,72 @@ Best network − best linear at matched peak SRAM (D70, comparison 2; each famil
 4. 12 matched intervals per task, uncorrected: about 0.6 per task would exclude 0 by chance if nothing differed.
 5. Exploratory: on the pendulum the streaming network's tuning chose λ 0 and κ 0 (no traces, no ObGD) on both
    encodings; linear chose the largest λ and κ on both. Several choices are on the edge of their grid.
+
+## Adaptation v2: heavier rod and back, every learner with v2's tuned update rule (23 Nov 2026)
+
+Pre-registered in D77. As "Stage 5: adaptation" (same schedule, 20 seeds, from-scratch reference), with every
+learner's hyperparameters from `pendulum_main_v2_tuned`. v2's tuning chose λ 0 and κ 0 for the streaming net on trig,
+so here it is a one-step network with LayerNorm and stochastic rounding.
+
+**adaptation_pendulum_v2** · commit `9cd3469` · config `configs/adaptation_pendulum_v2.json` · command `JOBS=8 bash scripts/run_experiment.sh adaptation_pendulum_v2` · seeds per config: 20–20 · intervals: bootstrap 95%
+
+| config | final eval return | mean eval (AUC) | online return | peak SRAM (B) | instr./step (M4) | update underflow | flash, bench firmware with all three learners (B) | update saturation | post-shift AUC (B window) | return on A right after switch back | AUC, second A window | recovered |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| table | -560 ± 10 | -703 ± 7 | -604 ± 5 | 2664 | 1909 | 22.9% | 15696 | 0% | -660 ± 5 | -585 ± 19 | -556 ± 4 | 95% |
+| linear | -119 ± 3 | -198 ± 5 | -193 ± 5 | 13720 | 12693 | 10.7% | 15696 | 0% | -329 ± 11 | -210 ± 59 | -128 ± 6 | 0% |
+| net | -155 ± 13 | -230 ± 11 | -232 ± 8 | 25072 | 79883 | 12.4% | 15684 | 0% | -300 ± 15 | -188 ± 43 | -145 ± 5 | 25% |
+| net-stream | -186 ± 40 | -435 ± 24 | -263 ± 16 | 2152 | 23941 | 31.6% | 15684 | 0% | -319 ± 20 | -258 ± 75 | -161 ± 15 | 55% |
+| net-stream-cbp | -611 ± 124 | -646 ± 35 | -667 ± 92 | 2408 | 27208 | 23.8% | 15684 | 0% | -769 ± 99 | -615 ± 180 | -561 ± 103 | 80% |
+| net-sgd | -166 ± 26 | -456 ± 28 | -212 ± 8 | 2128 | 11940 | 11.4% | 15684 | 0% | -395 ± 32 | -224 ± 58 | -165 ± 13 | 35% |
+| zero-torque | -1068 ± 0 | -1068 ± 0 | -1224 ± 8 | — | — | — | — | — | -1068 ± 0 | -1068 ± 0 | -1068 ± 0 | 100% |
+
+From-scratch reference (heavy rod from step 0, 150k steps):
+
+**adaptation_pendulum_scratch_v2** · commit `9cd3469` · config `configs/adaptation_pendulum_scratch_v2.json` · command `JOBS=8 bash scripts/run_experiment.sh adaptation_pendulum_scratch_v2` · seeds per config: 20–20 · intervals: bootstrap 95%
+
+| config | final eval return | mean eval (AUC) | online return | peak SRAM (B) | instr./step (M4) | update underflow | flash, bench firmware with all three learners (B) | update saturation |
+|---|---|---|---|---|---|---|---|---|
+| table | -648 ± 19 | -842 ± 7 | -704 ± 10 | 2664 | 1909 | 18.8% | 15696 | 0% |
+| linear | -268 ± 39 | -437 ± 13 | -374 ± 14 | 13720 | 12693 | 5.3% | 15696 | 0% |
+| net | -303 ± 33 | -470 ± 18 | -411 ± 22 | 25072 | 79883 | 9.2% | 15684 | 0% |
+| net-stream | -312 ± 41 | -735 ± 34 | -476 ± 28 | 2152 | 23941 | 21.9% | 15684 | 0% |
+| net-stream-cbp | -616 ± 91 | -965 ± 42 | -744 ± 69 | 2408 | 27208 | 17.8% | 15684 | 0% |
+| net-sgd | -504 ± 64 | -858 ± 20 | -553 ± 31 | 2128 | 11940 | 4.7% | 15684 | 0% |
+| zero-torque | -1068 ± 0 | -1068 ± 0 | -1208 ± 12 | — | — | — | — | — |
+
+![adaptation v2](../results/figures/adaptation_pendulum_v2_adaptation.png)
+
+Paired by seed, Student-t 95%:
+
+| A − B | metric | status | pairs | mean | 95% CI | verdict |
+|---|---|---|---|---|---|---|
+| net-stream − linear | post_auc | pre-registered | 20 | +9.85 | [-17.25, +36.95] | inconclusive |
+| net-stream-cbp − net-stream | post_auc | pre-registered | 20 | -450.3 | [-569.0, -331.5] | A lower |
+| forward transfer, table (after the shift − from scratch) | post_auc − auc | pre-registered | 20 | +182.6 | [+173.0, +192.3] | A higher |
+| forward transfer, linear (after the shift − from scratch) | post_auc − auc | pre-registered | 20 | +108.4 | [+89.6, +127.2] | A higher |
+| forward transfer, net (after the shift − from scratch) | post_auc − auc | pre-registered | 20 | +170.2 | [+143.9, +196.4] | A higher |
+| forward transfer, net-stream (after the shift − from scratch) | post_auc − auc | pre-registered | 20 | +415.7 | [+366.4, +465.1] | A higher |
+| forward transfer, net-stream-cbp (after the shift − from scratch) | post_auc − auc | pre-registered | 20 | +195.7 | [+70.1, +321.3] | A higher |
+| forward transfer, net-sgd (after the shift − from scratch) | post_auc − auc | pre-registered | 20 | +462.3 | [+424.0, +500.7] | A higher |
+| forgetting, table (right after switch back − P) | back − final | pre-registered | 20 | -24.8 | [-45.7, -3.9] | A lower |
+| forgetting, linear (right after switch back − P) | back − final | pre-registered | 20 | -91.5 | [-154.9, -28.0] | A lower |
+| forgetting, net (right after switch back − P) | back − final | pre-registered | 20 | -33.6 | [-86.5, +19.3] | inconclusive |
+| forgetting, net-stream (right after switch back − P) | back − final | pre-registered | 20 | -71.7 | [-167.6, +24.2] | inconclusive |
+| forgetting, net-stream-cbp (right after switch back − P) | back − final | pre-registered | 20 | -3.89 | [-182.48, +174.70] | inconclusive |
+| forgetting, net-sgd (right after switch back − P) | back − final | pre-registered | 20 | -57.4 | [-120.0, +5.1] | inconclusive |
+| second A window, table (mean − P) | a2_auc − final | pre-registered, secondary | 20 | +3.66 | [-8.62, +15.95] | inconclusive |
+| second A window, linear (mean − P) | a2_auc − final | pre-registered, secondary | 20 | -9.42 | [-17.47, -1.37] | A lower |
+| second A window, net (mean − P) | a2_auc − final | pre-registered, secondary | 20 | +9.30 | [-4.75, +23.34] | inconclusive |
+| second A window, net-stream (mean − P) | a2_auc − final | pre-registered, secondary | 20 | +24.6 | [-23.4, +72.5] | inconclusive |
+| second A window, net-stream-cbp (mean − P) | a2_auc − final | pre-registered, secondary | 20 | +50.9 | [-55.6, +157.4] | inconclusive |
+| second A window, net-sgd (mean − P) | a2_auc − final | pre-registered, secondary | 20 | +1.72 | [-24.23, +27.67] | inconclusive |
+
+**Findings.**
+1. **The v1 adaptation result does not hold up** once every learner has its own tuned update rule: streaming net −
+   linear on post-shift AUC is +9.85 [−17.25, +36.95], inconclusive (v1: +86.8 [+66.9, +106.8], with traces for the
+   network only).
+2. Continual backprop at its one untuned setting again made the streaming net worse after the shift
+   (−450.3 [−569.0, −331.5]).
+3. Every learner did better after the shift than a fresh learner (forward transfer, all intervals above 0). The
+   table and linear learner forgot measurably (return right after the switch back below the pre-shift level); the
+   networks' forgetting intervals include 0.
