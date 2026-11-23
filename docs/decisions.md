@@ -562,3 +562,14 @@ selection runs among the runs whose M4 peak SRAM fits, and compares the pair on 
 It refuses to run without M4 measurements. `scripts/results_table.py` adds the hash-load column when a linear learner
 uses `sweep_zip` (v2 only, so the v1 tables are unchanged). The v1 pairs of comparison 1 are registered in
 `COMPARISONS`. Design unchanged. **Status: built; nothing run.**
+
+## Added 23 Nov 2026, after Go1 v4 stage A (its results had been seen)
+
+**D74 — Go1 v4 stage B runs at roughness 0.08.** Stage A (D71) found headroom at 0.06 and 0.08, not at 0.10
+(docs/results.md, "Go1 v4, stage A"). D71's rule picks the highest such level, 0.08. `configs/go1_gait_v4.json`
+follows D71 exactly: v3's task at 0.08 without the shift; table (2 bins), linear 1,024 and 4,096, streaming net 16
+and 32, all with λ 0.8, κ 2, α 1, Watkins cut, γ 0.9, untuned; baselines B3, B4, random and B-best (clearance 1.0,
+posture gain 0.4, height −0.05, the stage A setting at 0.08); 10 seeds; 30 held-out terrains 20000-20029.
+v3's linear-bandit and B0 arms are dropped, as D71 lists neither. The comparisons are registered in
+`scripts/compare.py` (`go1_gait_v4`): 5 primary (learner − B3, `heldout`), 10 secondary (learner − random,
+learner − B-best). Cost: 90 runs, about 390 s each for the learners; about 2-3 h with 6 jobs. **Status: about to run.**
