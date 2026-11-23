@@ -35,7 +35,8 @@ def test_every_comparison_names_real_runs(cmp):
 def test_primary_set_is_the_registered_one(cmp):
     n = {k: sum(c.primary for c in v) for k, v in cmp.COMPARISONS.items()}
     assert n == {"pendulum_main_tuned": 0, "replay_ratio": 1, "cartpole_main_tuned": 6,
-                 "adaptation_pendulum": 12, "stream_ablation": 10, "go1_gait_v3": 10}
+                 "adaptation_pendulum": 12, "stream_ablation": 10, "go1_gait_v3": 10,
+                 "cartpole_main_v2_tuned": 6, "pendulum_main_v2_tuned": 4}
 
 
 @pytest.mark.parametrize("ratio,band", [(1.0, "about equal"), (0.67, "about equal"), (1.5, "about equal"),
