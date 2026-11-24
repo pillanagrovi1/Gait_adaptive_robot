@@ -66,7 +66,6 @@ int tr_mlp_init(tr_agent_t *ag, uint8_t **cursor)
     const tr_cfg_t *c = &ag->cfg;
     tr_mlp_t *m = &ag->u.mlp;
     const int d = c->obs_dim, H = c->hidden, A = c->n_actions;
-    if (c->norm < 0 || c->norm > 1) return TR_ERR_CFG;
     m->n_params = tr_mlp_nparams(c);
     m->p  = (q16_t *)tr_carve(cursor, m->n_params * sizeof(q16_t));
     m->tp = c->target_period > 0 ? (q16_t *)tr_carve(cursor, m->n_params * sizeof(q16_t)) : NULL;
@@ -79,8 +78,7 @@ int tr_mlp_init(tr_agent_t *ag, uint8_t **cursor)
     m->inv_sigma = Q16_ONE;
 
     /* Uniform fan-in init: W ~ U(-1/sqrt(fan_in), 1/sqrt(fan_in)), biases 0. */
-    q16_t s1 = (q16_t)(((int64_t)Q16_ONE << 16) / q16_sqrt(d * Q16_ONE));
-    q16_t s2 = (q16_t)(((int64_t)Q16_ONE << 16) / q16_sqrt(H * Q16_ONE));
+    q16_t s1 = init_scale(d), s2 = init_scale(H);
     q16_t *W1 = m->p, *W2 = m->p + H * d + H;
     for (int k = 0; k < H * d; k++) W1[k] = uniform_sym(&ag->rng, s1);
     for (int k = 0; k < A * H; k++) W2[k] = uniform_sym(&ag->rng, s2);

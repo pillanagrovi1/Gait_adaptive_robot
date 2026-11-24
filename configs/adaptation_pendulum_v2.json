@@ -1,6 +1,6 @@
 {
  "name": "adaptation_pendulum_v2",
- "_note": "PROPOSED (D77). As adaptation_pendulum, with every learner's hyperparameters from pendulum_main_v2_tuned (same choice of lambda, kappa, alpha for all, Watkins cut), at v1's sizes: table 11 bins, linear 1024 features (tiles 10, hash load 0.95), networks 32 hidden. net-sgd added. Encodings as v1 (table and linear angle, networks trig).",
+ "_note": "Registered in D77; run 23 Nov 2026 (docs/results.md, Adaptation v2). As adaptation_pendulum, with every learner's hyperparameters from pendulum_main_v2_tuned (same choice of lambda, kappa, alpha for all, Watkins cut), at v1's sizes: table 11 bins, linear 1024 features (tiles 10, hash load 0.95), networks 32 hidden. net-sgd added. Encodings as v1 (table and linear angle, networks trig).",
  "task": {
   "name": "pendulum",
   "obs_mode": "trig"

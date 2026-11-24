@@ -1,7 +1,7 @@
 # Learning on a microcontroller's memory budget: table, tile coding or tiny network?
 
 Every number below comes from a table or line in [`results.md`](results.md), which names its commit, config and
-archive. The rules that were fixed before the runs are in [`decisions.md`](decisions.md) (D49–D60); D61–D76 were added afterwards and say so; v2 (D70) and Go1 v4 (D71) were registered before their runs.
+archive. The rules that were fixed before the runs are in [`decisions.md`](decisions.md) (D49–D60); D61–D80 were added afterwards and say so; v2 (D70), Go1 v4 (D71) and adaptation v2 (D77) were registered before their runs, and D78 is exploratory.
 
 ## Summary
 
@@ -19,7 +19,7 @@ rounding made no detectable difference, and on the simulated Go1 no learner beat
 a roughness where a better fixed setting was shown to exist (+4.36 [+2.59, +6.13] over it on new terrain).
 
 *Caveats:* simulation and QEMU only (memory and instruction counts, no timing, no hardware); 10 seeds, 20 for
-adaptation; 12 uncorrected matched-SRAM intervals per task; replay and the ablation keep v1's update rules
+adaptation; 12 uncorrected matched-SRAM intervals in all (6 per task); replay and the ablation keep v1's update rules
 (D69) and traces without the Watkins cut (D68).
 
 ## 1. Question
@@ -265,7 +265,7 @@ at the full budget on tuning seeds and tuning evaluation states of its own (D66)
 faster than tile coding. On the pendulum the network's advantage is real only where tile coding has too few features
 to learn; with 16 KB, tile coding was better. On the pendulum the streaming network's tuning chose no traces and no
 ObGD (λ 0, κ 0) on both encodings, so its pendulum results are those of a one-step network with LayerNorm and
-stochastic rounding. With 12 uncorrected intervals per task, about 0.6 per task could exclude 0 by chance.
+stochastic rounding. With 12 uncorrected matched-SRAM intervals in all (6 per task), about 0.6 could exclude 0 by chance.
 
 *Exploratory (D78):* re-tuning tile coding with a wider grid (λ up to 0.98, κ up to 6) chose the same values on the
 angle encoding, so the 16 KB result is unchanged; on trig it again chose the largest κ offered.
@@ -325,11 +325,12 @@ return from linear's better encoding once linear had the 4 KB it needs to learn 
 choice of λ and κ for every learner (§4.9), the streaming net's cart-pole advantage did not reappear, and on the
 pendulum the best network beat the best tile coding only at 4 KB, where tile coding has too few features.
 
-- The streaming net pays 12.2x to 20.0x linear's instructions per step in the registered comparisons, and
-  its returns vary more between seeds.
-- Linear tile coding beat the table on cart-pole with less memory, at 4.3x the table's instructions.
+- The streaming net pays 12.2x to 20.0x linear's instructions per step in the v1 registered comparisons, where
+  linear had no traces; in v2, where linear also uses traces, 1.3x to 2.1x. Its returns vary more between seeds.
+- Linear tile coding beat the table on cart-pole with less memory, at 4.3x the table's instructions (v1) and
+  11.5x (v2).
   The table is the cheapest per step.
-- More replay updates were not shown to speed up the one table tested (+25 [-22, +72]).
+- More replay updates were not shown to speed up the one table tested (AUC +24.6 [−22.4, +71.5]).
 - Stochastic rounding made no detectable difference: table +12.3 [−36.0, +60.5], linear −1.38 [−10.00, +7.25], network −32.6 [−115.1, +49.8] on final return; table
   −15.1 [−45.1, +15.0], linear +2.23 [−8.71, +13.16], network +16.0 [−33.2, +65.2] on AUC.
 

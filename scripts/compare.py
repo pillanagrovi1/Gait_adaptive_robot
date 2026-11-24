@@ -36,7 +36,6 @@ class C(NamedTuple):
 POST_HOC = "not pre-registered"
 ADAPT = ("table", "linear", "net", "net-stream", "net-stream-cbp")
 ADAPT2 = ADAPT + ("net-sgd",)
-GO1_V4 = ("table", "linear_features1024", "linear_features4096", "net-stream_hidden16", "net-stream_hidden32")
 GO1 = ("table", "linear_features1024", "linear_features4096", "net-stream_hidden16", "net-stream_hidden32")
 
 COMPARISONS = {
@@ -114,8 +113,8 @@ COMPARISONS = {
         for m in ("final", "auc")
     ],
     "go1_gait_v4": [                    # D71: scored on 30 held-out terrains
-        *[C(a, "B3-stumble", "heldout") for a in GO1_V4],
-        *[C(a, b, "heldout", "pre-registered, secondary") for a in GO1_V4 for b in ("random", "B-best")],
+        *[C(a, "B3-stumble", "heldout") for a in GO1],
+        *[C(a, b, "heldout", "pre-registered, secondary") for a in GO1 for b in ("random", "B-best")],
     ],
     "go1_gait_v3": [
         *[C(a, b, "final") for a in GO1 for b in ("B3-stumble", "B4-all-reflexes")],

@@ -131,18 +131,9 @@ python3 scripts/run_sweep.py replay_ratio --jobs 6 --only table && python3 scrip
 
 Kill criterion (D53): run the table arm first (`python3 scripts/run_sweep.py replay_ratio --jobs 6 --only table`).
 Unless n = 5 beats n = 1 on AUC (paired difference, interval above 0), stop and report the null result.
-The original buffer-size sweep is still available:
+The buffer-size sweep that would have followed was removed unrun (D81).
 
 **Read:** `tr_observe` in `tr_agent.c`; D12 in the decisions log.
-
-```bash
-# not run (Stage 4 stopped at its gate, D53); kept as an option
-python3 scripts/run_sweep.py stage4_buffer --jobs 6
-python3 scripts/measure_m4.py stage4_buffer
-python3 scripts/make_plots.py stage4_buffer
-```
-
-Question to answer with the plot: *how much performance does each extra kilobyte of buffer buy?*
 
 ---
 
@@ -204,7 +195,6 @@ In a 10-episode probe the stumble reflex alone took success at roughness 0.10 fr
 
 **Algorithm trade-off map (any stage):** `python3 scripts/bench_kernels.py` measures candidate update kernels
 (Q16.16 / float32 / q15, LSTD-Q, Dyna-Q) on the M4 and draws `results/figures/tradeoff_map.png`.
-`python3 scripts/tile_collisions.py` shows how full the hashed tile table is (the `tile_collisions` learning experiment was not run).
 
 **Hardware (optional, Nucleo-F446RE): processor-in-the-loop.**
 

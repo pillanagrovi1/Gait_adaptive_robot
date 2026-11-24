@@ -36,7 +36,7 @@ rounding made no detectable difference, and on the simulated Go1 no learner beat
 a roughness where a better fixed setting was shown to exist (+4.36 [+2.59, +6.13] over it on new terrain).
 
 *Caveats:* simulation and QEMU only (memory and instruction counts, no timing, no hardware); 10 seeds, 20 for
-adaptation; 12 uncorrected matched-SRAM intervals per task; replay and the ablation keep v1's update rules
+adaptation; 12 uncorrected matched-SRAM intervals in all (6 per task); replay and the ablation keep v1's update rules
 (D69) and traces without the Watkins cut (D68).
 
 A difference counts only if its paired 95% interval excludes 0. "Learned faster" = higher AUC.
@@ -49,13 +49,13 @@ A difference counts only if its paired 95% interval excludes 0. "Learned faster"
 | Cart-pole (v1) | streaming network (3.0 KB) learned faster than linear tile coding (9.4 KB) at 12.2x the instructions; final return inconclusive | 10 seeds, pre-registered; update rule differs (D69) |
 | Cart-pole (v2) | linear tile coding beat the table (AUC +110.0 [+88.1, +132.0]) | 10 seeds, pre-registered; same choice of update rule (D70) |
 | Cart-pole (v2) | streaming network (3.0 KB) and linear tile coding (10.4 KB): no detectable difference (AUC −17.1 [−37.5, +3.3]) | 10 seeds, pre-registered (D70) |
-| Pendulum (v2), matched SRAM | best network beat best linear at 4 KB (AUC +489.6 [+443.3, +536.0]); linear better at 16 KB (AUC −221.7 [−265.2, −178.1]) | 10 seeds, pre-registered (D70); 12 uncorrected intervals |
+| Pendulum (v2), matched SRAM | best network beat best linear at 4 KB (AUC +489.6 [+443.3, +536.0]); linear better at 16 KB (AUC −221.7 [−265.2, −178.1]) | 10 seeds, pre-registered (D70); 12 uncorrected matched-SRAM intervals in all (6 per task) |
 | Adaptation (v1) | after a 50% heavier rod the streaming network returned more than linear tile coding, at 20.0x the instructions (different SRAM: 3.0 vs 13.2 KB, so no per-byte claim) | 20 seeds, pre-registered; update rule differs (D69) |
 | Adaptation (v2) | with every learner's own tuned update rule: streaming network and linear tile coding not detectably different after the heavier rod (+9.85 [−17.25, +36.95]) | 20 seeds, pre-registered (D77) |
 | Replay ratio | 5 replay updates per step did not measurably speed up the table, at 2.7x the instructions | 10 seeds, pre-registered gate |
 | Stochastic rounding | no detectable difference. Final: table +12.3 [−36.0, +60.5], linear −1.38 [−10.00, +7.25], network −32.6 [−115.1, +49.8]. AUC: table −15.1 [−45.1, +15.0], linear +2.23 [−8.71, +13.16], network +16.0 [−33.2, +65.2] | 10 seeds, pre-registered |
 | Traces (λ 0.8) | helped table (AUC +284.9 [+251.4, +318.5]) and linear (+152.1 [+132.6, +171.5]), hurt the network (−154.5 [−218.5, −90.6]); one-step network beat the full streaming recipe on final return (+149.0 [+70.7, +227.4]) | 10 seeds, untuned, exploratory (D69) |
-| Go1 (simulation) | the bar was not met: no learner beat the stumble-reflex gait, in v3 or in v4, where a better fixed setting was shown to exist; in v4 all beat random nudges | 10 seeds, pre-registered bar; v4 on 30 held-out terrains |
+| Go1 (simulation) | the bar was not met: no learner beat the stumble-reflex gait, in v3 or in v4, where a better fixed setting was shown to exist; in v4 all beat random nudges | 10 seeds, pre-registered bar; v4 on 30 held-out terrains, the same for every seed |
 | On-chip learning | learning on the emulated M4 reproduces host learning bit for bit (4 learner types) | deterministic test, QEMU only |
 
 Single-seed observations from the build are in [`docs/build_notes.md`](docs/build_notes.md) and are not results.
@@ -118,7 +118,7 @@ python3 scripts/view_go1.py                      # watch the robot (needs a disp
 |---|-------|---------|------|
 | 1 | Corridor, Q-learning by hand → Python → C | `python3 -m tinyrl.ref.corridor_ref` (in `python/`), `make test` | C matches Python bit for bit ✅ |
 | 2 | Pendulum, table learner | `run_experiment.sh stage2_pendulum_table` | if the emulator costs > 6 h, measure RAM from the binary |
-| 3 | Linear + network learners | `run_experiment.sh pendulum_main`, `… stream_ablation` (`tile_collisions`: not run) | if the network will not learn stably, report it and continue with two |
+| 3 | Linear + network learners | `run_experiment.sh pendulum_main`, `… stream_ablation` | if the network will not learn stably, report it and continue with two |
 | 4 | Replay ratio (compressed buffer) | `run_sweep.py replay_ratio --only table` | stopped at the gate, 22 Nov (D53): not met |
 | 5 | Cart-pole + adaptation | `… cartpole_main`, `… adaptation_pendulum` (+ `_scratch`) | no plot → cut the sweep until one exists |
 | 6 | Write-up | `docs/report.md`, `docs/results.md`, `docs/study_guide.md` | — |
@@ -141,7 +141,7 @@ python/tinyrl/      cbind.py (ctypes → C), pil.py, envs/, harness.py, sweep.py
 python/tinyrl/ref/  Python references: bit-exact corridor mirror, float twins of the learners
 configs/            one JSON per experiment (*_tuned.json are written by tune.py)
 scripts/            run_experiment.sh, run_sweep.py, tune.py, measure_m4.py, make_plots.py, results_table.py,
-                    pil_check.py, bench_kernels.py, tile_collisions.py, go1_difficulty.py, go1_es.py,
+                    pil_check.py, bench_kernels.py, go1_difficulty.py, go1_es.py,
                     view_go1.py, setup_ubuntu.sh
 results/            figures, M4 measurements and raw-log archives of reported experiments
 docs/               report, results, study guide, stages, architecture, decisions, research reviews, build notes, changelog

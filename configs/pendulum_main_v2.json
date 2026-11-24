@@ -1,6 +1,6 @@
 {
   "name": "pendulum_main_v2",
-  "_note": "PROPOSED, NOT RUN (D70). Every learner that can use traces tunes lam {0,0.6,0.8,0.9} and obgd_kappa {0,1.5,2,3}, alpha only where ObGD is off, Watkins cut on. Same K, full budget, own evaluation states for tuning. Encoding is part of the label, so each is tuned separately. Linear pairs tiles with features so the hash load is 0.8-1.2.",
+  "_note": "Registered in D70; run 23 Nov 2026 (docs/results.md, v2). Every learner that can use traces tunes lam {0,0.6,0.8,0.9} and obgd_kappa {0,1.5,2,3}, alpha only where ObGD is off, Watkins cut on. Same K, full budget, own evaluation states for tuning. Encoding is part of the label, so each is tuned separately. Linear pairs tiles with features so the hash load is 0.8-1.2.",
   "task": {
     "name": "pendulum"
   },

@@ -622,3 +622,10 @@ so; the v1 table stays, labelled v1. **Status: reported.**
 **D80 — D78 result.** Ran at commit `54c2f3b`. Angle: same values as v2, identical runs. Trig: λ 0.95, κ 6, again at
 the edge of κ. No v2 conclusion changes; report §4.9 now says that trig linear chose the largest
 κ offered again. **Status: reported, exploratory.**
+
+## Added 24 Nov 2026, after an audit
+
+**D81 — Never-run experiments removed.** `tile_collisions` (D37's learning comparison) and `stage4_buffer` (the
+buffer-size sweep after Stage 4, which stopped at its gate, D53) were never run. Their configs and
+`scripts/tile_collisions.py` are deleted, and `tile_dense: 2` (legacy plain FNV-1a, used only there) is now rejected.
+D37's collision measurements stay as recorded. No archived run used `tile_dense: 2`. **Status: applied.**

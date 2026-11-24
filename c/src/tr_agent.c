@@ -34,7 +34,7 @@ static int cfg_valid(const tr_cfg_t *c)
     if (c->round_mode < 0 || c->round_mode > 1 || c->norm < 0 || c->norm > 1 || c->trace_cap < 0) return 0;
     if (c->norm != 0 && c->kind != TR_MLP) return 0;
     if (tr_stream_on(c) && c->replay_cap > 0) return 0;   /* traces need on-policy order */
-    if (c->replay_compact < 0 || c->replay_compact > 1 || c->tile_dense < 0 || c->tile_dense > 2) return 0;
+    if (c->replay_compact < 0 || c->replay_compact > 1 || c->tile_dense < 0 || c->tile_dense > 1) return 0;
     if (c->replay_compact && c->n_actions > 63) return 0;
     if (c->cbp_period < 0 || c->cbp_maturity < 0) return 0;
     if (c->watkins < 0 || c->watkins > 1) return 0;

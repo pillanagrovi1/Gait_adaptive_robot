@@ -15,6 +15,23 @@ Notes on the Stage 2 entry: no table configuration reached the usual "solved" le
 300k steps; the largest table was still improving (see the curves). The tuning budget (100k steps) is
 shorter than the table needs (D29; from 22 Nov tuning uses the full budget, D49).
 
+## Stage 2: pendulum, table learner (17 Nov 2026)
+
+The full table behind the Stage 2 entry above, rebuilt from `results/raw_archive/stage2_pendulum_table_tuned.tar.gz`.
+
+**stage2_pendulum_table_tuned** · commit not recorded (runs predate commit tracking) · config `configs/stage2_pendulum_table_tuned.json` · command `bash scripts/run_experiment.sh stage2_pendulum_table` · seeds per config: 10–10 · intervals: t 95%
+
+| config | final eval return | mean eval (AUC) | online return | peak SRAM (B) | instr./step (M4) | update underflow | flash, bench firmware with all three learners (B) |
+|---|---|---|---|---|---|---|---|
+| table_bins5 | -948 ± 47 | -1062 ± 26 | -1018 ± 14 | 1008 | 523 | 0.0% | 15576 |
+| table_bins7 | -933 ± 82 | -969 ± 20 | -908 ± 17 | 1296 | 526 | 0.0% | 15576 |
+| table_bins11 | -770 ± 41 | -874 ± 16 | -820 ± 16 | 2160 | 529 | 0.0% | 15576 |
+| table_bins15 | -582 ± 70 | -723 ± 21 | -680 ± 11 | 3408 | 531 | 0.0% | 15576 |
+| table_bins21 | -345 ± 63 | -536 ± 26 | -485 ± 17 | 6000 | 534 | 0.0% | 15576 |
+| table_bins31 | -245 ± 70 | -443 ± 12 | -313 ± 17 | 12240 | 535 | 0.2% | 15576 |
+| random | -1147 ± 20 | -1133 ± 5 | -1233 ± 12 | — | — | — | — |
+| zero-torque | -1068 ± 0 | -1068 ± 0 | -1229 ± 11 | — | — | — | — |
+
 ## Stage 3: pendulum, all learners, both input encodings (18 Nov 2026, written up 22 Nov)
 
 ![pendulum: final return vs peak SRAM](../results/figures/pendulum_main_tuned_headline.png)
@@ -601,6 +618,9 @@ Paired by seed, metric `heldout`; 5 primary intervals, uncorrected:
 3. The learners were not tuned (D71), so this does not show that they cannot find the setting with other step sizes,
    longer training or more exploration.
 
+**Limits.** Every seed is scored on the same 30 held-out terrains, so B3, B4 and B-best have no variance across seeds
+and the intervals against them carry only the learner's variance: the results hold for those 30 terrains.
+
 ## v2: the main comparisons with the same choice of update rule for every learner (23 Nov 2026)
 
 Pre-registered in D70 (approved D72, tools D73). Table, linear and streaming network each tuned λ {0, 0.6, 0.8, 0.9}
@@ -756,7 +776,7 @@ Best network − best linear at matched peak SRAM (D70, comparison 2; each famil
 3. **Pendulum, matched SRAM: the answer depends on the budget.** At 4 KB the network was far better (AUC +489.6
    [+443.3, +536.0]); only 64 hashed features fit there. At 16 KB linear was better (AUC −221.7 [−265.2, −178.1]);
    at 64 KB linear's final return was better (−38.5 [−76.5, −0.6]) and AUC inconclusive.
-4. 12 matched intervals per task, uncorrected: about 0.6 per task would exclude 0 by chance if nothing differed.
+4. 12 matched intervals in all (6 per task), uncorrected: about 0.6 would exclude 0 by chance if nothing differed.
 5. Exploratory: on the pendulum the streaming network's tuning chose λ 0 and κ 0 (no traces, no ObGD) on both
    encodings; linear chose the largest λ and κ on both. Several choices are on the edge of their grid.
 

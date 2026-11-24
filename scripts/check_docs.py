@@ -3,8 +3,10 @@
 
 For every archive in results/raw_archive/: extract it if needed, recompute the summary and compare it with the
 committed results/figures/<experiment>_summary.csv, then require every line that scripts/results_table.py and
-scripts/compare.py print to appear verbatim in docs/results.md. Also checks the links and `results/...` paths in
-the documents, and that every interval in report.md and README.md appears in results.md.
+scripts/compare.py print to appear verbatim in docs/results.md. Every archive except selection runs (`*_select`)
+needs its table there, and an already extracted results/raw/<experiment>/ must equal its archive. Also checks the
+links and `results/...` paths in the documents, and that every interval in report.md and README.md appears in
+results.md together with the mean written before it.
 
     python3 scripts/check_docs.py
 """
@@ -52,6 +54,18 @@ def summary_problems(name: str) -> list[str]:
     return out
 
 
+def raw_differs(archive: Path) -> list[str]:
+    """Files of the archive whose extracted copy under results/raw/ is missing or different."""
+    out = []
+    with tarfile.open(archive) as t:
+        for m in t.getmembers():
+            if m.isfile():
+                local = ROOT / "results" / "raw" / m.name
+                if not local.is_file() or local.read_bytes() != t.extractfile(m).read():
+                    out.append(m.name)
+    return out
+
+
 def main() -> int:
     results = (ROOT / "docs/results.md").read_text()
     lines = set(results.split("\n"))
@@ -62,11 +76,18 @@ def main() -> int:
             (ROOT / "results" / "raw").mkdir(parents=True, exist_ok=True)
             with tarfile.open(archive) as t:
                 t.extractall(ROOT / "results" / "raw", filter="data")
+        else:                           # a local rerun must not stand in for the archive
+            changed = raw_differs(archive)
+            if changed:
+                problems.append(f"{archive.name}: results/raw/ differs from the archive in {len(changed)} files "
+                                f"(first: {changed[0]}); move it away to check the archive")
     for archive in archives:
         name = archive.name.removesuffix(".tar.gz")
         problems += summary_problems(name)
         header = re.search(rf"^\*\*{re.escape(name)}\*\* · .*command `([^`]*)`", results, re.M)
         printed = []
+        if not header and not name.endswith("_select"):
+            problems.append(f"{name}: no `**{name}** · … command `…`` table header in results.md")
         if header:
             printed += run("scripts/results_table.py", name, "--command", header.group(1)).split("\n")
         if name in COMPARISONS:
@@ -87,12 +108,14 @@ def main() -> int:
         for path in re.findall(r"`(results/[\w./-]+\.(?:csv|log|gz|png|json|versions))`", text):
             if not (ROOT / path).exists():
                 problems.append(f"{doc}: missing file {path}")
-    plain = results.replace("−", "-")
+    # results.md writes table rows as "| mean | [lo, hi] |": read them as "mean [lo, hi]", as the prose does
+    plain = re.sub(r"\| ([+-][\d.]+) \| (\[[+-][\d.]+, [+-][\d.]+\])", r"\1 \2", results.replace("−", "-"))
     for doc in ("README.md", "docs/report.md"):
         text = (ROOT / doc).read_text().replace("−", "-")
-        for iv in sorted(set(re.findall(r"\[[+-][\d.]+, [+-][\d.]+\]", text))):
-            if iv not in plain:
-                problems.append(f"{doc}: interval {iv} is not in results.md")
+        for mean, iv in sorted(set(re.findall(r"(?:([+-][\d.]+),? )?(\[[+-][\d.]+, [+-][\d.]+\])", text))):
+            claim = f"{mean} {iv}" if mean else iv
+            if claim not in plain:
+                problems.append(f"{doc}: {claim} is not in results.md" + (" with that mean" if mean else ""))
     for p in problems:
         print("PROBLEM:", p)
     print("documents match the data" if not problems else f"{len(problems)} problems")

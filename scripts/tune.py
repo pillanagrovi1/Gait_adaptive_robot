@@ -27,7 +27,7 @@ reference budget), and the chosen values are used for the whole sweep. Say so
 in the methods; the alternative (re-tune at every budget) costs K x sweep size.
 
     python3 scripts/tune.py pendulum_main            # writes configs/pendulum_main_tuned.json
-    python3 scripts/tune.py pendulum_main --only net
+    python3 scripts/tune.py pendulum_main --only net   # re-tunes net, keeps the others' tuned values
 Output: configs/<name>_tuned.json and results/tuning/<name>.csv (every trial).
 """
 import argparse
@@ -100,6 +100,13 @@ def main():
         tune_eval = int(t["run"]["eval_base_seed"])
         if abs(tune_eval - test) < n:
             sys.exit("tuning evaluation states overlap the reporting ones")
+    out = ROOT / "configs" / f"{exp['name']}_tuned.json"
+    tdir = ROOT / "results" / "tuning"
+    prev = {}
+    if a.only:                              # keep every other learner's tuned values and trials
+        if not out.exists():
+            sys.exit(f"--only needs {out.relative_to(ROOT)}: tune every learner once first")
+        prev = {L["label"]: L for L in json.loads(out.read_text())["learners"]}
     rng = np.random.default_rng(12345)
     run_cfg = {**exp.get("run", {}), **t.get("run", {})}
     tuned = copy.deepcopy(exp)
@@ -110,13 +117,14 @@ def main():
     for L in tuned["learners"]:
         if L["base"]["kind"].startswith("baseline") or L["label"] not in t["space"]:
             continue
+        cands = [sample(t["space"][L["label"]], rng) for _ in range(t["k"])]   # drawn for all: --only gets the same draws
         if a.only and L["label"] != a.only:
+            L["base"] = prev[L["label"]]["base"]
             continue
         mid = {k: v[len(v) // 2] for k, v in L.get("sweep", {}).items()}
         task = {**exp["task"], **L.get("task", {})}
         for k, v in exp.get("task_sweep", {}).items():
             task[k] = v[0]
-        cands = [sample(t["space"][L["label"]], rng) for _ in range(t["k"])]
         jobs = [(task, {**L["base"], **mid, **c}, s, run_cfg, t.get("score", "auc"))
                 for c in cands for s in t["seeds"]]
         with ProcessPoolExecutor(max_workers=a.jobs) as pool:
@@ -130,10 +138,11 @@ def main():
         print(f"{L['label']:>12}: best {cands[best]}  score {means[best]:.2f}  "
               f"(median of K={t['k']}: {np.nanmedian(means):.2f})")
         L["base"].update(cands[best])
-    out = ROOT / "configs" / f"{exp['name']}_tuned.json"
     tuned.pop("tune", None)
     out.write_text(json.dumps(tuned, indent=2))
-    tdir = ROOT / "results" / "tuning"
+    if a.only and (tdir / f"{exp['name']}.csv").exists():
+        with open(tdir / f"{exp['name']}.csv") as f:
+            trials = [r for r in csv.DictReader(f) if r["label"] != a.only] + trials
     tdir.mkdir(parents=True, exist_ok=True)
     keys = sorted({k for r in trials for k in r})
     with open(tdir / f"{exp['name']}.csv", "w", newline="") as f:

@@ -94,7 +94,7 @@ LEARNER_DEFAULTS = {
     # second round (17 Nov)
     "replay_compact": 0, # 1 = compressed replay (uint16 states, next state implied): ~2.7x smaller
     "tile_dense": 0,     # linear: 0 = hashed (FNV + murmur3 finaliser, default), 1 = collision-free
-                         #         dense indices (needs features >= T*(tiles+1)^d), 2 = legacy plain FNV
+                         #         dense indices (needs features >= T*(tiles+1)^d)
     "cbp_period": 0,     # MLP continual backprop: replace one hidden unit every N updates
     "cbp_maturity": 0,   # MLP continual backprop: minimum unit age (updates)
     # 23 Nov (D68, D70)

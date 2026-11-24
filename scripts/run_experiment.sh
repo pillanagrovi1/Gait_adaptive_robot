@@ -9,7 +9,11 @@ cd "$(dirname "$0")/.."
 E="$1"; shift
 JOBS="${JOBS:-$(($(nproc) > 1 ? $(nproc) - 0 : 1))}"
 if python3 -c "import json,sys; sys.exit(0 if 'tune' in json.load(open('configs/$E.json')) else 1)"; then
-  python3 scripts/tune.py "$E" --jobs "$JOBS"
+  if [ -f "configs/${E}_tuned.json" ]; then          # resuming: delete it to tune again
+    echo "using the existing configs/${E}_tuned.json"
+  else
+    python3 scripts/tune.py "$E" --jobs "$JOBS"
+  fi
   E="${E}_tuned"
   if [ -f "configs/${E}_select.json" ]; then        # D70/D73: selection runs on the tuning seeds
     python3 scripts/run_sweep.py "${E}_select" --jobs "$JOBS"

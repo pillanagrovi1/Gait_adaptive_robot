@@ -1,6 +1,6 @@
 {
   "name": "cartpole_main_v2_tuned",
-  "_note": "PROPOSED, NOT RUN (D70). As pendulum_main_v2, on cart-pole. 16 tilings (D09); tiles paired with features so the hash load is 1.0-1.3. Hyperparameters tuned by scripts/tune.py: K=40 per learner, tuning seeds [1000, 1001, 1002], score auc.",
+  "_note": "Registered in D70; run 23 Nov 2026 (docs/results.md, v2). As pendulum_main_v2, on cart-pole. 16 tilings (D09); tiles paired with features so the hash load is 1.0-1.3. Hyperparameters tuned by scripts/tune.py: K=40 per learner, tuning seeds [1000, 1001, 1002], score auc.",
   "task": {
     "name": "cartpole"
   },
